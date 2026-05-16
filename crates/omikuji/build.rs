@@ -53,7 +53,7 @@ fn compile_shaders() -> Vec<String> {
     if !dir.exists() {
         return vec![];
     }
-    let qsb = find_qsb();
+    let mut qsb: Option<PathBuf> = None;
     let mut out_paths: Vec<String> = vec![];
     for entry in fs::read_dir(dir).expect("read shader dir") {
         let entry = entry.expect("read shader entry");
@@ -64,23 +64,37 @@ fn compile_shaders() -> Vec<String> {
         }
         let filename = p.file_name().unwrap().to_string_lossy().into_owned();
         let qsb_filename = format!("{filename}.qsb");
-        let qsb_path = dir.join(&qsb_filename);
-        let status = Command::new(&qsb)
-            .arg("--qt6")
-            .arg("-o")
-            .arg(&qsb_path)
-            .arg(&p)
-            .status()
-            .expect("invoke qsb");
-        if !status.success() {
-            panic!("qsb failed for {filename}");
+        let qsb_dest = dir.join(&qsb_filename);
+
+        if needs_recompile(&p, &qsb_dest) {
+            let qsb = qsb.get_or_insert_with(find_qsb);
+            let status = Command::new(&*qsb)
+                .arg("--qt6")
+                .arg("-o")
+                .arg(&qsb_dest)
+                .arg(&p)
+                .status()
+                .expect("invoke qsb");
+            if !status.success() {
+                panic!("qsb failed for {filename}");
+            }
         }
+
         out_paths.push(format!(
             "qml/components/consolemode/shaders/{qsb_filename}"
         ));
     }
     out_paths.sort();
     out_paths
+}
+
+fn needs_recompile(source: &Path, qsb: &Path) -> bool {
+    let Ok(qsb_meta) = fs::metadata(qsb) else { return true };
+    let Ok(src_meta) = fs::metadata(source) else { return true };
+    match (qsb_meta.modified(), src_meta.modified()) {
+        (Ok(q), Ok(s)) => s > q,
+        _ => true,
+    }
 }
 
 fn write_icon_names(names: &[String]) {
