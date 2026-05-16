@@ -28,6 +28,20 @@ pub struct LaunchConfig {
     pub post_exit_script: String,
 }
 
+impl LaunchConfig {
+    fn from_game(game: &Game, command: Vec<String>, env: HashMap<String, String>, working_dir: PathBuf) -> Self {
+        Self {
+            command,
+            env,
+            working_dir,
+            game_id: game.metadata.id.clone(),
+            game_name: game.metadata.name.clone(),
+            pre_launch_script: game.launch.pre_launch_script.clone(),
+            post_exit_script: game.launch.post_exit_script.clone(),
+        }
+    }
+}
+
 // wine build variant, detected from version string
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WineVariant {
@@ -122,15 +136,7 @@ pub fn build_launch(game: &Game) -> Result<LaunchConfig> {
 
     apply_wrapping(&mut command, &mut env, game, true);
 
-    Ok(LaunchConfig {
-        command,
-        env,
-        working_dir,
-        game_id: game.metadata.id.clone(),
-        game_name: game.metadata.name.clone(),
-        pre_launch_script: game.launch.pre_launch_script.clone(),
-        post_exit_script: game.launch.post_exit_script.clone(),
-    })
+    Ok(LaunchConfig::from_game(game, command, env, working_dir))
 }
 
 fn apply_wrapping(
@@ -207,15 +213,7 @@ fn build_steam_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfig>
 
     apply_wrapping(&mut command, &mut env, game, true);
 
-    Ok(LaunchConfig {
-        command,
-        env,
-        working_dir,
-        game_id: game.metadata.id.clone(),
-        game_name: game.metadata.name.clone(),
-        pre_launch_script: game.launch.pre_launch_script.clone(),
-        post_exit_script: game.launch.post_exit_script.clone(),
-    })
+    Ok(LaunchConfig::from_game(game, command, env, working_dir))
 }
 
 fn build_flatpak_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfig> {
@@ -251,15 +249,7 @@ fn build_flatpak_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfi
     // mangohud is injected via --env above so the outer wrapper would double-set + leak into flatpak host process
     apply_wrapping(&mut command, &mut env, game, false);
 
-    Ok(LaunchConfig {
-        command,
-        env,
-        working_dir,
-        game_id: game.metadata.id.clone(),
-        game_name: game.metadata.name.clone(),
-        pre_launch_script: game.launch.pre_launch_script.clone(),
-        post_exit_script: game.launch.post_exit_script.clone(),
-    })
+    Ok(LaunchConfig::from_game(game, command, env, working_dir))
 }
 
 fn build_gamescope_args(game: &Game) -> Vec<String> {
@@ -522,32 +512,16 @@ pub fn resolve_wine_exe(variant: WineVariant, version: &str) -> Result<PathBuf> 
 }
 
 fn resolve_steam_runner(version: &str) -> Result<PathBuf> {
-    let install = crate::steam::local::find_proton_install(version)
+    crate::steam::local::find_proton_install(version)
         .ok_or_else(|| anyhow::anyhow!("Runner `{}` not found.", version))?;
-
-    if install.join("files").exists() {
-        let umu_run = find_umu_run()
-            .ok_or_else(|| anyhow::Error::new(ComponentMissing { name: "umu-run".to_string() }))?;
-        return Ok(umu_run);
-    }
-
-    let wine_bin = install.join("bin").join("wine");
-    if wine_bin.exists() {
-        return Ok(wine_bin);
-    }
-
-    anyhow::bail!(
-        "No valid wine/proton binary found in steam runner: {}",
-        install.display()
-    )
+    find_umu_run()
+        .ok_or_else(|| anyhow::Error::new(ComponentMissing { name: "umu-run".to_string() }))
 }
 
-fn find_umu_run() -> Option<PathBuf> {
-    let candidates = ["umu-run", "umu_run.py"];
-
+fn find_executable_in_paths(names: &[&str], extra_paths: &[&str]) -> Option<PathBuf> {
     if let Ok(path_var) = std::env::var("PATH") {
         for dir in path_var.split(':') {
-            for name in &candidates {
+            for name in names {
                 let full_path = Path::new(dir).join(name);
                 if full_path.exists() && is_executable(&full_path) {
                     return Some(full_path);
@@ -555,58 +529,38 @@ fn find_umu_run() -> Option<PathBuf> {
             }
         }
     }
+    for path in extra_paths {
+        let expanded = shellexpand::tilde(path);
+        let p = Path::new(expanded.as_ref());
+        if p.exists() && is_executable(p) {
+            return Some(p.to_path_buf());
+        }
+    }
+    None
+}
 
-    let system_paths = [
+fn find_umu_run() -> Option<PathBuf> {
+    const SYSTEM_PATHS: &[&str] = &[
         "/app/share/umu/umu-run",
         "/usr/share/umu/umu-run",
         "/usr/local/share/umu/umu-run",
         "/opt/umu/umu-run",
     ];
-
-    for path in &system_paths {
-        let p = Path::new(path);
-        if p.exists() && is_executable(p) {
-            return Some(p.to_path_buf());
-        }
+    if let Some(p) = find_executable_in_paths(&["umu-run", "umu_run.py"], SYSTEM_PATHS) {
+        return Some(p);
     }
-
     let our_runtime = runtime_dir().join("umu-run");
-    if our_runtime.exists() && is_executable(&our_runtime) {
-        return Some(our_runtime);
-    }
-
-    None
+    (our_runtime.exists() && is_executable(&our_runtime)).then_some(our_runtime)
 }
 
 fn find_native_steam() -> Option<String> {
-    let candidates = ["steam", "steam.sh"];
-
-    if let Ok(path_var) = std::env::var("PATH") {
-        for dir in path_var.split(':') {
-            for name in &candidates {
-                let full_path = Path::new(dir).join(name);
-                if full_path.exists() && is_executable(&full_path) {
-                    return Some(name.to_string());
-                }
-            }
-        }
-    }
-
-    let steam_paths = [
+    const STEAM_PATHS: &[&str] = &[
         "~/.steam/steam.sh",
         "~/.steam/steam/steam.sh",
         "~/.local/share/Steam/steam.sh",
     ];
-
-    for path in &steam_paths {
-        let expanded = shellexpand::tilde(path);
-        let p = Path::new(expanded.as_ref());
-        if p.exists() && is_executable(p) {
-            return Some(p.to_string_lossy().to_string());
-        }
-    }
-
-    None
+    find_executable_in_paths(&["steam", "steam.sh"], STEAM_PATHS)
+        .map(|p| p.to_string_lossy().to_string())
 }
 
 fn flatpak_steam_installed() -> bool {
