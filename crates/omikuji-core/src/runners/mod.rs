@@ -62,7 +62,7 @@ pub fn list_installed_runners() -> Vec<String> {
         if let Ok(entries) = std::fs::read_dir(&ctd) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.is_dir() && path.join("files").exists()
+                if path.is_dir() && path.join("proton").is_file()
                     && let Some(name) = path.file_name().and_then(|n| n.to_str())
                 {
                     runners.push(format!("steam:{name}"));
@@ -77,7 +77,7 @@ pub fn list_installed_runners() -> Vec<String> {
         for entry in entries.flatten() {
             let path = entry.path();
             let Some(name) = path.file_name().and_then(|n| n.to_str()) else { continue };
-            if name.starts_with("Proton ") && path.join("files").exists() {
+            if name.starts_with("Proton ") && path.join("proton").is_file() {
                 runners.push(format!("steam:{name}"));
             }
         }

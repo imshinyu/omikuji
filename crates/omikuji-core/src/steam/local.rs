@@ -433,17 +433,17 @@ pub fn find_steam_proton_version(appid: &str) -> Option<String> {
 //   1. compatibilitytools.d/{name}, custom protons (GE-Proton, etc.)
 //   2. steamapps/common/{name}
 //   3. steamapps/common/Proton {M.m}, derived from build IDs like "8.0-103"
-// validates that {dir}/files/ exists to avoid returning a half-empty folder.
+// validate like lutris, apparently steam makes folder regardless, tsk.
 pub fn find_proton_install(name: &str) -> Option<PathBuf> {
     for ctd in iter_compat_tools_dirs() {
         let p = ctd.join(name);
-        if p.join("files").exists() {
+        if p.join("proton").is_file() {
             return Some(p);
         }
     }
     for dir in get_steamapps_dirs() {
         let p = dir.join("common").join(name);
-        if p.join("files").exists() {
+        if p.join("proton").is_file() {
             return Some(p);
         }
     }
@@ -451,7 +451,7 @@ pub fn find_proton_install(name: &str) -> Option<PathBuf> {
         let dir_name = format!("Proton {}", mm);
         for dir in get_steamapps_dirs() {
             let p = dir.join("common").join(&dir_name);
-            if p.join("files").exists() {
+            if p.join("proton").is_file() {
                 return Some(p);
             }
         }
@@ -480,7 +480,7 @@ pub fn default_proton_install() -> Option<PathBuf> {
         if let Ok(entries) = std::fs::read_dir(&ctd) {
             for e in entries.flatten() {
                 let p = e.path();
-                if p.join("files").exists() {
+                if p.join("proton").is_file() {
                     all.push(p);
                 }
             }
@@ -503,7 +503,7 @@ pub fn default_proton_install() -> Option<PathBuf> {
         if let Ok(entries) = std::fs::read_dir(&common) {
             for e in entries.flatten() {
                 let name = e.file_name().to_string_lossy().to_string();
-                if name.starts_with("Proton ") && e.path().join("files").exists() {
+                if name.starts_with("Proton ") && e.path().join("proton").is_file() {
                     return Some(e.path());
                 }
             }
