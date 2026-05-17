@@ -8,7 +8,7 @@ Item {
     id: root
 
     // hand-maintained, bind from a build-info bridge invokable if a release pipeline ever lands (TODO: do ts)
-    readonly property string appVersion: "0.1.0"
+    readonly property string appVersion: "0.2.1"
     readonly property string repoUrl: "https://github.com/reakjra/omikuji"
     readonly property string assetsRepoUrl: "https://github.com/reakjra/omikuji-assets"
 

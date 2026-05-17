@@ -22,10 +22,27 @@
     </p>
   </description>
   <releases>
-    <release version="0.0.0" date="2026-05-06">
+    <release version="0.2.1" date="2026-05-17">
       <description>
         <ul>
-          <li>Here you will find a description of what has changed in the new version.</li>
+          <li>Version metadata sync across Cargo and About tab.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.2.0" date="2026-05-17">
+      <description>
+        <ul>
+          <li>AppImage and Flatpak release pipelines.</li>
+          <li>Discord Rich Presence integration.</li>
+          <li>System tray icon.</li>
+          <li>Font family picker and per-token theme color customization.</li>
+          <li>Epic and GOG update detection with manual and automatic checks.</li>
+          <li>HoYo downloads with Sophon (fixes Genshin stuck at 5.5.0 and other various problems).</li>
+          <li>Gacha import flow with on-disk version detection across all supported titles.</li>
+          <li>PGR now uses the new proper CDN.</li>
+          <li>Runner picker grouped by Proton and Wine families.</li>
+          <li>Double-click to launch games (toggleable).</li>
+          <li>Default prefix path option in global defaults.</li>
         </ul>
       </description>
     </release>
