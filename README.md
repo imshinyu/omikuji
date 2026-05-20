@@ -113,6 +113,28 @@ Then install the app:
 }
 ```
 
+If you don't want to compile the full package, there's a cachix binary cache from where you can pull the precompiled package:
+```nix
+{
+  nix.settings = {
+    substituters = [
+      "https://omikuji.cachix.org"
+    ];
+      
+    trusted-substituters = [
+      "https://omikuji.cachix.org"
+    ];
+
+    trusted-public-keys = [
+      "omikuji.cachix.org-1:dS6sbpMxarHWIIk3y0R7KXz3eVHUg1lo/y3gMbv4JhM="
+    ];
+
+  };
+}
+```
+And restart the nix daemon to apply them, then you can install the package
+> More info about substituter [here](https://wiki.nixos.org/wiki/Binary_Cache#Using_a_binary_cache)
+
 To run it without installing:
 ```sh
 nix run github:reakjra/omikuji
