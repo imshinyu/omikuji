@@ -18,6 +18,8 @@ extern "C" void omikuji_tray_event_quit();
 extern "C" void omikuji_tray_event_toggle();
 extern "C" void omikuji_tray_event_game(const char* id, std::size_t len);
 
+// little note for little myself: Nor NativeRender or QtTextRendering make the orange-blue doom less gag-inducing. slint omikuji when?
+
 namespace {
 
 char s_arg0[] = "omikuji";

@@ -1210,3 +1210,5 @@ property real cardZoom: uiSettings.cardZoom
 
     }
 }
+
+// TODO might just really need to spend a week just on un-spaghettifying the whole qml. just sayin
