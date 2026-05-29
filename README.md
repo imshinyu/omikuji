@@ -163,7 +163,7 @@ Runtime tools (umu-run, hpatchz, legendary, gogdl, jadeite, EGL dummy) are auto-
 
 Data lives in `~/.local/share/omikuji/`.
 
-If someone willingly wants to take charge for `.deb` / `.rpm` / Flatpak / etc. packaging im fine with it
+If someone willingly wants to take charge for `.deb` / `.rpm` / etc. packaging im fine with it
 
 ## Documentation
 - [Configuration](docs/configuration.md): `settings.toml`, custom runners, DLL packs
