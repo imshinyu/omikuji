@@ -153,8 +153,8 @@ async fn install_one_inner(spec: &ComponentSpec) -> Result<String> {
                 .await
                 .map_err(|e| anyhow!("release api ({}): {}", settings_url, e))?;
 
-            eprintln!(
-                "[components] {} latest release {} has assets:\n  - {}",
+            tracing::debug!(
+                "{} latest release {} has assets:\n  - {}",
                 spec.name,
                 release.tag_name,
                 release

@@ -38,7 +38,7 @@ impl super::qobject::GameModel {
             let rt = match tokio::runtime::Runtime::new() {
                 Ok(r) => r,
                 Err(e) => {
-                    eprintln!("[epic_size] failed to create tokio runtime: {}", e);
+                    tracing::error!("failed to create tokio runtime: {}", e);
                     omikuji_core::install_sizes::push(omikuji_core::install_sizes::InstallSizeResult {
                         request_id: rid,
                         download_bytes: 0,
@@ -60,7 +60,7 @@ impl super::qobject::GameModel {
                     error: String::new(),
                 },
                 Err(e) => {
-                    eprintln!("[epic_size] error: {}", e);
+                    tracing::error!("epic install size error: {}", e);
                     omikuji_core::install_sizes::InstallSizeResult {
                         request_id: rid,
                         download_bytes: 0,
@@ -87,12 +87,12 @@ impl super::qobject::GameModel {
         let app_name_s = app_name.to_string();
 
         if self.library.game.iter().any(|g| g.metadata.id == app_name_s) {
-            eprintln!("[epic_import] already in library: {}", app_name_s);
+            tracing::info!("already in library: {}", app_name_s);
             return QString::from(&app_name_s);
         }
 
         let Some(info) = omikuji_core::epic::find_installed_info(&app_name_s) else {
-            eprintln!("[epic_import] no install info for {} — leaving library alone", app_name_s);
+            tracing::warn!("no install info for {} - leaving library alone", app_name_s);
             return QString::default();
         };
 
@@ -142,7 +142,7 @@ impl super::qobject::GameModel {
         let row = self.library.game.len() as i32;
 
         if let Err(e) = Library::save_game_static(&game) {
-            eprintln!("[epic_import] failed to save: {}", e);
+            tracing::error!("failed to save: {}", e);
             return QString::default();
         }
 
@@ -170,7 +170,7 @@ impl super::qobject::GameModel {
         self.as_mut().set_count(count);
         self.as_mut().end_insert_rows();
 
-        eprintln!("[epic_import] imported '{}' as id '{}'", title, app_name_s);
+        tracing::info!("imported '{}' as id '{}'", title, app_name_s);
         QString::from(&app_name_s)
     }
 
@@ -183,11 +183,11 @@ impl super::qobject::GameModel {
             .find(|g| g.metadata.id == id)
             .cloned()
         else {
-            eprintln!("[epic_uninstall] game '{}' not found", id);
+            tracing::warn!("game '{}' not found", id);
             return false;
         };
         if game.source.kind != "epic" || game.source.app_id.is_empty() {
-            eprintln!("[epic_uninstall] game '{}' is not an epic entry", id);
+            tracing::warn!("game '{}' is not an epic entry", id);
             return false;
         }
 
@@ -232,7 +232,7 @@ impl super::qobject::GameModel {
                 Ok(out) if out.status.success() => {
                     if let Some(path) = &install_path
                         && path.exists() {
-                            eprintln!("[epic_uninstall] legendary exited 0 but {} still exists, forcing cleanup", path.display());
+                            tracing::warn!("legendary exited 0 but {} still exists, forcing cleanup", path.display());
                             omikuji_core::downloads::cleanup_install_dir_blocking(path);
                         }
                     if let Ok(mut lib) = omikuji_core::library::Library::load() {
@@ -274,11 +274,11 @@ impl super::qobject::GameModel {
     ) -> bool {
         let id = game_id.to_string();
         let Some(idx) = self.library.game.iter().position(|g| g.metadata.id == id) else {
-            eprintln!("[epic_overlay] game '{}' not found", id);
+            tracing::warn!("game '{}' not found", id);
             return false;
         };
         if !self.library.game[idx].is_epic() {
-            eprintln!("[epic_overlay] game '{}' is not epic", id);
+            tracing::warn!("game '{}' is not epic", id);
             return false;
         }
 
@@ -336,11 +336,11 @@ impl super::qobject::GameModel {
     ) -> bool {
         let id = game_id.to_string();
         let Some(idx) = self.library.game.iter().position(|g| g.metadata.id == id) else {
-            eprintln!("[epic_cloud] game '{}' not found", id);
+            tracing::warn!("game '{}' not found", id);
             return false;
         };
         if !self.library.game[idx].is_epic() {
-            eprintln!("[epic_cloud] game '{}' is not epic", id);
+            tracing::warn!("game '{}' is not epic", id);
             return false;
         }
 

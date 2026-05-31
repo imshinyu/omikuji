@@ -65,8 +65,8 @@ pub fn run(game: &Game, tool: WineTool) -> Result<Child> {
         cmd.env("PROTON_VERB", "waitforexitandrun");
     }
 
-    eprintln!(
-        "[wine_tools] {:?} :: {} {}",
+    tracing::debug!(
+        "{:?} :: {} {}",
         tool,
         program.display(),
         args.join(" ")

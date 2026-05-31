@@ -41,7 +41,7 @@ impl qobject::LibraryWatcher {
         let path_str = path.to_string();
         let path_buf = std::path::PathBuf::from(&path_str);
 
-        eprintln!("[library_watcher] watching: {}", path_str);
+        tracing::debug!("watching: {}", path_str);
 
         let qt_thread = self.as_mut().qt_thread();
         let watcher = DirWatcher::watch(
@@ -61,7 +61,7 @@ impl qobject::LibraryWatcher {
 
         match watcher {
             Ok(w) => self.as_mut().rust_mut().get_mut().watcher = Some(w),
-            Err(e) => eprintln!("[library_watcher] failed to start: {e}"),
+            Err(e) => tracing::error!("failed to start: {e}"),
         }
     }
 

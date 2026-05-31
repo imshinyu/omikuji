@@ -11,7 +11,7 @@ impl super::qobject::GameModel {
         match serde_json::to_string(&manifests) {
             Ok(s) => QString::from(&s),
             Err(e) => {
-                eprintln!("[list_gachas] serialize failed: {}", e);
+                tracing::error!("serialize failed: {}", e);
                 QString::from("[]")
             }
         }
@@ -26,14 +26,14 @@ impl super::qobject::GameModel {
             {
                 Ok(rt) => rt,
                 Err(e) => {
-                    eprintln!("[gachas] couldn't build runtime: {}", e);
+                    tracing::error!("couldn't build runtime: {}", e);
                     return;
                 }
             };
             let fetched = match rt.block_on(omikuji_core::gachas::remote::ensure_all_fetched()) {
                 Ok(n) => n,
                 Err(e) => {
-                    eprintln!("[gachas] fetch failed: {}", e);
+                    tracing::error!("gacha manifest fetch failed: {}", e);
                     omikuji_core::notifications::warning(
                         "Gachas",
                         "Couldn't fetch manifests. Existing cached games still work.",
@@ -53,7 +53,7 @@ impl super::qobject::GameModel {
             Some(m) => match serde_json::to_string(&m) {
                 Ok(s) => QString::from(&s),
                 Err(e) => {
-                    eprintln!("[get_gacha_manifest] serialize failed: {}", e);
+                    tracing::error!("serialize failed: {}", e);
                     QString::default()
                 }
             },
@@ -108,7 +108,7 @@ impl super::qobject::GameModel {
             let rt = match tokio::runtime::Runtime::new() {
                 Ok(r) => r,
                 Err(e) => {
-                    eprintln!("[gacha_size] tokio: {}", e);
+                    tracing::error!("tokio runtime: {}", e);
                     omikuji_core::install_sizes::push(
                         omikuji_core::install_sizes::InstallSizeResult {
                             request_id: rid,
@@ -143,7 +143,7 @@ impl super::qobject::GameModel {
                         error: String::new(),
                     },
                     Err(e) => {
-                        eprintln!("[gacha_size] {}: {}", mid, e);
+                        tracing::error!("gacha size {}: {}", mid, e);
                         omikuji_core::install_sizes::InstallSizeResult {
                             request_id: rid,
                             download_bytes: 0,
@@ -219,11 +219,11 @@ impl super::qobject::GameModel {
         let runner_s = runner_version.to_string();
 
         let Some(manifest) = omikuji_core::gachas::manifest::find(&mid) else {
-            eprintln!("[gacha_import] unknown manifest: {}", mid);
+            tracing::warn!("unknown manifest: {}", mid);
             return QString::default();
         };
         let Some(edition) = manifest.editions.iter().find(|e| e.id == eid) else {
-            eprintln!("[gacha_import] unknown edition '{}' for '{}'", eid, mid);
+            tracing::warn!("unknown edition '{}' for '{}'", eid, mid);
             return QString::default();
         };
         let app_id = omikuji_core::gachas::strategies::build_app_id(&manifest, &eid, &[]);
@@ -231,7 +231,7 @@ impl super::qobject::GameModel {
         if self.library.game.iter().any(|g| {
             g.source.kind == "gacha" && g.source.app_id == app_id
         }) {
-            eprintln!("[gacha_import] already in library: {}", app_id);
+            tracing::info!("already in library: {}", app_id);
             return QString::default();
         }
 
@@ -282,7 +282,7 @@ impl super::qobject::GameModel {
         let row = self.library.game.len() as i32;
 
         if let Err(e) = Library::save_game_static(&game) {
-            eprintln!("[gacha_import] failed to save: {}", e);
+            tracing::error!("failed to save: {}", e);
             return QString::default();
         }
 
@@ -302,13 +302,13 @@ impl super::qobject::GameModel {
             if !dotversion.exists() {
                 let _ = std::fs::write(&dotversion, &version);
             }
-            eprintln!(
-                "[gacha_import] detected version {} for {}/{} {}",
+            tracing::info!(
+                "detected version {} for {}/{} {}",
                 version, manifest.publisher_slug, manifest.game_slug, edition.id
             );
         } else {
-            eprintln!(
-                "[gacha_import] coulndt detect version on disk for {}/{} {}, update check skipped until next install",
+            tracing::warn!(
+                "couldn't detect version on disk for {}/{} {}, update check skipped until next install",
                 manifest.publisher_slug, manifest.game_slug, edition.id
             );
         }
@@ -341,8 +341,8 @@ impl super::qobject::GameModel {
         self.as_mut().set_count(count);
         self.as_mut().end_insert_rows();
 
-        eprintln!(
-            "[gacha_import] imported '{}' ({}) as id '{}'",
+        tracing::info!(
+            "imported '{}' ({}) as id '{}'",
             display_s, app_id, game_id
         );
         QString::from(&game_id)

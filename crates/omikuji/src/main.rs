@@ -1,5 +1,6 @@
 mod bridge;
 mod cli;
+mod log_fmt;
 mod single_instance;
 
 use cxx_qt_lib::{QQmlApplicationEngine, QUrl};
@@ -17,9 +18,10 @@ unsafe extern "C" {
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
+        .event_format(log_fmt::ShortTarget)
         .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive(tracing::Level::INFO.into()),
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
         )
         .init();
 

@@ -290,19 +290,11 @@ impl Defaults {
         }
         match std::fs::read_to_string(&path) {
             Ok(body) => toml::from_str::<Defaults>(&body).unwrap_or_else(|e| {
-                eprintln!(
-                    "[defaults] couldn't parse {}: {} — using empty defaults",
-                    path.display(),
-                    e
-                );
+                tracing::warn!("couldn't parse {}: {} - using empty defaults", path.display(), e);
                 Self::default()
             }),
             Err(e) => {
-                eprintln!(
-                    "[defaults] couldn't read {}: {} — using empty defaults",
-                    path.display(),
-                    e
-                );
+                tracing::warn!("couldn't read {}: {} - using empty defaults", path.display(), e);
                 Self::default()
             }
         }

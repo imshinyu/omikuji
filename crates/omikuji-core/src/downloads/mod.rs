@@ -149,7 +149,7 @@ lazy_static! {
 
         let restored = load_queue();
         if !restored.is_empty() {
-            eprintln!("[downloads] restored {} paused entries from previous session", restored.len());
+            tracing::info!("restored {} paused entries from previous session", restored.len());
         }
 
         Arc::new(DownloadManager {
@@ -471,16 +471,13 @@ pub fn cleanup_install_dir_blocking(path: &std::path::Path) {
         return;
     }
     if !is_safe_to_wipe(path) {
-        eprintln!(
-            "[downloads] refusing to wipe suspicious path {} (defense-in-depth sanity check)",
-            path.display()
-        );
+        tracing::error!("refusing to wipe suspicious path {} (defense-in-depth sanity check)", path.display());
         return;
     }
     if let Err(e) = std::fs::remove_dir_all(path) {
-        eprintln!("[downloads] failed to clean up {}: {}", path.display(), e);
+        tracing::error!("failed to clean up {}: {}", path.display(), e);
     } else {
-        eprintln!("[downloads] cleaned up {}", path.display());
+        tracing::info!("cleaned up {}", path.display());
     }
 }
 
@@ -584,13 +581,9 @@ fn cleanup_source_state(entry: &DownloadEntry) {
                     .join(format!("{}.resume", entry.app_id));
                 if resume.exists() {
                     if let Err(e) = std::fs::remove_file(&resume) {
-                        eprintln!(
-                            "[downloads] failed to clear resume state {}: {}",
-                            resume.display(),
-                            e
-                        );
+                        tracing::error!("failed to clear resume state {}: {}", resume.display(), e);
                     } else {
-                        eprintln!("[downloads] cleared resume state for {}", entry.app_id);
+                        tracing::debug!("cleared resume state for {}", entry.app_id);
                     }
                 }
             }
@@ -743,10 +736,10 @@ fn save_queue(entries: &[DownloadEntry]) {
     match serde_json::to_string_pretty(&active) {
         Ok(json) => {
             if let Err(e) = std::fs::write(&path, json) {
-                eprintln!("[downloads] failed to save queue: {}", e);
+                tracing::error!("failed to save queue: {}", e);
             }
         }
-        Err(e) => eprintln!("[downloads] failed to serialize queue: {}", e),
+        Err(e) => tracing::error!("failed to serialize queue: {}", e),
     }
 }
 
@@ -759,7 +752,7 @@ fn load_queue() -> Vec<DownloadEntry> {
     let mut entries: Vec<DownloadEntry> = match serde_json::from_str(&data) {
         Ok(v) => v,
         Err(e) => {
-            eprintln!("[downloads] failed to parse queue.json: {}", e);
+            tracing::error!("failed to parse queue.json: {}", e);
             return Vec::new();
         }
     };

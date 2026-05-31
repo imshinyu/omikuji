@@ -321,7 +321,7 @@ impl qobject::DownloadModel {
 
         let mid = manifest_id.to_string();
         let Some(manifest) = gm::find(&mid) else {
-            eprintln!("[enqueue_gacha] manifest '{}' not found", mid);
+            tracing::error!("manifest '{}' not found", mid);
             return QString::default();
         };
         let eid = edition_id.to_string();
@@ -346,7 +346,7 @@ impl qobject::DownloadModel {
         ) {
             Ok(r) => r,
             Err(e) => {
-                eprintln!("[enqueue_gacha] build request failed: {}", e);
+                tracing::error!("build request failed: {}", e);
                 return QString::default();
             }
         };

@@ -87,10 +87,7 @@ impl DownloadSource for LegendarySource {
 
         if let Some(info) = crate::epic::find_installed_info(&entry.app_id)
             && !info.install_path.exists() {
-                eprintln!(
-                    "[legendary] stale installed.json entry for {} → clearing before reinstall",
-                    entry.app_id
-                );
+                tracing::warn!("stale installed.json entry for {} - clearing before reinstall", entry.app_id);
                 let _ = Command::new(&legendary)
                     .arg("-y")
                     .arg("uninstall")
@@ -213,7 +210,7 @@ async fn run_with_progress(mut child: Child, entry: &DownloadEntry) -> Result<()
                             let (p, d, t, s) = adjusted(pct, dl_bytes, total_bytes, reusable_bytes, speed_bps);
                             report_progress(&entry.id, p, d, t, s);
                         } else {
-                            eprintln!("[legendary] {}", l);
+                            tracing::debug!("{}", l);
                         }
                     }
                     Ok(None) | Err(_) => break,

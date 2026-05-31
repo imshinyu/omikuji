@@ -53,7 +53,7 @@ fn run_game(input: &str) -> i32 {
     let library = match Library::load() {
         Ok(l) => l,
         Err(e) => {
-            eprintln!("failed to load library: {}", e);
+            tracing::error!("failed to load library: {}", e);
             return 1;
         }
     };
@@ -65,7 +65,7 @@ fn run_game(input: &str) -> i32 {
             None => return 2,
         },
         Resolved::NotFound => {
-            eprintln!("no game matches '{}'", input);
+            tracing::error!("no game matches '{}'", input);
             return 1;
         }
     };
@@ -121,7 +121,7 @@ fn is_id_like(s: &str) -> bool {
 
 fn pick_from_matches(matches: &[&Game]) -> Option<usize> {
     if !io::stdin().is_terminal() {
-        eprintln!("multiple games match — re-run with slug_id for precision:");
+        eprintln!("multiple games match - re-run with slug_id for precision:");
         print_matches(matches);
         return None;
     }
@@ -150,7 +150,7 @@ fn print_matches(matches: &[&Game]) {
             &g.metadata.last_played
         };
         eprintln!(
-            "  {}) {}  —  {}  —  {:.1}h  —  {}",
+            "  {}) {}  -  {}  -  {:.1}h  -  {}",
             i + 1,
             g.metadata.name,
             g.metadata.id,
@@ -162,31 +162,31 @@ fn print_matches(matches: &[&Game]) {
 
 fn launch_and_wait(game: &Game) -> i32 {
     if process::is_game_running(&game.metadata.id) {
-        eprintln!("'{}' is already running", game.metadata.name);
+        tracing::warn!("'{}' is already running", game.metadata.name);
         return 1;
     }
 
     let config = match launch::build_launch(game) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("failed to build launch config: {}", e);
+            tracing::error!("failed to build launch config: {}", e);
             return 1;
         }
     };
 
-    eprintln!("launching '{}'", game.metadata.name);
+    tracing::info!("launching '{}'", game.metadata.name);
 
     let game_id = game.metadata.id.clone();
     let rt = match tokio::runtime::Runtime::new() {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("failed to start tokio runtime: {}", e);
+            tracing::error!("failed to start tokio runtime: {}", e);
             return 1;
         }
     };
 
     if let Err(e) = rt.block_on(process::launch_game(&config)) {
-        eprintln!("failed to launch: {}", e);
+        tracing::error!("failed to launch: {}", e);
         return 1;
     }
 

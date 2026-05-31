@@ -50,10 +50,7 @@ pub fn resolve_art(manifest: &GachaManifest, kind: &str) -> String {
     std::thread::spawn(move || {
         let result = fetch_first_match(&pub_s, &game_s, &kind_s);
         if let Err(e) = result {
-            eprintln!(
-                "[gachas/art] failed to fetch {}/{} {}: {}",
-                pub_s, game_s, kind_s, e
-            );
+            tracing::error!("failed to fetch {}/{} {}: {}", pub_s, game_s, kind_s, e);
         }
         in_flight().lock().unwrap().remove(&key);
     });
@@ -68,7 +65,7 @@ pub fn fetch_into_library_cache(
 ) {
     let library_dir = crate::cache_dir().join("images");
     if let Err(e) = std::fs::create_dir_all(&library_dir) {
-        eprintln!("[gachas/art] failed to create library cache dir: {}", e);
+        tracing::error!("failed to create library cache dir: {}", e);
         return;
     }
 
@@ -81,7 +78,7 @@ pub fn fetch_into_library_cache(
     for (gacha_kind, lib_type) in pairs {
         if cached_url(&manifest.publisher_slug, &manifest.game_slug, gacha_kind).is_none()
             && let Err(e) = fetch_first_match(&manifest.publisher_slug, &manifest.game_slug, gacha_kind) {
-                eprintln!("[gachas/art] {} fetch fialed: {}", gacha_kind, e);
+                tracing::error!("{} fetch failed: {}", gacha_kind, e);
                 continue;
             }
 
@@ -94,7 +91,7 @@ pub fn fetch_into_library_cache(
             let dst = library_dir.join(format!("{}_{}.{}", game_id, lib_type.suffix(), lib_type.extension()));
             match std::fs::copy(&src, &dst) {
                 Ok(_) => on_asset(lib_type),
-                Err(e) => eprintln!("[gachas/art] copy {} → {} failed: {}", src.display(), dst.display(), e),
+                Err(e) => tracing::error!("copy {} -> {} failed: {}", src.display(), dst.display(), e),
             }
             break;
         }

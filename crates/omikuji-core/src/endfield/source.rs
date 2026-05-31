@@ -45,8 +45,8 @@ fn parse_endfield_app(app_id: &str) -> Result<ParsedEndfieldApp> {
 impl DownloadSource for EndfieldSource {
     async fn install(&self, entry: &DownloadEntry) -> Result<()> {
         let parsed = parse_endfield_app(&entry.app_id)?;
-        eprintln!(
-            "[endfield] install: {} ({})",
+        tracing::info!(
+            "install: {} ({})",
             entry.display_name,
             parsed.edition_label
         );
@@ -72,8 +72,8 @@ impl DownloadSource for EndfieldSource {
         }
 
         super::set_installed_version(&parsed.manifest.game_slug, &parsed.edition_id, &target_version);
-        eprintln!(
-            "[endfield] install complete: {} {}",
+        tracing::info!(
+            "install complete: {} {}",
             parsed.edition_label,
             target_version
         );
@@ -87,8 +87,8 @@ impl DownloadSource for EndfieldSource {
         };
 
         let parsed = parse_endfield_app(&entry.app_id)?;
-        eprintln!(
-            "[endfield] update: {} {} -> latest",
+        tracing::info!(
+            "update: {} {} -> latest",
             parsed.edition_label,
             from_version
         );
@@ -110,20 +110,20 @@ impl DownloadSource for EndfieldSource {
             match apply_resource_patches(entry, &parsed.cfg, &game_version, &target_version, &rand).await {
                 Ok(true) => {
                     super::set_installed_version(&parsed.manifest.game_slug, &parsed.edition_id, &target_version);
-                    eprintln!(
-                        "[endfield] update complete via resource patches: {} -> {}",
+                    tracing::info!(
+                        "update complete via resource patches: {} -> {}",
                         from_version, target_version
                     );
                     return Ok(());
                 }
                 Ok(false) => {
-                    eprintln!(
-                        "[endfield] resource patch.json had no variants applicable to installed state, falling back"
+                    tracing::warn!(
+                        "resource patch.json had no variants applicable to installed state, falling back"
                     );
                 }
                 Err(e) => {
-                    eprintln!(
-                        "[endfield] resource patch path failed: {} — falling back to overlay bundle",
+                    tracing::warn!(
+                        "resource patch path failed: {} - falling back to overlay bundle",
                         e
                     );
                 }
@@ -155,8 +155,8 @@ impl DownloadSource for EndfieldSource {
         }
 
         super::set_installed_version(&parsed.manifest.game_slug, &parsed.edition_id, &target_version);
-        eprintln!(
-            "[endfield] update complete via overlay: {} -> {}",
+        tracing::info!(
+            "update complete via overlay: {} -> {}",
             from_version, target_version
         );
         Ok(())
@@ -191,14 +191,14 @@ async fn apply_resource_patches(
         if check_control(&entry.id) != ControlSignal::None {
             return Ok(false);
         }
-        eprintln!(
-            "[endfield] fetching patch.json for resource {}",
+        tracing::debug!(
+            "fetching patch.json for resource {}",
             resource.name
         );
         match api::fetch_resource_patch(&resource.path).await {
             Ok(m) => {
-                eprintln!(
-                    "[endfield] resource {} has {} file entries (target build {})",
+                tracing::debug!(
+                    "resource {} has {} file entries (target build {})",
                     resource.name,
                     m.files.len(),
                     m.version
@@ -206,7 +206,7 @@ async fn apply_resource_patches(
                 manifests.push((resource.clone(), m));
             }
             Err(e) => {
-                eprintln!("[endfield] skip {}: {}", resource.name, e);
+                tracing::warn!("skip {}: {}", resource.name, e);
             }
         }
     }
@@ -239,8 +239,8 @@ async fn apply_resource_patches(
                 Ok(FileOutcome::NotMaterialized) => not_materialized += 1,
                 Ok(FileOutcome::Unpatchable) => unpatchable += 1,
                 Err(e) => {
-                    eprintln!(
-                        "[endfield] hpatchz failed for {}: {} — counting as unpatchable",
+                    tracing::warn!(
+                        "hpatchz failed for {}: {} - counting as unpatchable",
                         file.name, e
                     );
                     unpatchable += 1;
@@ -252,8 +252,8 @@ async fn apply_resource_patches(
         }
     }
 
-    eprintln!(
-        "[endfield] resource patch pass: {} applied, {} already at target, {} lazy-loaded (skipped ok), {} unpatchable (of {} total)",
+    tracing::info!(
+        "resource patch pass: {} applied, {} already at target, {} lazy-loaded (skipped ok), {} unpatchable (of {} total)",
         applied, already, not_materialized, unpatchable, total_files
     );
 
@@ -290,16 +290,16 @@ async fn apply_one_file(
     file: &api::ResourcePatchFile,
 ) -> Result<FileOutcome> {
     if file.diff_type != 1 {
-        eprintln!(
-            "[endfield] {} has diffType={}, skipping (unsupported)",
+        tracing::warn!(
+            "{} has diffType={}, skipping (unsupported)",
             file.name, file.diff_type
         );
         return Ok(FileOutcome::Unpatchable);
     }
 
     if let Some(target_abs) = resolve_on_disk(&entry.install_path, &file.name, &file.md5)? {
-        eprintln!(
-            "[endfield] {} already at target md5, skip",
+        tracing::debug!(
+            "{} already at target md5, skip",
             target_abs.display()
         );
         return Ok(FileOutcome::AlreadyCurrent);
@@ -317,20 +317,20 @@ async fn apply_one_file(
     if !any_variant_base_exists_on_disk(&entry.install_path, file)
         && !file_exists_anywhere(&entry.install_path, &file.name)
     {
-        eprintln!(
-            "[endfield] {} not materialized on disk (likely inside a .blc bundle, lazy-loaded) — skip, game will reconcile",
+        tracing::debug!(
+            "{} not materialized on disk (likely inside a .blc bundle, lazy-loaded) - skip, game will reconcile",
             file.name
         );
         return Ok(FileOutcome::NotMaterialized);
     }
 
-    eprintln!(
-        "[endfield] UNPATCHABLE {} — target_md5={}, variants={}",
+    tracing::warn!(
+        "UNPATCHABLE {} - target_md5={}, variants={}",
         file.name, file.md5, file.patch.len()
     );
     for (i, v) in file.patch.iter().enumerate() {
-        eprintln!(
-            "[endfield]   variant[{}]: base_file={} base_md5={}",
+        tracing::debug!(
+            "  variant[{}]: base_file={} base_md5={}",
             i, v.base_file, v.base_md5
         );
     }
@@ -513,8 +513,8 @@ async fn download_and_extract(
             first_segment = Some(temp_path.clone());
         }
 
-        eprintln!(
-            "[endfield] {} segment: {} ({})",
+        tracing::debug!(
+            "{} segment: {} ({})",
             label,
             filename,
             format_bytes(f.package_size)
@@ -537,8 +537,8 @@ async fn download_and_extract(
     }
 
     if let Some(first) = &first_segment {
-        eprintln!(
-            "[endfield] extracting {} to {}",
+        tracing::info!(
+            "extracting {} to {}",
             label,
             entry.install_path.display()
         );
@@ -579,7 +579,7 @@ pub fn cleanup_endfield_state(app_id: &str, install_path: &Path, temp_dir: Optio
     for dir in candidates {
         if dir.exists()
             && let Err(e) = std::fs::remove_dir_all(&dir) {
-                eprintln!("[endfield] clean {} failed: {}", dir.display(), e);
+                tracing::warn!("clean {} failed: {}", dir.display(), e);
             }
     }
 }

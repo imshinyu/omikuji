@@ -196,7 +196,7 @@ impl super::qobject::GameModel {
         let from = from_version.to_string();
 
         let Some(game) = self.library.game.iter().find(|g| g.metadata.id == gid) else {
-            eprintln!("[update] enqueue_game_update: game '{}' not found", gid);
+            tracing::error!("enqueue_game_update: game '{}' not found", gid);
             return QString::from("");
         };
 
@@ -209,7 +209,7 @@ impl super::qobject::GameModel {
                     let src = match omikuji_core::gachas::strategies::source_key(&manifest) {
                         Ok(s) => s.to_string(),
                         Err(e) => {
-                            eprintln!("[update] unknown strategy for '{}': {}", manifest.id, e);
+                            tracing::error!("unknown strategy for '{}': {}", manifest.id, e);
                             return QString::from("");
                         }
                     };
@@ -217,7 +217,7 @@ impl super::qobject::GameModel {
                     (src, if poster.is_empty() { None } else { Some(poster) })
                 }
                 None => {
-                    eprintln!("[update] no gacha manifest for app_id '{}'", app_id);
+                    tracing::error!("no gacha manifest for app_id '{}'", app_id);
                     return QString::from("");
                 }
             }
@@ -230,7 +230,7 @@ impl super::qobject::GameModel {
             let banner = if resolved.is_empty() { None } else { Some(resolved) };
             ("gog".to_string(), banner)
         } else {
-            eprintln!("[update] unsupported source.kind '{}' for game '{}'", game.source.kind, gid);
+            tracing::error!("unsupported source.kind '{}' for game '{}'", game.source.kind, gid);
             return QString::from("");
         };
 

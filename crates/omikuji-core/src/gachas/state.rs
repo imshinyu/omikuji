@@ -31,19 +31,11 @@ pub fn write_installed_version(
     let path = version_file(publisher_slug, game_slug, edition_id);
     if let Some(parent) = path.parent()
         && let Err(e) = std::fs::create_dir_all(parent) {
-            eprintln!(
-                "[gachas::state] create_dir_all({}) failed: {}",
-                parent.display(),
-                e
-            );
+            tracing::error!("create_dir_all({}) failed: {}", parent.display(), e);
             return;
         }
     if let Err(e) = std::fs::write(&path, version) {
-        eprintln!(
-            "[gachas::state] write({}) failed: {}",
-            path.display(),
-            e
-        );
+        tracing::error!("write({}) failed: {}", path.display(), e);
     }
 }
 

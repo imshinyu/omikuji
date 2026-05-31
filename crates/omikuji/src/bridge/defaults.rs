@@ -195,7 +195,7 @@ impl qobject::DefaultsBridge {
         self.as_mut().rust_mut().get_mut().suppress_reload_until =
             Some(Instant::now() + Duration::from_millis(600));
         if let Err(e) = self.as_ref().rust().data.save() {
-            eprintln!("[defaults] save failed: {}", e);
+            tracing::error!("save failed: {}", e);
         }
     }
 
@@ -223,9 +223,9 @@ impl qobject::DefaultsBridge {
         match watcher {
             Ok(w) => {
                 self.as_mut().rust_mut().get_mut().watcher = Some(w);
-                eprintln!("[defaults] watching {} via notify", defaults_path().display());
+                tracing::debug!("watching {} via notify", defaults_path().display());
             }
-            Err(e) => eprintln!("[defaults] failed to start watcher: {e}"),
+            Err(e) => tracing::error!("failed to start watcher: {e}"),
         }
     }
 }
@@ -292,7 +292,7 @@ fn apply_to_defaults(d: &mut Defaults, key: &str, value: &str) -> bool {
         "system.cpu_limit" => d.system.cpu_limit = Some(parse_u32(value)),
 
         _ => {
-            eprintln!("[defaults] unknown key: {}", key);
+            tracing::warn!("unknown key: {}", key);
             return false;
         }
     }
@@ -345,7 +345,7 @@ fn clear_in_defaults(d: &mut Defaults, key: &str) -> bool {
         "system.pulse_latency" => d.system.pulse_latency = None,
         "system.cpu_limit" => d.system.cpu_limit = None,
         _ => {
-            eprintln!("[defaults] unknown key to reset: {}", key);
+            tracing::warn!("unknown key to reset: {}", key);
             return false;
         }
     }

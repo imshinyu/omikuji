@@ -119,12 +119,12 @@ fn walk_manifests(root: &std::path::Path) -> Vec<GachaManifest> {
             let Ok(data) = std::fs::read_to_string(&manifest_path) else { continue };
             match serde_json::from_str::<GachaManifest>(&data) {
                 Ok(m) if m.schema_version == SCHEMA_VERSION => out.push(m),
-                Ok(m) => eprintln!(
-                    "[gachas] skipping {}: unsupported schema_version {}",
+                Ok(m) => tracing::warn!(
+                    "skipping {}: unsupported schema_version {}",
                     manifest_path.display(),
                     m.schema_version
                 ),
-                Err(e) => eprintln!("[gachas] skipping {}: {}", manifest_path.display(), e),
+                Err(e) => tracing::warn!("skipping {}: {}", manifest_path.display(), e),
             }
         }
     }

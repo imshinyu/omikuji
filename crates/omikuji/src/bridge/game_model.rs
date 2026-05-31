@@ -784,7 +784,7 @@ fn apply_field_to_game(game: &mut Game, key: &str, value: &str) -> bool {
         "system.cpu_limit" => game.system.cpu_limit = parse_u32(value),
 
         _ => {
-            eprintln!("unknown config key: {}", key);
+            tracing::warn!("unknown config key: {}", key);
             return false;
         }
     }
@@ -805,7 +805,7 @@ impl qobject::GameModel {
 
         // debug: log first data() call per game
         if role == ROLE_NAME {
-            eprintln!("[data] row={} name='{}' coverart='{}'",
+            tracing::debug!("row={} name='{}' coverart='{}'",
                 row, game.metadata.name,
                 media::resolve_image(&game.metadata.id, &game.metadata.coverart, &MediaType::Coverart));
         }
@@ -891,13 +891,13 @@ impl qobject::GameModel {
     // on failure, draft is preserved so the user can fix fields and retry (a bit useless most of the times but may it be a connection error)
     fn commit_new_game(mut self: Pin<&mut Self>) -> QString {
         let Some(mut game) = self.as_mut().rust_mut().get_mut().draft.take() else {
-            eprintln!("commit_new_game: no draft");
+            tracing::warn!("commit_new_game: no draft");
             return QString::default();
         };
 
         // exe is allowed empty for non-wine runners (steam, flatpak, etc)
         if game.metadata.name.trim().is_empty() {
-            eprintln!("commit_new_game: name is required");
+            tracing::warn!("commit_new_game: name is required");
             self.as_mut().rust_mut().get_mut().draft = Some(game);
             return QString::default();
         }
@@ -909,7 +909,7 @@ impl qobject::GameModel {
         let row = self.library.game.len() as i32;
 
         if let Err(e) = Library::save_game_static(&game) {
-            eprintln!("commit_new_game: failed to save: {}", e);
+            tracing::error!("commit_new_game: failed to save: {}", e);
             self.as_mut().rust_mut().get_mut().draft = Some(game);
             return QString::default();
         }
@@ -943,9 +943,9 @@ impl qobject::GameModel {
             .flatten()
             .collect();
             if fetched.is_empty() {
-                eprintln!("no media found for '{}'", game_name);
+                tracing::warn!("no media found for '{}'", game_name);
             } else {
-                eprintln!("fetched {} for '{}'", fetched.join(", "), game_name);
+                tracing::info!("fetched {} for '{}'", fetched.join(", "), game_name);
             }
         });
 
@@ -970,16 +970,16 @@ impl qobject::GameModel {
     fn commit_edit_game(mut self: Pin<&mut Self>, game_id: &QString) -> bool {
         let id = game_id.to_string();
         let Some(draft) = self.as_mut().rust_mut().get_mut().draft.take() else {
-            eprintln!("commit_edit_game: no draft");
+            tracing::warn!("commit_edit_game: no draft");
             return false;
         };
         let Some(idx) = self.library.game.iter().position(|g| g.metadata.id == id) else {
-            eprintln!("commit_edit_game: game id '{}' not found", id);
+            tracing::warn!("commit_edit_game: game id '{}' not found", id);
             self.as_mut().rust_mut().get_mut().draft = Some(draft);
             return false;
         };
         if let Err(e) = Library::save_game_static(&draft) {
-            eprintln!("commit_edit_game: failed to save: {}", e);
+            tracing::error!("commit_edit_game: failed to save: {}", e);
             self.as_mut().rust_mut().get_mut().draft = Some(draft);
             return false;
         }
@@ -1005,7 +1005,7 @@ impl qobject::GameModel {
 
         let lib = &mut self.as_mut().rust_mut().get_mut().library;
         if let Err(e) = lib.remove_game(&game_id) {
-            eprintln!("failed to remove game file: {}", e);
+            tracing::error!("failed to remove game file: {}", e);
         }
 
         media::remove_cached_media(&game_id);
@@ -1034,7 +1034,7 @@ impl qobject::GameModel {
                 QString::from(&*selected_id)
             }
             Err(e) => {
-                eprintln!("failed to reload library: {}", e);
+                tracing::error!("failed to reload library: {}", e);
                 QString::from(&*selected_id)
             }
         }
@@ -1170,15 +1170,15 @@ impl qobject::GameModel {
         let game = match self.library.game.iter().find(|g| g.metadata.id == id) {
             Some(g) => g.clone(),
             None => {
-                eprintln!("save_game: game with id '{}' not found", id);
+                tracing::warn!("save_game: game with id '{}' not found", id);
                 return false;
             }
         };
 
-        eprintln!("[save_game] saving game '{}' id '{}'", game.metadata.name, game.metadata.id);
+        tracing::debug!("saving game '{}' id '{}'", game.metadata.name, game.metadata.id);
 
         if let Err(e) = Library::save_game_static(&game) {
-            eprintln!("failed to save game config: {}", e);
+            tracing::error!("failed to save game config: {}", e);
             return false;
         }
         true
@@ -1187,7 +1187,7 @@ impl qobject::GameModel {
     fn refetch_media(mut self: Pin<&mut Self>, game_id: &QString) {
         let id = game_id.to_string();
         let Some(game) = self.library.game.iter().find(|g| g.metadata.id == id) else {
-            eprintln!("refetch_media: game id '{}' not found", id);
+            tracing::warn!("refetch_media: game id '{}' not found", id);
             return;
         };
         let name = game.metadata.name.clone();
@@ -1243,8 +1243,8 @@ impl qobject::GameModel {
             defaults.apply_sections_to(game, &sections, replace_maps);
             match Library::save_game_static(game) {
                 Ok(_) => written += 1,
-                Err(e) => eprintln!(
-                    "[apply_defaults] save failed for {}: {}",
+                Err(e) => tracing::error!(
+                    "apply_defaults save failed for {}: {}",
                     game.metadata.id, e
                 ),
             }
@@ -1288,7 +1288,7 @@ impl qobject::GameModel {
     fn duplicate_game(mut self: Pin<&mut Self>, index: i32) -> bool {
         let idx = index as usize;
         if idx >= self.library.game.len() {
-            eprintln!("duplicate_game: invalid index {}", index);
+            tracing::warn!("duplicate_game: invalid index {}", index);
             return false;
         }
 
@@ -1314,12 +1314,12 @@ impl qobject::GameModel {
                 self.as_mut().set_count(count);
                 self.as_mut().end_insert_rows();
 
-                eprintln!("duplicated game '{}' -> '{}' (id: {})",
+                tracing::info!("duplicated game '{}' -> '{}' (id: {})",
                     game.metadata.name, new_name, new_id);
                 true
             }
             Err(e) => {
-                eprintln!("duplicate_game failed: {}", e);
+                tracing::error!("duplicate_game failed: {}", e);
                 false
             }
         }

@@ -40,14 +40,14 @@ impl super::qobject::GameModel {
         let appid_str = appid.to_string();
         let name_str = name.to_string();
 
-        eprintln!("[steam_import] importing {} - {}", appid_str, name_str);
+        tracing::info!("importing {} - {}", appid_str, name_str);
 
         let already_imported = self.library.game.iter().any(|g| {
             g.metadata.id == appid_str
         });
 
         if already_imported {
-            eprintln!("[steam_import] already imported: {}", appid_str);
+            tracing::info!("already imported: {}", appid_str);
             return true;
         }
 
@@ -90,7 +90,7 @@ impl super::qobject::GameModel {
         let row = self.library.game.len() as i32;
 
         if let Err(e) = Library::save_game_static(&game) {
-            eprintln!("[steam_import] failed to save game: {}", e);
+            tracing::error!("failed to save game: {}", e);
             return false;
         }
 
@@ -106,9 +106,9 @@ impl super::qobject::GameModel {
             .collect();
 
             if fetched.is_empty() {
-                eprintln!("no steam media found for appid {}", appid_for_media);
+                tracing::warn!("no steam media found for appid {}", appid_for_media);
             } else {
-                eprintln!("fetched steam {} for appid {}", fetched.join(", "), appid_for_media);
+                tracing::info!("fetched steam {} for appid {}", fetched.join(", "), appid_for_media);
             }
         });
 
@@ -126,7 +126,7 @@ impl super::qobject::GameModel {
         self.as_mut().set_count(count);
         self.as_mut().end_insert_rows();
 
-        eprintln!("[steam_import] imported '{}' (steam appid: {})", name_str, appid_str);
+        tracing::info!("imported '{}' (steam appid: {})", name_str, appid_str);
         true
     }
 
@@ -136,7 +136,7 @@ impl super::qobject::GameModel {
             return;
         }
 
-        eprintln!("[steam_sync] syncing playtime from steam api...");
+        tracing::info!("syncing playtime from steam api...");
         let qt_thread = self.as_mut().qt_thread();
 
         // blocking reqwest inside #[tokio::main] panics; escape to an os thread, then marshal the mutation back via qt_thread.queue
@@ -147,26 +147,26 @@ impl super::qobject::GameModel {
                 let steam_data = match fetch_result {
                     Ok(d) => d,
                     Err(e) => {
-                        eprintln!("[steam_sync] failed: {}", e);
+                        tracing::error!("steam sync failed: {}", e);
                         return;
                     }
                 };
 
                 let library = &mut obj.as_mut().rust_mut().get_mut().library;
                 let (updated, total) = omikuji_core::steam::apply_playtime_data(library, &steam_data);
-                eprintln!("[steam_sync] updated {}/{} steam games", updated, total);
+                tracing::info!("updated {}/{} steam games", updated, total);
 
                 let mut saved = 0;
                 for game in &library.game {
                     if game.runner.runner_type == "steam" {
                         if let Err(e) = Library::save_game_static(game) {
-                            eprintln!("[steam_sync] failed to save {}: {}", game.metadata.id, e);
+                            tracing::error!("failed to save {}: {}", game.metadata.id, e);
                         } else {
                             saved += 1;
                         }
                     }
                 }
-                eprintln!("[steam_sync] saved {} games to disk", saved);
+                tracing::info!("saved {} games to disk", saved);
 
                 obj.as_mut().begin_reset_model();
                 obj.as_mut().end_reset_model();

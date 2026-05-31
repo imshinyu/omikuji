@@ -59,7 +59,7 @@ pub fn set_playing(game: &Game) {
             );
 
         if let Err(e) = send_activity(activity) {
-            eprintln!("[discord] set_playing failed: {}", e);
+            tracing::error!("set_playing failed: {}", e);
         }
     });
 }
@@ -67,7 +67,7 @@ pub fn set_playing(game: &Game) {
 pub fn clear() {
     std::thread::spawn(|| {
         if let Err(e) = clear_activity_inner() {
-            eprintln!("[discord] clear failed: {}", e);
+            tracing::error!("clear failed: {}", e);
         }
     });
 }

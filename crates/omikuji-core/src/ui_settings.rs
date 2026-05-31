@@ -192,30 +192,18 @@ impl UiSettings {
         if !path.exists() {
             let defaults = Self::default();
             if let Err(e) = defaults.save() {
-                eprintln!(
-                    "[ui_settings] couldn't write defaults to {}: {} — running in-memory only",
-                    path.display(),
-                    e
-                );
+                tracing::warn!("couldn't write defaults to {}: {} - running in-memory only", path.display(), e);
             }
             return defaults;
         }
 
         match std::fs::read_to_string(&path) {
             Ok(body) => toml::from_str::<UiSettings>(&body).unwrap_or_else(|e| {
-                eprintln!(
-                    "[ui_settings] couldn't parse {}: {} — using defaults",
-                    path.display(),
-                    e
-                );
+                tracing::warn!("couldn't parse {}: {} - using defaults", path.display(), e);
                 Self::default()
             }),
             Err(e) => {
-                eprintln!(
-                    "[ui_settings] couldn't read {}: {} — using defaults",
-                    path.display(),
-                    e
-                );
+                tracing::warn!("couldn't read {}: {} - using defaults", path.display(), e);
                 Self::default()
             }
         }

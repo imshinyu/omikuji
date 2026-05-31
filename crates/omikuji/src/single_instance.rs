@@ -48,7 +48,7 @@ pub async fn check() -> bool {
     let listener = match UnixListener::bind(&path) {
         Ok(l) => l,
         Err(e) => {
-            eprintln!("[single_instance] Failed to bind socket at {path:?}: {e}");
+            tracing::error!("failed to bind socket at {path:?}: {e}");
             return true;
         }
     };
@@ -69,13 +69,13 @@ pub async fn check() -> bool {
                             }
                             Ok(_) => {}
                             Err(e) => {
-                                eprintln!("[single_instance] Read error: {e}");
+                                tracing::error!("read error: {e}");
                             }
                         }
                     });
                 }
                 Err(e) => {
-                    eprintln!("[single_instance] Accept error: {e}");
+                    tracing::error!("accept error: {e}");
                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 }
             }

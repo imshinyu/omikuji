@@ -458,19 +458,19 @@ pub fn prepare_epic_prefix(game: &Game, wine_exe: &Path, env: &HashMap<String, S
     cmd.stderr(Stdio::null());
 
     if let Err(e) = cmd.status() {
-        eprintln!("[launch] epic registry spoof failed: {}", e);
+        tracing::error!("epic registry spoof failed: {}", e);
     }
 
     let dummy_src = runtime_dir().join("EpicGamesLauncher.exe");
     if dummy_src.exists() {
         let dest_dir = prefix.join("drive_c").join("windows").join("command");
         if let Err(e) = std::fs::create_dir_all(&dest_dir) {
-            eprintln!("[launch] failed to create command dir in prefix: {}", e);
+            tracing::error!("failed to create command dir in prefix: {}", e);
         } else {
             let dest_file = dest_dir.join("EpicGamesLauncher.exe");
             if !dest_file.exists()
                 && let Err(e) = std::fs::copy(&dummy_src, &dest_file) {
-                    eprintln!("[launch] failed to copy dummy EpicGamesLauncher.exe: {}", e);
+                    tracing::error!("failed to copy dummy EpicGamesLauncher.exe: {}", e);
                 }
         }
     }
@@ -647,7 +647,7 @@ pub fn resolve_prefix(game: &Game) -> PathBuf {
     let prefix = dir.join(folder);
     if !prefix.exists()
         && let Err(e) = std::fs::create_dir_all(&prefix) {
-            eprintln!("failed to create prefix dir: {}", e);
+            tracing::error!("failed to create prefix dir: {}", e);
         }
     prefix
 }

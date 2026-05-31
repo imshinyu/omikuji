@@ -212,7 +212,7 @@ impl qobject::EpicModel {
                     });
                 }
                 Err(e) => {
-                    eprintln!("[Epic] Login failed: {}", e);
+                    tracing::error!("login failed: {}", e);
                 }
             }
         });
@@ -224,7 +224,7 @@ impl qobject::EpicModel {
             {
                 let mut store = EPIC_STORE.lock().await;
                 if let Err(e) = store.logout().await {
-                    eprintln!("[Epic] logout failed: {}", e);
+                    tracing::error!("logout failed: {}", e);
                 }
             }
             let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::EpicModel>| {
@@ -301,7 +301,7 @@ impl qobject::EpicModel {
                     });
                 }
                 Err(e) => {
-                    eprintln!("[Epic] Refresh failed: {}", e);
+                    tracing::error!("refresh failed: {}", e);
                     let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::EpicModel>| {
                         obj.as_mut().set_is_refreshing(false);
                     });
@@ -320,7 +320,7 @@ impl qobject::EpicModel {
     ) -> QString {
         let i = index as usize;
         let Some(game) = self.rust().games.get(i).cloned() else {
-            eprintln!("[epic] enqueue_install: bad index {}", index);
+            tracing::error!("enqueue_install: bad index {}", index);
             return QString::default();
         };
 

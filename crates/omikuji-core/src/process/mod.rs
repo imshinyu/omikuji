@@ -66,17 +66,17 @@ impl ProcessManager {
         // steam manages its own prefix, skip dll injection for it
         if game.runner.runner_type != "steam"
             && let Err(e) = crate::dll_packs::inject_all(&game, &config.env) {
-                eprintln!("[process] dll pack injection failed: {} (launching anyway)", e);
+                tracing::warn!("dll pack injection failed: {} (launching anyway)", e);
             }
 
         // download saves before the game opens its save files
         if game.is_epic() && game.source.cloud_saves && !game.source.save_path.is_empty()
             && let Err(e) = crate::epic::sync_saves_download(&game.source.app_id, &game.source.save_path) {
-                eprintln!("[process] cloud save download failed: {} (launching anyway)", e);
+                tracing::warn!("cloud save download failed: {} (launching anyway)", e);
             }
 
         if !config.pre_launch_script.is_empty() {
-            eprintln!("[process] running pre-launch script: {}", config.pre_launch_script);
+            tracing::info!("running pre-launch script: {}", config.pre_launch_script);
             let status = std::process::Command::new("sh")
                 .arg("-c")
                 .arg(&config.pre_launch_script)
@@ -84,8 +84,8 @@ impl ProcessManager {
                 .envs(&config.env)
                 .status();
             match status {
-                Ok(s) if !s.success() => eprintln!("[process] pre-launch script exited with: {}", s),
-                Err(e) => eprintln!("[process] pre-launch script failed: {}", e),
+                Ok(s) if !s.success() => tracing::warn!("pre-launch script exited with: {}", s),
+                Err(e) => tracing::error!("pre-launch script failed: {}", e),
                 _ => {}
             }
         }
@@ -147,7 +147,7 @@ impl ProcessManager {
         let mut child = cmd.spawn()?;
         let pid = child.id();
 
-        eprintln!("[process] spawned pid: {}", pid);
+        tracing::info!("spawned pid: {}", pid);
 
         crate::discord::set_playing(&game);
 
@@ -234,7 +234,7 @@ impl ProcessManager {
                 // upload only after game has quit and released save files
                 if game.is_epic() && game.source.cloud_saves && !game.source.save_path.is_empty()
                     && let Err(e) = crate::epic::sync_saves_upload(&game.source.app_id, &game.source.save_path) {
-                        eprintln!("[process {}] cloud save upload failed: {}", pid, e);
+                        tracing::warn!(pid, "cloud save upload failed: {}", e);
                     }
             }
 
@@ -250,9 +250,9 @@ impl ProcessManager {
                 }
             }
 
-            eprintln!(
-                "[process {}] game '{}' exited with code {:?}, playtime: {}s",
-                pid, game_id, exit_code, playtime_secs
+            tracing::info!(
+                pid, "game '{}' exited with code {:?}, playtime: {}s",
+                game_id, exit_code, playtime_secs
             );
 
             crate::discord::clear();
@@ -260,7 +260,7 @@ impl ProcessManager {
             notify_game_exited(&game_id);
 
             if !post_exit_script.is_empty() {
-                eprintln!("[process {}] running post-exit script: {}", pid, post_exit_script);
+                tracing::info!(pid, "running post-exit script: {}", post_exit_script);
                 let status = std::process::Command::new("sh")
                     .arg("-c")
                     .arg(&post_exit_script)
@@ -268,8 +268,8 @@ impl ProcessManager {
                     .envs(&env)
                     .status();
                 match status {
-                    Ok(s) if !s.success() => eprintln!("[process {}] post-exit script exited with: {}", pid, s),
-                    Err(e) => eprintln!("[process {}] post-exit script failed: {}", pid, e),
+                    Ok(s) if !s.success() => tracing::warn!(pid, "post-exit script exited with: {}", s),
+                    Err(e) => tracing::error!(pid, "post-exit script failed: {}", e),
                     _ => {}
                 }
             }
@@ -279,14 +279,14 @@ impl ProcessManager {
                     game.metadata.playtime += playtime_secs as f64 / 3600.0;
                     game.metadata.last_played = chrono::Local::now().format("%b %-d, %Y").to_string();
                     if let Err(e) = crate::library::Library::save_game_static(&game) {
-                        eprintln!("[process {}] failed to save playtime: {}", pid, e);
+                        tracing::error!(pid, "failed to save playtime: {}", e);
                     }
                 }
                 Ok(None) => {
-                    eprintln!("[process {}] game '{}' not found on disk, skipping playtime save", pid, game_id);
+                    tracing::warn!(pid, "game '{}' not found on disk, skipping playtime save", game_id);
                 }
                 Err(e) => {
-                    eprintln!("[process {}] failed to load game for playtime save: {}", pid, e);
+                    tracing::error!(pid, "failed to load game for playtime save: {}", e);
                 }
             }
         });
@@ -470,7 +470,7 @@ pub fn stop_game(game_id: &str) -> bool {
         .map(|g| g.runner.runner_type == "steam")
         .unwrap_or(false);
 
-    eprintln!("[process] stopping game '{}' (pid: {})", game_id, pid);
+    tracing::info!("stopping game '{}' (pid: {})", game_id, pid);
 
     #[cfg(unix)]
     {
@@ -486,7 +486,7 @@ pub fn stop_game(game_id: &str) -> bool {
         let game_id = game_id.to_string();
         std::thread::spawn(move || {
             let term_pids = session_pids(sid);
-            eprintln!("[process] SIGTERM to {} session members", term_pids.len());
+            tracing::debug!("SIGTERM to {} session members", term_pids.len());
             for p in &term_pids {
                 let _ = kill(Pid::from_raw(*p as i32), Signal::SIGTERM);
             }
@@ -494,13 +494,13 @@ pub fn stop_game(game_id: &str) -> bool {
             for _ in 0..30 {
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 if !session_has_live_process(sid) {
-                    eprintln!("[process] game '{}' stopped gracefully", game_id);
+                    tracing::info!("game '{}' stopped gracefully", game_id);
                     return;
                 }
             }
 
             let kill_pids = session_pids(sid);
-            eprintln!("[process] game '{}' ignored SIGTERM, SIGKILLing {} survivors", game_id, kill_pids.len());
+            tracing::warn!("game '{}' ignored SIGTERM, SIGKILLing {} survivors", game_id, kill_pids.len());
             for p in &kill_pids {
                 let _ = kill(Pid::from_raw(*p as i32), Signal::SIGKILL);
             }
@@ -509,7 +509,7 @@ pub fn stop_game(game_id: &str) -> bool {
 
     #[cfg(not(unix))]
     {
-        eprintln!("[process] stop not implemented for non-unix platforms");
+        tracing::error!("stop not implemented for non-unix platforms");
         return false;
     }
 

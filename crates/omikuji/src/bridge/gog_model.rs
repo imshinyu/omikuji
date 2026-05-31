@@ -210,7 +210,7 @@ impl qobject::GogModel {
                     });
                 }
                 Err(e) => {
-                    eprintln!("[GOG] Login failed: {}", e);
+                    tracing::error!("login failed: {}", e);
                 }
             }
         });
@@ -297,7 +297,7 @@ impl qobject::GogModel {
                     });
                 }
                 Err(e) => {
-                    eprintln!("[GOG] Refresh failed: {}", e);
+                    tracing::error!("refresh failed: {}", e);
                     let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::GogModel>| {
                         obj.as_mut().set_is_refreshing(false);
                     });
@@ -316,7 +316,7 @@ impl qobject::GogModel {
     ) -> QString {
         let i = index as usize;
         let Some(game) = self.rust().games.get(i).cloned() else {
-            eprintln!("[gog] enqueue_install: bad index {}", index);
+            tracing::error!("enqueue_install: bad index {}", index);
             return QString::default();
         };
 

@@ -20,7 +20,7 @@ pub fn install() -> Result<()> {
     let path = eos_overlay_dir();
     std::fs::create_dir_all(&path)?;
 
-    eprintln!("[Epic] Installing EOS Overlay to {} ...", path.display());
+    tracing::info!("installing EOS overlay to {} ...", path.display());
     
     let status = Command::new(&bin)
         .arg("eos-overlay")
@@ -44,7 +44,7 @@ pub fn enable(prefix: &Path) -> Result<()> {
 
     let bin = find_legendary().ok_or_else(|| anyhow!("legendary not found"))?;
     
-    eprintln!("[Epic] Enabling EOS Overlay for prefix {} ...", prefix.display());
+    tracing::info!("enabling EOS overlay for prefix {} ...", prefix.display());
 
     let status = Command::new(&bin)
         .arg("eos-overlay")
@@ -63,7 +63,7 @@ pub fn enable(prefix: &Path) -> Result<()> {
 pub fn disable(prefix: &Path) -> Result<()> {
     let bin = find_legendary().ok_or_else(|| anyhow!("legendary not found"))?;
     
-    eprintln!("[Epic] Disabling EOS Overlay for prefix {} ...", prefix.display());
+    tracing::info!("disabling EOS overlay for prefix {} ...", prefix.display());
 
     let status = Command::new(&bin)
         .arg("eos-overlay")

@@ -320,7 +320,7 @@ pub fn disk_free_space(path: &str) -> u64 {
     match nix::sys::statvfs::statvfs(&p) {
         Ok(stat) => stat.fragment_size() * stat.blocks_available(),
         Err(e) => {
-            eprintln!("[disk_free_space] statvfs failed for {}: {}", p.display(), e);
+            tracing::error!("statvfs failed for {}: {}", p.display(), e);
             0
         }
     }

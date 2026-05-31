@@ -37,7 +37,7 @@ impl super::qobject::GameModel {
             let rt = match tokio::runtime::Runtime::new() {
                 Ok(r) => r,
                 Err(e) => {
-                    eprintln!("[gog_size] failed to create tokio runtime: {}", e);
+                    tracing::error!("failed to create tokio runtime: {}", e);
                     omikuji_core::install_sizes::push(omikuji_core::install_sizes::InstallSizeResult {
                         request_id: rid,
                         download_bytes: 0,
@@ -59,7 +59,7 @@ impl super::qobject::GameModel {
                     error: String::new(),
                 },
                 Err(e) => {
-                    eprintln!("[gog_size] error: {}", e);
+                    tracing::error!("install size fetch failed: {}", e);
                     omikuji_core::install_sizes::InstallSizeResult {
                         request_id: rid,
                         download_bytes: 0,
@@ -86,12 +86,12 @@ impl super::qobject::GameModel {
         let app_name_s = app_name.to_string();
 
         if self.library.game.iter().any(|g| g.metadata.id == app_name_s) {
-            eprintln!("[gog_import] already in library: {}", app_name_s);
+            tracing::info!("already in library: {}", app_name_s);
             return QString::from(&app_name_s);
         }
 
         let Some(info) = omikuji_core::gog::find_installed_info(&app_name_s) else {
-            eprintln!("[gog_import] no install info for {} — leaving library alone", app_name_s);
+            tracing::warn!("no install info for {} - leaving library alone", app_name_s);
             return QString::default();
         };
 
@@ -141,7 +141,7 @@ impl super::qobject::GameModel {
         let row = self.library.game.len() as i32;
 
         if let Err(e) = Library::save_game_static(&game) {
-            eprintln!("[gog_import] failed to save: {}", e);
+            tracing::error!("failed to save: {}", e);
             return QString::default();
         }
 
@@ -169,7 +169,7 @@ impl super::qobject::GameModel {
         self.as_mut().set_count(count);
         self.as_mut().end_insert_rows();
 
-        eprintln!("[gog_import] imported '{}' as id '{}'", title, app_name_s);
+        tracing::info!("imported '{}' as id '{}'", title, app_name_s);
         QString::from(&app_name_s)
     }
 
@@ -182,11 +182,11 @@ impl super::qobject::GameModel {
             .find(|g| g.metadata.id == id)
             .cloned()
         else {
-            eprintln!("[gog_uninstall] game '{}' not found", id);
+            tracing::error!("game '{}' not found", id);
             return false;
         };
         if game.source.kind != "gog" || game.source.app_id.is_empty() {
-            eprintln!("[gog_uninstall] game '{}' is not a gog entry", id);
+            tracing::error!("game '{}' is not a gog entry", id);
             return false;
         }
 
@@ -222,7 +222,7 @@ impl super::qobject::GameModel {
                         return;
                     }
             if let Err(e) = omikuji_core::gog::remove_install(&app_id) {
-                eprintln!("[gog_uninstall] registry remove failed: {}", e);
+                tracing::error!("registry remove failed: {}", e);
             }
             if let Ok(mut lib) = omikuji_core::library::Library::load() {
                 let _ = lib.remove_game(&game_id_owned);

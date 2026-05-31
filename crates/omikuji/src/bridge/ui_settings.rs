@@ -336,7 +336,7 @@ impl qobject::UiSettingsBridge {
         self.as_mut().rust_mut().get_mut().suppress_reload_until =
             Some(Instant::now() + Duration::from_millis(600));
         if let Err(e) = self.snapshot().save() {
-            eprintln!("[ui_settings] save failed: {}", e);
+            tracing::error!("save failed: {}", e);
         }
     }
 
@@ -502,7 +502,7 @@ impl qobject::UiSettingsBridge {
                 self.as_mut().persist();
                 self.as_mut().categories_changed();
             }
-            Err(e) => eprintln!("[ui_settings] bad categories json: {e}"),
+            Err(e) => tracing::error!("bad categories json: {e}"),
         }
     }
 
@@ -595,9 +595,9 @@ impl qobject::UiSettingsBridge {
         match watcher {
             Ok(w) => {
                 self.as_mut().rust_mut().get_mut().watcher = Some(w);
-                eprintln!("[ui_settings] watching {} via notify", ui_settings_path().display());
+                tracing::debug!("watching {} via notify", ui_settings_path().display());
             }
-            Err(e) => eprintln!("[ui_settings] failed to start watcher: {e}"),
+            Err(e) => tracing::error!("failed to start watcher: {e}"),
         }
     }
 }

@@ -60,8 +60,8 @@ impl DownloadSource for HoyoSource {
             .find(|t| crate::gachas::strategies::normalize_version(t) == target)
             .cloned();
         let Some(diff_key) = matched_tag else {
-            eprintln!(
-                "[hoyo::update] no diff path from {} to {} for {}, falling back to full reinstall",
+            tracing::warn!(
+                "no diff path from {} to {} for {}, falling back to full reinstall",
                 from_version, target_version, parsed.display_name
             );
             return self.install(entry).await;
@@ -227,8 +227,8 @@ impl DownloadSource for HoyoSource {
         super::set_installed_version(&parsed.game_slug, parsed.edition, &target_version);
         let total = total_bytes_arc.load(Ordering::SeqCst);
         report_progress(&entry.id, 100.0, total, total, 0);
-        eprintln!(
-            "[hoyo] installed {} {} v{}",
+        tracing::info!(
+            "installed {} {} v{}",
             parsed.display_name,
             parsed.edition.display_name(),
             target_version
@@ -295,7 +295,7 @@ async fn download_file_conn(
     let file_size = match probed_size {
         Some(s) if s > 0 => s,
         _ => {
-            eprintln!("[hoyo] range probe returned no size, falling back to single stream");
+            tracing::debug!("range probe returned no size, falling back to single stream");
             return download_file_simple(url, dest, 0, entry_id, base_offset, total_bytes, &client).await;
         }
     };
@@ -318,14 +318,14 @@ async fn download_file_conn(
     if completed.len() == pieces.len()
         && let Ok(meta) = std::fs::metadata(dest)
             && meta.len() == file_size {
-                eprintln!("[hoyo] already downloaded: {}", dest.display());
+                tracing::debug!("already downloaded: {}", dest.display());
                 return Ok(());
             }
 
     if completed.is_empty() && !parts_path(dest).exists()
         && let Ok(meta) = std::fs::metadata(dest)
             && meta.len() == file_size {
-                eprintln!("[hoyo] already downloaded (no journal, size matches): {}", dest.display());
+                tracing::debug!("already downloaded (no journal, size matches): {}", dest.display());
                 return Ok(());
             }
 
@@ -419,7 +419,7 @@ async fn download_file_conn(
                     );
                 }
                 if let Err(e) = mark_part_complete(&dest, idx) {
-                    eprintln!("[hoyo] failed to update parts journal for {}: {}", dest.display(), e);
+                    tracing::warn!("failed to update parts journal for {}: {}", dest.display(), e);
                 }
             }
         }));
@@ -497,17 +497,17 @@ async fn download_file_simple(
     let existing = std::fs::metadata(dest).map(|m| m.len()).unwrap_or(0);
     let mut req = client.get(url).header("Accept-Encoding", "identity");
     if existing > 0 {
-        eprintln!("[hoyo] resuming single-stream from {}", format_bytes(existing));
+        tracing::debug!("resuming single-stream from {}", format_bytes(existing));
         req = req.header("Range", format!("bytes={}-", existing));
     }
 
     let resp = req.send().await.map_err(|e| anyhow!("download failed: {e}"))?;
     let status = resp.status();
     let content_len = resp.content_length();
-    eprintln!("[hoyo] simple download: status={}, content-length={:?}, url={}", status, content_len, url);
+    tracing::debug!("simple download: status={}, content-length={:?}, url={}", status, content_len, url);
 
     if status == reqwest::StatusCode::RANGE_NOT_SATISFIABLE && existing > 0 {
-        eprintln!("[hoyo] already fully downloaded: {}", dest.display());
+        tracing::debug!("already fully downloaded: {}", dest.display());
         return Ok(());
     }
 
@@ -553,7 +553,7 @@ async fn download_file_simple(
     }
 
     file.flush().await?;
-    eprintln!("[hoyo] simple download done: {} chunks, {} bytes written", chunk_count, downloaded);
+    tracing::debug!("simple download done: {} chunks, {} bytes written", chunk_count, downloaded);
     Ok(())
 }
 
@@ -579,7 +579,7 @@ pub fn extract_archive(archive_path: &Path, dest: &Path, entry_id: Option<&str>)
                 return Ok(());
             }
             let stderr = String::from_utf8_lossy(&output.stderr);
-            eprintln!("[hoyo] unzip failed, falling back to 7z: {}", stderr.trim());
+            tracing::warn!("unzip failed, falling back to 7z: {}", stderr.trim());
         }
 
     let bin = which::which("7z")
@@ -775,9 +775,9 @@ pub fn cleanup_hoyo_state(app_id: &str, install_path: &Path, temp_dir: Option<&P
     let dir = scratch_dir_for(app_id, install_path, temp_dir);
     if dir.exists() {
         if let Err(e) = std::fs::remove_dir_all(&dir) {
-            eprintln!("[hoyo] failed to clean temp dir {}: {}", dir.display(), e);
+            tracing::warn!("failed to clean temp dir {}: {}", dir.display(), e);
         } else {
-            eprintln!("[hoyo] cleaned temp dir {}", dir.display());
+            tracing::debug!("cleaned temp dir {}", dir.display());
         }
     }
 
@@ -788,13 +788,13 @@ pub fn cleanup_hoyo_state(app_id: &str, install_path: &Path, temp_dir: Option<&P
         .join(format!(".omikuji-update-{}", safe_id));
     if update_scratch.exists() {
         if let Err(e) = std::fs::remove_dir_all(&update_scratch) {
-            eprintln!(
-                "[hoyo] failed to clean update scratch {}: {}",
+            tracing::warn!(
+                "failed to clean update scratch {}: {}",
                 update_scratch.display(),
                 e
             );
         } else {
-            eprintln!("[hoyo] cleaned update scratch {}", update_scratch.display());
+            tracing::debug!("cleaned update scratch {}", update_scratch.display());
         }
     }
 }

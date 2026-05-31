@@ -294,7 +294,7 @@ impl Library {
 
             match Self::load_game(&path) {
                 Ok(game) => games.push(game),
-                Err(e) => eprintln!("failed to load {}: {}", path.display(), e),
+                Err(e) => tracing::warn!("failed to load game {}: {}", path.display(), e),
             }
         }
 
