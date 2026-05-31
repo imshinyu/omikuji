@@ -60,7 +60,7 @@ impl ProcessManager {
 
         if game.is_epic() {
             let wine_exe = config.env.get("WINE").map(std::path::PathBuf::from).unwrap_or_else(|| std::path::PathBuf::from("wine"));
-            let _ = crate::launch::prepare_epic_prefix(&game, &wine_exe);
+            let _ = crate::launch::prepare_epic_prefix(&game, &wine_exe, &config.env);
         }
 
         // steam manages its own prefix, skip dll injection for it

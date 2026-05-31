@@ -152,7 +152,21 @@ Item {
                         to: 999
                         stepSize: 1
                         value: config["graphics.gamescope.fps"] || 0
+                        zeroPlaceholder: "—"
                         onValueChanged: updateField("graphics.gamescope.fps", value)
+                    }
+                }
+
+                SettingsRow {
+                    label: "Refresh Rate"
+                    width: parent.width
+                    M3SpinBox {
+                        from: 0
+                        to: 999
+                        stepSize: 1
+                        value: config["graphics.gamescope.refresh_rate"] || 0
+                        zeroPlaceholder: "—"
+                        onValueChanged: updateField("graphics.gamescope.refresh_rate", value)
                     }
                 }
 

@@ -684,6 +684,7 @@ fn populate_config_map(game: &Game, m: &mut QMap<QMapPair_QString_QVariant>) {
     put_int!("graphics.gamescope.game_width", game.graphics.gamescope.game_width);
     put_int!("graphics.gamescope.game_height", game.graphics.gamescope.game_height);
     put_int!("graphics.gamescope.fps", game.graphics.gamescope.fps);
+    put_int!("graphics.gamescope.refresh_rate", game.graphics.gamescope.refresh_rate);
     put_bool!("graphics.gamescope.fullscreen", game.graphics.gamescope.fullscreen);
     put_bool!("graphics.gamescope.borderless", game.graphics.gamescope.borderless);
     put_bool!("graphics.gamescope.integer_scaling", game.graphics.gamescope.integer_scaling);
@@ -769,6 +770,7 @@ fn apply_field_to_game(game: &mut Game, key: &str, value: &str) -> bool {
         "graphics.gamescope.game_width" => game.graphics.gamescope.game_width = parse_u32(value),
         "graphics.gamescope.game_height" => game.graphics.gamescope.game_height = parse_u32(value),
         "graphics.gamescope.fps" => game.graphics.gamescope.fps = parse_u32(value),
+        "graphics.gamescope.refresh_rate" => game.graphics.gamescope.refresh_rate = parse_u32(value),
         "graphics.gamescope.fullscreen" => game.graphics.gamescope.fullscreen = parse_bool(value),
         "graphics.gamescope.borderless" => game.graphics.gamescope.borderless = parse_bool(value),
         "graphics.gamescope.integer_scaling" => game.graphics.gamescope.integer_scaling = parse_bool(value),

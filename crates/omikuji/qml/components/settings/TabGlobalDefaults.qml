@@ -500,12 +500,35 @@ Item {
                             to: 999
                             stepSize: 1
                             value: root.cfg["graphics.gamescope.fps"] || 0
+                            zeroPlaceholder: "—"
                             onValueChanged: root.update("graphics.gamescope.fps", value)
                         }
                     }
                     ResetBadge {
                         anchors.verticalCenter: parent.verticalCenter
                         fieldKey: "graphics.gamescope.fps"
+                    }
+                }
+
+                Row {
+                    width: parent.width
+                    spacing: 8
+                    SettingsRow {
+                        label: "Refresh Rate"
+                        width: parent.width - 32
+                        M3SpinBox {
+                            id: refreshRateSpinBox
+                            from: 0
+                            to: 999
+                            stepSize: 1
+                            value: root.cfg["graphics.gamescope.refresh_rate"] || 0
+                            zeroPlaceholder: "—"
+                            onValueChanged: root.update("graphics.gamescope.refresh_rate", value)
+                        }
+                    }
+                    ResetBadge {
+                        anchors.verticalCenter: parent.verticalCenter
+                        fieldKey: "graphics.gamescope.refresh_rate"
                     }
                 }
 

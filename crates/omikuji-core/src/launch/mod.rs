@@ -274,9 +274,12 @@ fn build_gamescope_args(game: &Game) -> Vec<String> {
         args.push(gs.game_height.to_string());
     }
 
-    if gs.fps > 0 {
+    if gs.refresh_rate > 0 {
         args.push("-r".to_string());
-        args.push(gs.fps.to_string());
+        args.push(gs.refresh_rate.to_string());
+    }
+
+    if gs.fps > 0 {
         args.push("--framerate-limit".to_string());
         args.push(gs.fps.to_string());
     }
@@ -440,15 +443,19 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path) -> HashMap<
     env
 }
 
-pub fn prepare_epic_prefix(game: &Game, wine_exe: &Path) -> Result<()> {
+pub fn prepare_epic_prefix(game: &Game, wine_exe: &Path, env: &HashMap<String, String>) -> Result<()> {
     let prefix = resolve_prefix(game);
 
     // spoof the epic launcher registry key so games that check for it dont bail early
-    let mut cmd = std::process::Command::new(wine_exe);
-    cmd.env("WINEPREFIX", prefix.to_string_lossy().to_string());
+    let mut cmd = Command::new(wine_exe);
+    cmd.env_clear();
+    cmd.envs(env);
+    if WineVariant::from_version(&game.wine.version) == WineVariant::Proton {
+        cmd.env("PROTON_VERB", "waitforexitandrun");
+    }
     cmd.args(["reg", "add", "HKEY_CLASSES_ROOT\\com.epicgames.launcher", "/f"]);
-    cmd.stdout(std::process::Stdio::null());
-    cmd.stderr(std::process::Stdio::null());
+    cmd.stdout(Stdio::null());
+    cmd.stderr(Stdio::null());
 
     if let Err(e) = cmd.status() {
         eprintln!("[launch] epic registry spoof failed: {}", e);

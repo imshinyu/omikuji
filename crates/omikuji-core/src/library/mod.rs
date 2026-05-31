@@ -208,6 +208,8 @@ pub struct GamescopeConfig {
     #[serde(default)]
     pub fps: u32,
     #[serde(default)]
+    pub refresh_rate: u32,
+    #[serde(default)]
     pub fullscreen: bool,
     #[serde(default)]
     pub borderless: bool,

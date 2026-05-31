@@ -140,6 +140,7 @@ impl qobject::DefaultsBridge {
         put_int!("graphics.gamescope.game_width", gs.game_width.unwrap_or(0));
         put_int!("graphics.gamescope.game_height", gs.game_height.unwrap_or(0));
         put_int!("graphics.gamescope.fps", gs.fps.unwrap_or(0));
+        put_int!("graphics.gamescope.refresh_rate", gs.refresh_rate.unwrap_or(0));
         put_bool!("graphics.gamescope.fullscreen", gs.fullscreen.unwrap_or(false));
         put_bool!("graphics.gamescope.borderless", gs.borderless.unwrap_or(false));
         put_bool!("graphics.gamescope.integer_scaling", gs.integer_scaling.unwrap_or(false));
@@ -277,6 +278,7 @@ fn apply_to_defaults(d: &mut Defaults, key: &str, value: &str) -> bool {
         "graphics.gamescope.game_width" => d.graphics.gamescope.game_width = Some(parse_u32(value)),
         "graphics.gamescope.game_height" => d.graphics.gamescope.game_height = Some(parse_u32(value)),
         "graphics.gamescope.fps" => d.graphics.gamescope.fps = Some(parse_u32(value)),
+        "graphics.gamescope.refresh_rate" => d.graphics.gamescope.refresh_rate = Some(parse_u32(value)),
         "graphics.gamescope.fullscreen" => d.graphics.gamescope.fullscreen = Some(parse_bool(value)),
         "graphics.gamescope.borderless" => d.graphics.gamescope.borderless = Some(parse_bool(value)),
         "graphics.gamescope.integer_scaling" => d.graphics.gamescope.integer_scaling = Some(parse_bool(value)),
@@ -331,6 +333,7 @@ fn clear_in_defaults(d: &mut Defaults, key: &str) -> bool {
         "graphics.gamescope.game_width" => d.graphics.gamescope.game_width = None,
         "graphics.gamescope.game_height" => d.graphics.gamescope.game_height = None,
         "graphics.gamescope.fps" => d.graphics.gamescope.fps = None,
+        "graphics.gamescope.refresh_rate" => d.graphics.gamescope.refresh_rate = None,
         "graphics.gamescope.fullscreen" => d.graphics.gamescope.fullscreen = None,
         "graphics.gamescope.borderless" => d.graphics.gamescope.borderless = None,
         "graphics.gamescope.integer_scaling" => d.graphics.gamescope.integer_scaling = None,
@@ -394,6 +397,7 @@ fn collect_set_keys(d: &Defaults) -> Vec<String> {
     if dgs.game_width.is_some_and(|v| v != gs_def.game_width) { k.push("graphics.gamescope.game_width".into()); }
     if dgs.game_height.is_some_and(|v| v != gs_def.game_height) { k.push("graphics.gamescope.game_height".into()); }
     if dgs.fps.is_some_and(|v| v != gs_def.fps) { k.push("graphics.gamescope.fps".into()); }
+    if dgs.refresh_rate.is_some_and(|v| v != gs_def.refresh_rate) { k.push("graphics.gamescope.refresh_rate".into()); }
     if dgs.fullscreen.is_some_and(|v| v != gs_def.fullscreen) { k.push("graphics.gamescope.fullscreen".into()); }
     if dgs.borderless.is_some_and(|v| v != gs_def.borderless) { k.push("graphics.gamescope.borderless".into()); }
     if dgs.integer_scaling.is_some_and(|v| v != gs_def.integer_scaling) { k.push("graphics.gamescope.integer_scaling".into()); }
