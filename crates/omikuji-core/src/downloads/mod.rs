@@ -2,6 +2,7 @@ pub mod gogdl;
 pub mod legendary;
 pub mod source;
 
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
@@ -165,6 +166,60 @@ lazy_static! {
     };
 }
 
+lazy_static! {
+    static ref MULTI: MultiProgress = MultiProgress::new();
+    static ref BARS: Mutex<HashMap<String, ProgressBar>> = Mutex::new(HashMap::new());
+}
+
+fn bar_style() -> ProgressStyle {
+    ProgressStyle::with_template("\n{msg}\n  {prefix}  [{bar:30}]  {bytes}/{total_bytes}  {bytes_per_sec}\n")
+        .unwrap()
+        .progress_chars("▰▰▱")
+}
+
+fn bar_style_no_total() -> ProgressStyle {
+    ProgressStyle::with_template("\n{msg}\n  {prefix}  [{bar:30}]  {bytes}  {bytes_per_sec}\n")
+        .unwrap()
+        .progress_chars("▰▰▱")
+}
+
+fn finished_style() -> ProgressStyle {
+    ProgressStyle::with_template("\n{msg}\n")
+        .unwrap()
+}
+
+fn bold(s: &str) -> String {
+    format!("\x1b[1m{}\x1b[0m", s)
+}
+
+fn get_or_create_bar(id: &str, display_name: &str, total: u64) -> ProgressBar {
+    let mut bars = BARS.lock().unwrap();
+    if let Some(bar) = bars.get(id) {
+        if total > 0 && bar.length() != Some(total) {
+            bar.set_length(total);
+            bar.set_style(bar_style());
+        }
+        return bar.clone();
+    }
+    let bar = if total > 0 {
+        MULTI.add(ProgressBar::new(total).with_style(bar_style()))
+    } else {
+        MULTI.add(ProgressBar::new(0).with_style(bar_style_no_total()))
+    };
+    bar.set_message(bold(display_name));
+    bar.set_prefix("Downloading");
+    bars.insert(id.to_string(), bar.clone());
+    bar
+}
+
+fn finish_bar(id: &str, name: &str, status: &str) {
+    let mut bars = BARS.lock().unwrap();
+    if let Some(bar) = bars.remove(id) {
+        bar.set_style(finished_style());
+        bar.finish_with_message(format!("{} - {}", bold(name), status));
+    }
+}
+
 pub fn manager() -> Arc<DownloadManager> {
     MANAGER.clone()
 }
@@ -288,6 +343,7 @@ impl DownloadManager {
                 inner.events.push_back(DownloadEvent::Removed(id.to_string()));
                 save_queue(&inner.entries);
                 drop(inner);
+                finish_bar(id, &entry_snapshot.display_name, "cancelled");
                 if matches!(entry_snapshot.kind, DownloadKind::Install)
                     && entry_snapshot.destructive_cleanup
                 {
@@ -299,6 +355,8 @@ impl DownloadManager {
                 inner.entries.remove(idx);
                 inner.events.push_back(DownloadEvent::Removed(id.to_string()));
                 save_queue(&inner.entries);
+                drop(inner);
+                finish_bar(id, &entry_snapshot.display_name, "removed");
             }
         }
     }
@@ -450,6 +508,7 @@ impl DownloadManager {
                         cleanup_install_dir_blocking(&entry.install_path);
                     }
                     cleanup_source_state(&entry);
+                    finish_bar(&entry.id, &entry.display_name, "cancelled");
                     let mgr = MANAGER.clone();
                     let mut inner = mgr.inner.lock().unwrap();
                     if let Some(idx) = inner.entries.iter().position(|e| e.id == entry.id) {
@@ -629,6 +688,7 @@ pub fn report_progress(id: &str, progress: f64, bytes_downloaded: u64, bytes_tot
     let mut inner = mgr.inner.lock().unwrap();
 
     let mut became_downloading = false;
+    let display_name = inner.entries.iter().find(|e| e.id == id).map(|e| e.display_name.clone());
     if let Some(e) = inner.entries.iter_mut().find(|e| e.id == id) {
         if e.status == DownloadStatus::Starting {
             e.status = DownloadStatus::Downloading;
@@ -654,6 +714,11 @@ pub fn report_progress(id: &str, progress: f64, bytes_downloaded: u64, bytes_tot
         bytes_total,
         speed_bps,
     });
+
+    drop(inner);
+    let name = display_name.unwrap_or_default();
+    let bar = get_or_create_bar(id, &name, bytes_total);
+    bar.set_position(bytes_downloaded);
 }
 
 pub fn check_control(id: &str) -> ControlSignal {
@@ -668,18 +733,37 @@ pub fn set_status(id: &str, status: DownloadStatus) {
     if let Some(e) = inner.entries.iter_mut().find(|e| e.id == id) {
         e.status = status.clone();
     }
-    inner.events.push_back(DownloadEvent::StatusChanged(id.to_string(), status));
+    inner.events.push_back(DownloadEvent::StatusChanged(id.to_string(), status.clone()));
     save_queue(&inner.entries);
+    drop(inner);
+
+    let prefix = match status {
+        DownloadStatus::Downloading => "Downloading",
+        DownloadStatus::Extracting => "Extracting",
+        DownloadStatus::Patching => "Patching",
+        DownloadStatus::Starting => "Starting",
+        DownloadStatus::Paused => "Paused",
+        DownloadStatus::Queued => "Queued",
+        _ => return,
+    };
+    let bars = BARS.lock().unwrap();
+    if let Some(bar) = bars.get(id) {
+        bar.set_prefix(prefix);
+    }
 }
 
 fn set_failed(id: &str, err: String) {
     let mgr = MANAGER.clone();
     let mut inner = mgr.inner.lock().unwrap();
+    let name = inner.entries.iter().find(|e| e.id == id).map(|e| e.display_name.clone());
     if let Some(e) = inner.entries.iter_mut().find(|e| e.id == id) {
         e.status = DownloadStatus::Failed(err.clone());
     }
     inner.events.push_back(DownloadEvent::Failed(id.to_string(), err));
     save_queue(&inner.entries);
+    drop(inner);
+    let label = name.unwrap_or_default();
+    finish_bar(id, &label, "failed");
 }
 
 fn complete(entry: &DownloadEntry) {
@@ -699,6 +783,8 @@ fn complete(entry: &DownloadEntry) {
         runner_version: entry.runner_version.clone(),
     });
     save_queue(&inner.entries);
+    drop(inner);
+    finish_bar(&entry.id, &entry.display_name, "done");
 }
 
 // active entries are saved to cache/downloads/queue.json so paused/queued
