@@ -22,6 +22,17 @@
     </p>
   </description>
   <releases>
+    <release version="0.2.3" date="2026-06-17">
+      <description>
+        <ul>
+          <li>Now games symlink on run their icon in ~/.local/share/icons/hicolor/256x256/apps/</li>
+          <li>Added a create steam shortcut button.</li>
+          <li>Fixed cli target resolution.</li>
+          <li>Flatpak build now doesn't hide various options from permissions lock, just warn about it.</li>
+          <li>Discord's RPC now shows the game name as the activity title.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.2" date="2026-06-05">
       <description>
         <ul>
