@@ -36,7 +36,7 @@ pub fn delete_version(source: &ArchiveSource, tag: &str) -> Result<()> {
     archive_source::delete_version(source, &runners_dir(), tag)
 }
 
-pub fn list_installed_runners() -> Vec<String> {
+pub fn list_installed_runners() -> Vec<(String, String)> {
     let mut runners = vec![];
     
     if let Ok(entries) = std::fs::read_dir(runners_dir()) {
@@ -52,22 +52,23 @@ pub fn list_installed_runners() -> Vec<String> {
                     || path.join("proton").exists();
                 
                 if has_wine || has_proton {
-                    runners.push(name.to_string());
+                    runners.push((name.to_string(), String::new()));
                 }
             }
         }
     }
     
-    for (name, _) in crate::steam::local::iter_steam_protons() {
-        runners.push(format!("steam:{name}"));
+    for (name, path) in crate::steam::local::iter_steam_protons() {
+        let label = crate::steam::local::proton_display_name(&path).unwrap_or_default();
+        runners.push((format!("steam:{name}"), label));
     }
 
     for name in system_wine_paths().keys() {
-        runners.push(format!("system:{name}"));
+        runners.push((format!("system:{name}"), String::new()));
     }
 
     if which::which("wine").is_ok() {
-        runners.push("system".to_string());
+        runners.push(("system".to_string(), String::new()));
     }
 
     runners.sort();

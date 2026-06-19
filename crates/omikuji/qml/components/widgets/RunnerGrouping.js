@@ -19,11 +19,11 @@ function compareDesc(a, b) {
     return a.value < b.value ? 1 : (a.value > b.value ? -1 : 0)
 }
 
-function displayLabel(raw) {
-    if (raw === "system") return "System Wine"
-    if (raw.indexOf("system:") === 0) return raw.substring(7) + " (System)"
-    if (raw.indexOf("steam:") === 0) return raw.substring(6) + " (Steam)"
-    return raw
+function displayLabel(value, name) {
+    if (value === "system") return "System Wine"
+    if (value.indexOf("system:") === 0) return value.substring(7) + " (System)"
+    if (value.indexOf("steam:") === 0) return (name || value.substring(6)) + " (Steam)"
+    return name || value
 }
 
 function isProton(name) {
@@ -35,9 +35,11 @@ function groupRunners(rawList, opts) {
     var proton = []
     var wine = []
     for (var i = 0; i < rawList.length; i++) {
-        var v = rawList[i]
-        var entry = { label: displayLabel(v), value: v }
-        if (isProton(v)) proton.push(entry)
+        var raw = rawList[i]
+        var value = Array.isArray(raw) ? raw[0] : raw
+        var name = Array.isArray(raw) ? raw[1] : ""
+        var entry = { label: displayLabel(value, name), value: value }
+        if (isProton(value)) proton.push(entry)
         else wine.push(entry)
     }
     proton.sort(compareDesc)

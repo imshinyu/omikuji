@@ -81,7 +81,7 @@ pub fn parse_vdf(content: &str) -> HashMap<String, VdfValue> {
                 let key = after_first_quote[..key_end_rel].to_string();
                 let after_key = &after_first_quote[key_end_rel + 1..].trim();
 
-                if after_key.is_empty() {
+                if after_key.is_empty() || after_key.starts_with("//") {
                     i += 1;
                     while i < lines.len() {
                         let next_trimmed = lines[i].trim();
@@ -463,6 +463,21 @@ fn push_protons_from(parent: &Path, out: &mut Vec<(String, PathBuf)>) {
             out.push((name.to_string(), p));
         }
     }
+}
+
+pub fn proton_display_name(dir: &Path) -> Option<String> {
+    let content = fs::read_to_string(dir.join("compatibilitytool.vdf")).ok()?;
+    let vdf = parse_vdf(&content);
+    let tools = vdf
+        .get("compatibilitytools")?
+        .as_object()?
+        .get("compat_tools")?
+        .as_object()?;
+    let (_, tool) = tools.iter().next()?;
+    tool.as_object()?
+        .get("display_name")?
+        .as_str()
+        .map(str::to_string)
 }
 
 pub fn find_proton_install(name: &str) -> Option<PathBuf> {
