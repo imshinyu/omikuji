@@ -17,7 +17,7 @@ Rectangle {
 
     anchors.fill: parent
     color: theme.surface
-    radius: 12
+    radius: theme.radius.md
     visible: opacity > 0
     opacity: panelActive ? 1 : 0
 

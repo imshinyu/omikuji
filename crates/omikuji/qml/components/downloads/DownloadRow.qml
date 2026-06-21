@@ -46,7 +46,7 @@ Item {
             transparentBorder: true
             horizontalOffset: 0
             verticalOffset: 2
-            radius: 12
+            radius: theme.radius.md
             samples: 25
             color: Qt.rgba(0, 0, 0, 0.28)
         }
@@ -60,7 +60,7 @@ Item {
                 Layout.preferredWidth: 184
                 Layout.preferredHeight: 84
                 radius: 10
-                color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.05)
+                color: theme.alpha(theme.text, 0.05)
                 clip: true
 
                 Image {
@@ -134,10 +134,10 @@ Item {
                     wavy: row.isActive
                     animate: row.isActive && row.pageVisible
                     fillColor: row.status === "Failed" ? "#e06060"
-                        : row.isPaused ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.3)
+                        : row.isPaused ? theme.alpha(theme.text, 0.3)
                         : theme.accent
                     handleColor: fillColor
-                    trackColor: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.18)
+                    trackColor: theme.alpha(theme.text, 0.18)
                 }
             }
 

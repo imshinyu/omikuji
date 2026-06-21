@@ -64,7 +64,7 @@ Item {
                     placeholder: '--skip-intro --windowed --name "John Doe"'
                     text: config["launch.args"] || ""
                     width: parent.width
-                    onTextEdited: updateField("launch.args", text)
+                    onTextEdited: (t) => updateField("launch.args", t)
                 }
 
                 M3TextField {
@@ -72,7 +72,7 @@ Item {
                     placeholder: "prepended to command (e.g. custom wrapper)"
                     text: config["launch.command_prefix"] || ""
                     width: parent.width
-                    onTextEdited: updateField("launch.command_prefix", text)
+                    onTextEdited: (t) => updateField("launch.command_prefix", t)
                 }
             }
 
@@ -416,7 +416,7 @@ Item {
                 placeholder: '--skip-intro --windowed'
                 text: config["launch.args"] || ""
                 width: parent.width
-                onTextEdited: updateField("launch.args", text)
+                onTextEdited: (t) => updateField("launch.args", t)
             }
 
             M3TextField {
@@ -424,7 +424,7 @@ Item {
                 placeholder: "prepended to command (e.g. custom wrapper)"
                 text: config["launch.command_prefix"] || ""
                 width: parent.width
-                onTextEdited: updateField("launch.command_prefix", text)
+                onTextEdited: (t) => updateField("launch.command_prefix", t)
             }
         }
 
@@ -439,7 +439,7 @@ Item {
                 placeholder: "e.g. 235320"
                 text: config["source.app_id"] || ""
                 width: parent.width
-                onTextEdited: updateField("source.app_id", text)
+                onTextEdited: (t) => updateField("source.app_id", t)
             }
 
             M3TextField {
@@ -447,7 +447,7 @@ Item {
                 placeholder: '--skip-intro --windowed'
                 text: config["launch.args"] || ""
                 width: parent.width
-                onTextEdited: updateField("launch.args", text)
+                onTextEdited: (t) => updateField("launch.args", t)
             }
         }
 
@@ -462,7 +462,7 @@ Item {
                 placeholder: "e.g. com.valvesoftware.Steam"
                 text: config["source.app_id"] || ""
                 width: parent.width
-                onTextEdited: updateField("source.app_id", text)
+                onTextEdited: (t) => updateField("source.app_id", t)
             }
 
             M3TextField {
@@ -470,7 +470,7 @@ Item {
                 placeholder: "passed to the application"
                 text: config["launch.args"] || ""
                 width: parent.width
-                onTextEdited: updateField("launch.args", text)
+                onTextEdited: (t) => updateField("launch.args", t)
             }
         }
     }

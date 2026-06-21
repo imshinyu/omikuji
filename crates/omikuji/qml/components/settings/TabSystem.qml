@@ -108,7 +108,7 @@ Item {
                         text: (config["graphics.gamescope.width"] || 0) > 0
                             ? String(config["graphics.gamescope.width"]) : ""
                         width: (parent.width - 12) / 2
-                        onTextEdited: updateField("graphics.gamescope.width", text || "0")
+                        onTextEdited: (t) => updateField("graphics.gamescope.width", t || "0")
                     }
 
                     M3TextField {
@@ -117,7 +117,7 @@ Item {
                         text: (config["graphics.gamescope.height"] || 0) > 0
                             ? String(config["graphics.gamescope.height"]) : ""
                         width: (parent.width - 12) / 2
-                        onTextEdited: updateField("graphics.gamescope.height", text || "0")
+                        onTextEdited: (t) => updateField("graphics.gamescope.height", t || "0")
                     }
                 }
 
@@ -131,7 +131,7 @@ Item {
                         text: (config["graphics.gamescope.game_width"] || 0) > 0
                             ? String(config["graphics.gamescope.game_width"]) : ""
                         width: (parent.width - 12) / 2
-                        onTextEdited: updateField("graphics.gamescope.game_width", text || "0")
+                        onTextEdited: (t) => updateField("graphics.gamescope.game_width", t || "0")
                     }
 
                     M3TextField {
@@ -140,7 +140,7 @@ Item {
                         text: (config["graphics.gamescope.game_height"] || 0) > 0
                             ? String(config["graphics.gamescope.game_height"]) : ""
                         width: (parent.width - 12) / 2
-                        onTextEdited: updateField("graphics.gamescope.game_height", text || "0")
+                        onTextEdited: (t) => updateField("graphics.gamescope.game_height", t || "0")
                     }
                 }
 

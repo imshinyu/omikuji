@@ -11,8 +11,8 @@ Rectangle {
 
     signal retryRequested()
 
-    radius: 12
-    color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.05)
+    radius: theme.radius.md
+    color: theme.alpha(theme.text, 0.05)
     implicitHeight: 56
 
     readonly property string status: entry.status || "missing"
@@ -70,7 +70,7 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 2
                 radius: 1
-                color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.12)
+                color: theme.alpha(theme.text, 0.12)
                 visible: row.isActive
                 Rectangle {
                     anchors.left: parent.left

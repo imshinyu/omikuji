@@ -21,9 +21,9 @@ Item {
         radius: width / 2
         visible: root.primary
         color: hoverArea.containsPress
-            ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.3)
+            ? theme.alpha(theme.accent, 0.3)
             : (hoverArea.containsMouse && !root._suppressHover)
-                ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2)
+                ? theme.alpha(theme.accent, 0.2)
                 : "transparent"
         Behavior on color { ColorAnimation { duration: 100 } }
     }

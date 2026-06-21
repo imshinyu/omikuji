@@ -117,7 +117,6 @@ Item {
                             text: root._hasOverride(modelData.key) ? root.overrides[modelData.key] : "system"
                             color: root._hasOverride(modelData.key) ? theme.text : theme.textSubtle
                             font.pixelSize: 13
-                            font.family: "monospace"
                         }
 
                         IconButton {

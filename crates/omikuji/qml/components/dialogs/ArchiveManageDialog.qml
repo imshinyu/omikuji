@@ -3,11 +3,10 @@ import QtQuick.Controls
 
 import "../widgets"
 
-Item {
+DialogCard {
     id: root
 
     property var archiveManager: null
-    // root-owned map keyed by category/source/tag, install runs detached so reopening mid-download still reflects the live state
     property var activeInstalls: ({})
 
     property string category: ""
@@ -23,9 +22,10 @@ Item {
     signal closed()
     signal versionDeleted(string category, string sourceName, string tag)
 
-    anchors.fill: parent
-    visible: false
-    z: 2000
+    maxWidth: 720
+    scrollable: false
+    fillHeight: true
+    title: ""
 
     function show(cat, name, kind) {
         category = cat
@@ -35,13 +35,13 @@ Item {
         installedTags = ({})
         errorMessage = ""
         refreshInstalled()
-        visible = true
+        open()
         fetchVersionsNow()
     }
 
     function hide() {
-        visible = false
         root.closed()
+        close()
     }
 
     function refreshInstalled() {
@@ -65,9 +65,19 @@ Item {
         archiveManager.fetchVersions(category, sourceName)
     }
 
+    onCloseRequested: { root.closed(); root.close() }
+
+    actions: Row {
+        M3Button {
+            text: "Close"
+            variant: "tonal"
+            onClicked: { root.closed(); root.close() }
+        }
+    }
+
     Connections {
         target: archiveManager
-        enabled: root.visible && archiveManager !== null
+        enabled: root.shown && archiveManager !== null
 
         function onVersionsReady(cat, name, json) {
             if (cat !== root.category || name !== root.sourceName) return
@@ -94,36 +104,12 @@ Item {
         }
     }
 
-    Rectangle {
-        anchors.fill: parent
-        color: Qt.rgba(0, 0, 0, 0.55)
-        MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
-            acceptedButtons: Qt.AllButtons
-            onClicked: (mouse) => { if (mouse.button === Qt.LeftButton) root.hide() }
-            onWheel: (wheel) => wheel.accepted = true
-        }
-    }
-
-    Rectangle {
-        id: panel
-        anchors.centerIn: parent
-        width: Math.min(parent.width - 60, 720)
-        height: Math.min(parent.height - 60, 560)
-        radius: 14
-        color: theme.surface
-        border.width: 1
-        border.color: theme.surfaceBorder
-
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.AllButtons
-            onWheel: (wheel) => wheel.accepted = true
-        }
+    body: Item {
+        width: parent.width
+        height: parent.height
 
         Item {
-            id: header
+            id: bodyHeader
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
@@ -131,7 +117,6 @@ Item {
 
             Column {
                 anchors.left: parent.left
-                anchors.leftMargin: 24
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 2
 
@@ -148,7 +133,7 @@ Item {
                         height: 18
                         width: kindLabel.width + 14
                         radius: 9
-                        color: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.15)
+                        color: theme.alpha(theme.accent, 0.15)
                         anchors.verticalCenter: parent.verticalCenter
                         Text {
                             id: kindLabel
@@ -172,38 +157,11 @@ Item {
                     font.pixelSize: 12
                 }
             }
-
-            Rectangle {
-                id: closeBtn
-                anchors.right: parent.right
-                anchors.rightMargin: 18
-                anchors.verticalCenter: parent.verticalCenter
-                width: 32
-                height: 32
-                radius: 16
-                color: closeArea.containsMouse
-                    ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
-                    : "transparent"
-
-                SvgIcon {
-                    anchors.centerIn: parent
-                    name: "close"
-                    size: 16
-                    color: theme.text
-                }
-
-                MouseArea {
-                    id: closeArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.hide()
-                }
-            }
         }
 
         Rectangle {
-            anchors.top: header.bottom
+            id: bodyDivider
+            anchors.top: bodyHeader.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             height: 1
@@ -212,8 +170,7 @@ Item {
 
         ListView {
             id: list
-            anchors.top: header.bottom
-            anchors.topMargin: 1
+            anchors.top: bodyDivider.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
@@ -221,7 +178,7 @@ Item {
             model: root.versions
             spacing: 0
 
-            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+            ScrollBar.vertical: ThinScrollBar {}
 
             Text {
                 anchors.centerIn: parent
@@ -241,7 +198,6 @@ Item {
                 readonly property string publishedAt: modelData.published_at || ""
                 readonly property int assetSize: modelData.asset_size || 0
                 readonly property bool installed: root.installedTags[tag] === true
-                // derived from activeInstalls so reopening mid-install shows the in-flight row as busy right away
                 readonly property bool busy:
                     root.activeInstalls[root.category + "/" + root.sourceName + "/" + tag] !== undefined
 
@@ -251,7 +207,7 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     color: rowMouse.containsMouse
-                        ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.03)
+                        ? theme.alpha(theme.text, 0.03)
                         : "transparent"
                 }
 
@@ -299,7 +255,6 @@ Item {
                     }
                 }
 
-                // fixed width so Install, check+delete, and Working all center on the same column witohut the row jumping right on state change
                 Item {
                     id: actionSlot
                     anchors.right: parent.right
@@ -350,7 +305,7 @@ Item {
                             width: 26
                             height: 26
                             radius: 13
-                            color: Qt.rgba(theme.success.r, theme.success.g, theme.success.b, 0.18)
+                            color: theme.alpha(theme.success, 0.18)
                             SvgIcon {
                                 anchors.centerIn: parent
                                 name: "check_circle"
@@ -365,7 +320,7 @@ Item {
                             height: 28
                             radius: 14
                             color: deleteArea.containsMouse
-                                ? Qt.rgba(theme.error.r, theme.error.g, theme.error.b, 0.18)
+                                ? theme.alpha(theme.error, 0.18)
                                 : "transparent"
                             Behavior on color { ColorAnimation { duration: 100 } }
                             SvgIcon {

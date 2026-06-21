@@ -87,8 +87,8 @@ Item {
                     Layout.preferredWidth: 1
                     placeholder: root.keyPlaceholder
                     text: rowItem.k
-                    onTextEdited: {
-                        listModel.setProperty(rowItem.index, "k", text)
+                    onTextEdited: (t) => {
+                        listModel.setProperty(rowItem.index, "k", t)
                         root._emit()
                     }
                 }
@@ -105,8 +105,8 @@ Item {
                     Layout.preferredWidth: 2
                     placeholder: root.valuePlaceholder
                     text: rowItem.v
-                    onTextEdited: {
-                        listModel.setProperty(rowItem.index, "v", text)
+                    onTextEdited: (t) => {
+                        listModel.setProperty(rowItem.index, "v", t)
                         root._emit()
                     }
                 }
@@ -122,7 +122,7 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 40
-            radius: 8
+            radius: theme.radius.sm
             color: addArea.containsMouse ? theme.surfaceHover : "transparent"
             border.width: 1
             border.color: theme.surfaceBorder

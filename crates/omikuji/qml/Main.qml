@@ -37,6 +37,8 @@ ApplicationWindow {
         followSystemColors: uiSettings.followSystemColors
         followSystemFont: uiSettings.followSystemFont
         fontFamily: uiSettings.fontFamily
+        fillFields: uiSettings.fillFields
+        radiusScale: uiSettings.radiusScale
     }
 
     Connections {
@@ -236,6 +238,9 @@ ApplicationWindow {
     readonly property var themeRef: theme
     readonly property var epicModelRef: epicModel
     readonly property var gogModelRef: gogModel
+    readonly property var uiSettingsRef: uiSettings
+    readonly property var componentsBridgeRef: componentsBridge
+    readonly property var archiveManagerRef: archiveManager
 
     GameModel {
         id: gameModel
@@ -319,6 +324,7 @@ ApplicationWindow {
     property bool isSelectedGameRunning: false
 
     property string currentView: "library"
+    property string activeModal: ""
 
     // clear search on view switch, but not on library filter tab flips (those dont change currentView, i think)
     onCurrentViewChanged: {
@@ -538,11 +544,7 @@ property real cardZoom: uiSettings.cardZoom
             root.currentView = "downloads"
         }
 
-        onSettingsClicked: {
-            navTabs.currentStore = ""
-            navTabs.currentBottom = "settings"
-            root.currentView = "globalSettings"
-        }
+        onSettingsClicked: root.activeModal = "globalSettings"
     }
 
     MouseArea {
@@ -597,28 +599,17 @@ property real cardZoom: uiSettings.cardZoom
         anchors.right: parent.right
         z: 100
 
-        currentTabLabel: root.currentView === "settings" && root.selectedGame // this is so cursed omfg what the FUCK am i doing
-            ? root.selectedGame.name
-            : root.currentView === "add"
-                ? "New Game"
-                : root.currentView === "steam"
-                    ? "Steam"
-                    : root.currentView === "epic"
-                        ? "Epic Games"
-                        : root.currentView === "gog"
-                            ? "GOG"
-                            : root.currentView === "hoyo"
-                                ? "Gachas"
-                                : root.currentView === "downloads"
-                                    ? "Downloads"
-                                    : root.currentView === "globalSettings"
-                                        ? "Settings"
-                                        : navTabs.tabs[navTabs.currentIndex]?.label || ""
-        subText: root.currentView === "settings" && root.selectedGame
-            ? root.selectedGame.gameId
-            : ""
-
-        pillCenterX: scaledRoot.width / 2 - navTabs.width
+        currentTabLabel: root.currentView === "steam"
+            ? "Steam"
+            : root.currentView === "epic"
+                ? "Epic Games"
+                : root.currentView === "gog"
+                    ? "GOG"
+                    : root.currentView === "hoyo"
+                        ? "Gachas"
+                        : root.currentView === "downloads"
+                            ? "Downloads"
+                            : navTabs.tabs[navTabs.currentIndex]?.label || ""
 
         showAddButton: root.currentView === "library"
         showSearch: root.currentView === "library"
@@ -634,24 +625,10 @@ property real cardZoom: uiSettings.cardZoom
         zoomValue: uiSettings.cardZoom
         spacingValue: uiSettings.cardSpacing
 
-        tabs: (root.currentView === "settings" && settingsPageLoader.item) ? settingsPageLoader.item.tabs
-            : (root.currentView === "add" && addGamePageLoader.item) ? addGamePageLoader.item.tabs
-            : root.currentView === "globalSettings" ? globalSettingsPage.tabs
-            : []
-        currentTabIndex: (root.currentView === "settings" && settingsPageLoader.item) ? settingsPageLoader.item.currentTabIndex
-            : (root.currentView === "add" && addGamePageLoader.item) ? addGamePageLoader.item.currentTabIndex
-            : root.currentView === "globalSettings" ? globalSettingsPage.currentTabIndex
-            : 0
-
-        onAddClicked: root.currentView = "add"
+        onAddClicked: root.activeModal = "addGame"
         onConsoleModeClicked: gameModel.launch_console_mode()
         onZoomMoved: (v) => uiSettings.applyCardZoom(v)
         onSpacingMoved: (v) => uiSettings.applyCardSpacing(v)
-        onTabSelected: (i) => {
-            if (root.currentView === "settings" && settingsPageLoader.item) settingsPageLoader.item.currentTabIndex = i
-            else if (root.currentView === "add" && addGamePageLoader.item) addGamePageLoader.item.currentTabIndex = i
-            else if (root.currentView === "globalSettings") globalSettingsPage.currentTabIndex = i
-        }
     }
 
     Item {
@@ -665,7 +642,7 @@ property real cardZoom: uiSettings.cardZoom
             property bool isDropdownHost: true
             anchors.fill: parent
             color: theme.surface
-            radius: 12
+            radius: theme.radius.md
             visible: opacity > 0
             opacity: root.currentView === "library" ? 1 : 0
 
@@ -722,7 +699,7 @@ property real cardZoom: uiSettings.cardZoom
                 downloadActivity: root.selectedDownloadActivity
                 onSettingsClicked: {
                     root.settingsGameIndex = root.selectedGameIndex
-                    root.currentView = "settings"
+                    root.activeModal = "gameSettings"
                 }
                 onDownloadActivityClicked: {
                     root.currentView = "downloads"
@@ -737,105 +714,6 @@ property real cardZoom: uiSettings.cardZoom
                     if (!root.selectedGame || !root.selectedGame.gameId) return
                     if (Date.now() - wineToolsMenu.lastClosedAt < 150) return
                     wineToolsMenu.openAbove(floatingBar.wineToolsAnchor)
-                }
-            }
-        }
-
-        Rectangle {
-            id: settingsPanel
-            property bool isDropdownHost: true
-            anchors.fill: parent
-            color: theme.surface
-            radius: 12
-            visible: opacity > 0
-            opacity: root.currentView === "settings" ? 1 : 0
-
-            Behavior on opacity {
-                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-            }
-
-            Rectangle {
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                width: parent.radius
-                height: parent.radius
-                color: parent.color
-                visible: parent.visible
-            }
-
-            Loader {
-                id: settingsPageLoader
-                anchors.fill: parent
-                active: root.currentView === "settings" || settingsPanel.opacity > 0.01
-
-                sourceComponent: GameSettingsPage {
-                    gameModel: root.gameModelRef
-                    runnersVersion: root.runnersVersion
-                    gameIndex: root.settingsGameIndex
-
-                    onCancelRequested: root.currentView = "library"
-                    onSaveRequested: (idx) => root.currentView = "library"
-                    onSaveAndPlayRequested: (idx) => {
-                        root.currentView = "library"
-                        root.tryPlay(idx)
-                    }
-                    onRefetchMediaRequested: (gameId) => refetchMediaConfirm.show(gameId)
-                }
-            }
-        }
-
-        Rectangle {
-            id: addPanel
-            anchors.fill: parent
-            color: theme.surface
-            radius: 12
-            visible: opacity > 0
-            opacity: root.currentView === "add" ? 1 : 0
-
-            Behavior on opacity {
-                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-            }
-
-            Rectangle {
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                width: parent.radius
-                height: parent.radius
-                color: parent.color
-                visible: parent.visible
-            }
-
-            Loader {
-                id: addGamePageLoader
-                anchors.fill: parent
-                active: root.currentView === "add" || addPanel.opacity > 0.01
-
-                sourceComponent: AddGamePage {
-                    gameModel: root.gameModelRef
-                    runnersVersion: root.runnersVersion
-
-                    onCancelRequested: root.currentView = "library"
-                    onGameCreated: (gameId) => {
-                        root.currentView = "library"
-                        for (let i = 0; i < gameModel.count; i++) {
-                            let g = gameModel.get_game(i)
-                            if (g && g["gameId"] === gameId) {
-                                root.selectedGameIndex = i
-                                break
-                            }
-                        }
-                    }
-                    onGameCreatedAndPlay: (gameId) => {
-                        root.currentView = "library"
-                        for (let i = 0; i < gameModel.count; i++) {
-                            let g = gameModel.get_game(i)
-                            if (g && g["gameId"] === gameId) {
-                                root.selectedGameIndex = i
-                                root.tryPlay(i)
-                                break
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -943,7 +821,7 @@ property real cardZoom: uiSettings.cardZoom
             property bool isDropdownHost: true
             anchors.fill: parent
             color: theme.surface
-            radius: 12
+            radius: theme.radius.md
             visible: opacity > 0
             opacity: root.currentView === "downloads" ? 1 : 0
 
@@ -973,46 +851,6 @@ property real cardZoom: uiSettings.cardZoom
             }
         }
 
-        Rectangle {
-            id: globalSettingsPanel
-            property bool isDropdownHost: true
-            anchors.fill: parent
-            color: theme.surface
-            radius: 12
-            visible: opacity > 0
-            opacity: root.currentView === "globalSettings" ? 1 : 0
-
-            Behavior on opacity {
-                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-            }
-
-            Rectangle {
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                width: parent.radius
-                height: parent.radius
-                color: parent.color
-                visible: parent.visible
-            }
-
-            GlobalSettingsPage {
-                id: globalSettingsPage
-                anchors.fill: parent
-                uiSettings: uiSettings
-                componentsBridge: componentsBridge
-                archiveManager: archiveManager
-                defaults: defaultsBridge
-                gameModel: root.gameModelRef
-                activeInstalls: root.archiveActiveInstalls
-                onManageRequested: (category, source, kind) => {
-                    archiveManageDialog.show(category, source, kind)
-                }
-                onCategoryAddRequested: categoriesController.showAdd()
-                onCategoryEditRequested: (idx, entry) => categoriesController.showEdit(idx, entry)
-                onCategoryDeleteRequested: (idx, entry) => categoriesController.showDelete(idx, entry)
-                onDefaultsApplyToExistingRequested: defaultsApplyDialog.show()
-            }
-        }
     }
 
     EpicController {
@@ -1064,7 +902,7 @@ property real cardZoom: uiSettings.cardZoom
         onConfigureRequested: (idx) => {
             root.selectedGameIndex = idx
             root.settingsGameIndex = idx
-            root.currentView = "settings"
+            root.activeModal = "gameSettings"
         }
         onCategoriesRequested: (idx) => categoriesController.showForGame(idx)
         onRemoveRequested: (idx) => {
@@ -1155,10 +993,10 @@ property real cardZoom: uiSettings.cardZoom
                 let idx = gameModel.index_of_id(gid)
                 if (idx >= 0) {
                     root.settingsGameIndex = idx
-                    root.currentView = "settings"
+                    root.activeModal = "gameSettings"
                 }
             } else if (act === "open_global_settings") {
-                root.currentView = "globalSettings"
+                root.activeModal = "globalSettings"
             }
         }
     }
@@ -1198,6 +1036,81 @@ property real cardZoom: uiSettings.cardZoom
                 if (path && path !== "" && root.selectedGame && root.selectedGame.gameId) {
                     gameModel.run_wine_exe(root.selectedGame.gameId, path)
                 }
+            }
+        }
+    }
+
+    SettingsModal {
+        id: gameSettingsModal
+        shown: root.activeModal === "gameSettings"
+        onCloseRequested: { if (pageItem) pageItem.closeAction(); root.activeModal = "" }
+        pageComponent: Component {
+            GameSettingsPage {
+                gameModel: root.gameModelRef
+                runnersVersion: root.runnersVersion
+                gameIndex: root.settingsGameIndex
+                onSaveRequested: (idx) => root.activeModal = ""
+                onSaveAndPlayRequested: (idx) => {
+                    root.activeModal = ""
+                    root.tryPlay(idx)
+                }
+                onRefetchMediaRequested: (gid) => refetchMediaConfirm.show(gid)
+            }
+        }
+    }
+
+    SettingsModal {
+        id: addGameModal
+        shown: root.activeModal === "addGame"
+        onCloseRequested: { if (pageItem) pageItem.closeAction(); root.activeModal = "" }
+        pageComponent: Component {
+            AddGamePage {
+                gameModel: root.gameModelRef
+                runnersVersion: root.runnersVersion
+                onGameCreated: (gameId) => {
+                    root.activeModal = ""
+                    for (let i = 0; i < gameModel.count; i++) {
+                        let g = gameModel.get_game(i)
+                        if (g && g["gameId"] === gameId) {
+                            root.selectedGameIndex = i
+                            break
+                        }
+                    }
+                }
+                onGameCreatedAndPlay: (gameId) => {
+                    root.activeModal = ""
+                    for (let i = 0; i < gameModel.count; i++) {
+                        let g = gameModel.get_game(i)
+                        if (g && g["gameId"] === gameId) {
+                            root.selectedGameIndex = i
+                            root.tryPlay(i)
+                            break
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    SettingsModal {
+        id: globalSettingsModal
+        shown: root.activeModal === "globalSettings"
+        onCloseRequested: root.activeModal = ""
+        pageComponent: Component {
+            GlobalSettingsPage {
+                uiSettings: root.uiSettingsRef
+                componentsBridge: root.componentsBridgeRef
+                archiveManager: root.archiveManagerRef
+                defaults: defaultsBridge
+                gameModel: root.gameModelRef
+                activeInstalls: root.archiveActiveInstalls
+                onManageRequested: (category, source, kind) => {
+                    archiveManageDialog.show(category, source, kind)
+                }
+                onCategoryAddRequested: categoriesController.showAdd()
+                onCategoryEditRequested: (idx, entry) => categoriesController.showEdit(idx, entry)
+                onCategoryDeleteRequested: (idx, entry) => categoriesController.showDelete(idx, entry)
+                onDefaultsApplyToExistingRequested: defaultsApplyDialog.show()
             }
         }
     }

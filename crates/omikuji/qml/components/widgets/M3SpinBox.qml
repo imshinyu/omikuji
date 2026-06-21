@@ -31,12 +31,12 @@ Item {
             id: minusBtn
             width: 36
             height: parent.height
-            radius: 8
+            radius: theme.radius.sm
             color: minusArea.containsPress
-                ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.14)
+                ? theme.alpha(theme.text, 0.14)
                 : (minusArea.containsMouse
-                    ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
-                    : Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.04))
+                    ? theme.alpha(theme.text, 0.08)
+                    : theme.alpha(theme.text, 0.04))
             opacity: root.value > root.from ? 1 : 0.4
 
             Behavior on color { ColorAnimation { duration: 100 } }
@@ -70,7 +70,6 @@ Item {
                 text: (root.zeroPlaceholder !== "" && root.value === 0) ? root.zeroPlaceholder : root.value
                 color: theme.text
                 font.pixelSize: 14
-                font.family: "monospace"
                 horizontalAlignment: TextInput.AlignHCenter
                 verticalAlignment: TextInput.AlignVCenter
                 selectByMouse: true
@@ -95,12 +94,12 @@ Item {
             id: plusBtn
             width: 36
             height: parent.height
-            radius: 8
+            radius: theme.radius.sm
             color: plusArea.containsPress
-                ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.14)
+                ? theme.alpha(theme.text, 0.14)
                 : (plusArea.containsMouse
-                    ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
-                    : Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.04))
+                    ? theme.alpha(theme.text, 0.08)
+                    : theme.alpha(theme.text, 0.04))
             opacity: root.value < root.to ? 1 : 0.4
 
             Behavior on color { ColorAnimation { duration: 100 } }

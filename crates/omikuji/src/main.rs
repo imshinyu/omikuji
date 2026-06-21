@@ -17,6 +17,8 @@ unsafe extern "C" {
 
 #[tokio::main]
 async fn main() {
+    unsafe { std::env::set_var("QT_QUICK_CONTROLS_STYLE", "Basic") };
+
     tracing_subscriber::fmt()
         .event_format(log_fmt::ShortTarget)
         .with_env_filter(

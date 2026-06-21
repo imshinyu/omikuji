@@ -64,7 +64,7 @@ Item {
             leftIconName: "steam"
             leftIconSize: 20
             selected: modelData.imported
-            selectedBgTint: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.05)
+            selectedBgTint: theme.alpha(theme.accent, 0.05)
             clickable: false
             cardVisible: root.searchText === ""
                 || (modelData.name || "").toLowerCase().includes(root.searchText.toLowerCase())

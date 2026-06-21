@@ -108,7 +108,7 @@ Window {
 
         Rectangle {
             anchors.fill: parent
-            radius: 6
+            radius: theme.radius.xs
             color: btnArea.containsMouse ? btn.hoverColor : "transparent"
             border.width: 1
             border.color: btn.borderColor
@@ -162,7 +162,7 @@ Window {
 
                     Rectangle {
                         anchors.fill: parent
-                        radius: 6
+                        radius: theme.radius.xs
                         color: followArea.containsMouse
                             ? Qt.rgba(logWindow.theme.text.r, logWindow.theme.text.g, logWindow.theme.text.b, 0.08)
                             : "transparent"

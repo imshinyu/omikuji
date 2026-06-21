@@ -1,33 +1,22 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-
 import "../widgets"
 import "../widgets/RunnerGrouping.js" as RG
 
-Item {
+DialogCard {
     id: root
 
     property var gameModel: null
     property var epicModel: null
 
-    // bumped from Main on runner install so the dropdown reloads witout a close+reopen
     property int runnersVersion: 0
-    onRunnersVersionChanged: if (opened) loadRunners()
+    onRunnersVersionChanged: if (root.shown) loadRunners()
 
     property int gameIndex: -1
 
     signal installEnqueued(string downloadId)
     signal cancelled()
-
-    property bool opened: false
-    visible: opacity > 0.001
-    opacity: opened ? 1.0 : 0.0
-    Behavior on opacity {
-        NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
-    }
-    z: 1000
 
     property var gameData: null
     property string installPath: ""
@@ -36,17 +25,27 @@ Item {
     property var runnerOptions: []
     property int runnerIndex: 0
 
-    // -1 = not yet checked (don't block), 0 = checked, got zero/error, >0 = actual bytes free
     property real freeSpaceBytes: -1
-    // -1 = not fetched, -2 = fetching, >=0 = actual
     property real downloadBytes: -1
     property real installBytes: -1
     property string sizeError: ""
     property string _sizeRequestId: ""
 
-    // legendary streams into the install dir so existing files count towards space, check relaxes on resume
     property real existingInstallBytes: 0
     property bool hasResumeState: false
+
+    readonly property bool isImportMode: gameData && gameData.isInstalled === true
+
+    readonly property string effectiveInstallPath: {
+        if (!gameData) return ""
+        if (isImportMode) return gameData.installPath || ""
+        let safe = (gameData.title || "Game").replace(/[\\/:*?"<>|]/g, "").trim()
+        let base = (installPath || "").trim().replace(/\/+$/, "")
+        if (base === "" || safe === "") return ""
+        return base + "/" + safe
+    }
+
+    maxWidth: 480
 
     function hasEnoughSpace() {
         if (freeSpaceBytes < 0) return false
@@ -57,13 +56,11 @@ Item {
 
     function refreshFreeSpace() {
         if (!gameModel || installPath.trim() === "") { freeSpaceBytes = -1; return }
-        // disk_free_space walks up to the nearest existing ancestor, library folder is fine before the subdir exists
         let raw = gameModel.disk_free_space(installPath.trim())
         freeSpaceBytes = parseInt(raw)
         if (isNaN(freeSpaceBytes)) freeSpaceBytes = -1
     }
 
-    // stat the game-specific subdir not the library folder, otherwise siblings under the same parent get counted as leftovers
     function refreshExistingInstall() {
         if (!gameModel || !gameData || !gameData.appName || effectiveInstallPath === "") {
             existingInstallBytes = 0; hasResumeState = false; return
@@ -117,28 +114,30 @@ Item {
     onInstallPathChanged: refreshFreeSpace()
     onEffectiveInstallPathChanged: refreshExistingInstall()
 
-    // epic only permits one install per app, so the path becomes authoritative once legendary registers the game
-    readonly property bool isImportMode: gameData && gameData.isInstalled === true
-
-    // field value is a library folder (legendary's --base-path), import mode uses legendary's authoritative path directly
-    readonly property string effectiveInstallPath: {
-        if (!gameData) return ""
-        if (isImportMode) return gameData.installPath || ""
-        let safe = (gameData.title || "Game").replace(/[\\/:*?"<>|]/g, "").trim()
-        let base = (installPath || "").trim().replace(/\/+$/, "")
-        if (base === "" || safe === "") return ""
-        return base + "/" + safe
+    function resetState() {
+        gameData = null
+        installPath = ""
+        prefixPath = ""
+        runnerOptions = []
+        runnerIndex = 0
+        freeSpaceBytes = -1
+        downloadBytes = -1
+        installBytes = -1
+        sizeError = ""
+        _sizeRequestId = ""
+        existingInstallBytes = 0
+        hasResumeState = false
     }
 
     function show() {
         if (!epicModel || gameIndex < 0) return
+        resetState()
         gameData = epicModel.get_game_at(gameIndex)
-        // legendary takes --base-path not the game folder, import mode pins to the parent so a re-invoked install hits the existing dir
         let legendaryGameDir = gameData && gameData.installPath ? gameData.installPath : ""
         if (gameData && gameData.isInstalled === true && legendaryGameDir !== "") {
             let slash = legendaryGameDir.lastIndexOf("/")
             installPath = slash > 0 ? legendaryGameDir.substring(0, slash) : legendaryGameDir
-        } else if (installPath === "") {
+        } else {
             installPath = defaultInstallPath(gameData ? gameData.title : "")
         }
         if (defaults) prefixPath = defaults.getConfig()["wine.prefix"] || ""
@@ -146,32 +145,15 @@ Item {
         refreshFreeSpace()
         refreshInstallSize()
         refreshExistingInstall()
-        opened = true
+        open()
         forceActiveFocus()
     }
 
-    function hide() {
-        opened = false
-    }
+    function hide() { close() }
 
-    // visible goes false at opacity 0.001, thats our cue to wipe state before the next open
-    onVisibleChanged: {
-        if (!visible) {
-            gameIndex = -1
-            gameData = null
-            installPath = ""
-            prefixPath = ""
-            runnerOptions = []
-            runnerIndex = 0
-            freeSpaceBytes = -1
-            downloadBytes = -1
-            installBytes = -1
-            sizeError = ""
-            _sizeRequestId = ""
-            existingInstallBytes = 0
-            hasResumeState = false
-        }
-    }
+    onVisibleChanged: if (!visible) { gameIndex = -1; resetState() }
+
+    onCloseRequested: { root.cancelled(); root.close() }
 
     function defaultInstallPath(title) {
         if (!gameModel) return ""
@@ -189,311 +171,184 @@ Item {
         if (opts.length === 0) opts = [{ label: "System Wine", value: "system" }]
         runnerOptions = opts
 
-        let pick = RG.pickPreferred(opts, ["GE-Proton", "Proton-GE", "wine-ge"])
-        runnerIndex = pick >= 0 ? pick : 0
+        let def = defaults ? (defaults.getConfig()["wine.version"] || "") : ""
+        runnerIndex = RG.preferredIndex(opts, def, ["GE-Proton", "Proton-GE", "wine-ge"])
     }
 
-    // hoverEnabled true so cards underneath dont stay lit while the dialog is open
-    Rectangle {
-        anchors.fill: parent
-        color: Qt.rgba(0, 0, 0, 0.55)
-        MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
-            acceptedButtons: Qt.AllButtons
-            onClicked: (mouse) => { if (mouse.button === Qt.LeftButton) root.cancelled() }
-            onWheel: (wheel) => wheel.accepted = true
-            cursorShape: Qt.ArrowCursor
-        }
-    }
+    body: ColumnLayout {
+        width: parent.width
+        spacing: 18
 
-    // popups parent here not the card, card's layer.enabled would clip them
-    property bool isDropdownHost: true
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: theme.space.md
 
-    Rectangle {
-        id: card
-        anchors.centerIn: parent
-        width: Math.min(parent.width - 80, 480)
-        height: Math.min(parent.height - 60, contentCol.implicitHeight + 48)
-        radius: 24
-        color: theme.surface
-        border.width: 1
-        border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+            SvgIcon {
+                name: "shield_moon"
+                size: 20
+                color: theme.textMuted
+                Layout.alignment: Qt.AlignVCenter
+            }
 
-        Behavior on height {
-            NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+            Text {
+                Layout.fillWidth: true
+                text: "Install " + (root.gameData ? root.gameData.title : "")
+                color: theme.text
+                font.pixelSize: 18
+                font.weight: Font.DemiBold
+                elide: Text.ElideRight
+            }
         }
 
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.AllButtons
-            onClicked: {}
-            onWheel: (wheel) => wheel.accepted = true
-        }
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 96
+            radius: theme.radius.md
+            color: theme.alpha(theme.text, 0.04)
+            visible: bannerImg.source != ""
 
-        layer.enabled: true
-        layer.effect: DropShadow {
-            radius: 24
-            samples: 32
-            color: Qt.rgba(0, 0, 0, 0.4)
-            horizontalOffset: 0
-            verticalOffset: 6
+            Image {
+                id: bannerImg
+                anchors.fill: parent
+                source: root.gameData ? (root.gameData.banner || root.gameData.coverart || "") : ""
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                sourceSize.width: 800
+                sourceSize.height: 240
+                visible: status === Image.Ready
+                layer.enabled: true
+                layer.effect: OpacityMask {
+                    maskSource: Rectangle {
+                        width: bannerImg.width
+                        height: bannerImg.height
+                        radius: theme.radius.md
+                    }
+                }
+            }
         }
-
-        Flickable {
-            id: cardScroll
-            anchors.fill: parent
-            anchors.margins: 24
-            contentWidth: width
-            contentHeight: contentCol.implicitHeight
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
-            interactive: contentHeight > height
-            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
         ColumnLayout {
-            id: contentCol
-            width: cardScroll.width
-            spacing: 18
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 12
-
-                SvgIcon {
-                    name: "shield_moon"
-                    size: 20
-                    color: theme.textMuted
-                    Layout.alignment: Qt.AlignVCenter
-                }
-
-                Text {
-                    Layout.fillWidth: true
-                    text: "Install " + (root.gameData ? root.gameData.title : "")
-                    color: theme.text
-                    font.pixelSize: 18
-                    font.weight: Font.DemiBold
-                    elide: Text.ElideRight
-                }
-
-                IconButton {
-                    icon: "close"
-                    size: 28
-                    onClicked: root.cancelled()
-                }
-            }
-
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 96
-                radius: 12
-                color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.04)
-                visible: bannerImg.source != ""
-
-                Image {
-                    id: bannerImg
-                    anchors.fill: parent
-                    source: root.gameData ? (root.gameData.banner || root.gameData.coverart || "") : ""
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    sourceSize.width: 800
-                    sourceSize.height: 240
-                    visible: status === Image.Ready
-                    layer.enabled: true
-                    layer.effect: OpacityMask {
-                        maskSource: Rectangle {
-                            width: bannerImg.width
-                            height: bannerImg.height
-                            radius: 12
-                        }
-                    }
-                }
-            }
-
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 4
-
-                M3FileField {
-                    Layout.fillWidth: true
-                    label: root.isImportMode ? "Install path" : "Library folder"
-                    placeholder: "/home/you/Games"
-                    selectFolder: true
-                    gameModel: root.gameModel
-                    text: root.installPath
-                    readOnly: root.isImportMode
-                    trailingHint: root.isImportMode || !root.gameData || !root.gameData.title
-                        ? ""
-                        : "/" + (root.gameData.title || "").replace(/[\\/:*?"<>|]/g, "").trim()
-                    onTextEdited: (t) => root.installPath = t
-                    onAccepted: (p) => root.installPath = p
-                }
-
-                Text {
-                    text: {
-                        let parts = []
-                        if (root.existingInstallBytes > 0 || root.hasResumeState) {
-                            let label = "Found existing files"
-                            if (root.existingInstallBytes > 0) label += " · " + formatBytes(root.existingInstallBytes)
-                            if (root.hasResumeState) label += " · resume state"
-                            parts.push(label)
-                        }
-                        if (root.downloadBytes === -2) {
-                            parts.push("Calculating size…")
-                        } else if (root.sizeError !== "") {
-                            parts.push("Size unavailable")
-                        } else if (root.installBytes >= 0) {
-                            parts.push(formatBytes(root.installBytes) + " install")
-                            if (root.downloadBytes > 0) {
-                                parts.push(formatBytes(root.downloadBytes) + " download")
-                            }
-                        }
-                        if (root.freeSpaceBytes >= 0) {
-                            parts.push(formatBytes(root.freeSpaceBytes) + " free")
-                        }
-                        return parts.join(" · ")
-                    }
-                    color: (root.existingInstallBytes > 0 || root.hasResumeState)
-                        ? theme.accent
-                        : (root.hasEnoughSpace() ? theme.textFaint : "#e06060")
-                    font.pixelSize: 11
-                    wrapMode: Text.WordWrap
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 4
-                    visible: text !== ""
-                }
-
-                Text {
-                    text: "Epic Games allows only one install. To reinstall elsewhere, delete the game files first."
-                    color: theme.accent
-                    font.pixelSize: 11
-                    wrapMode: Text.WordWrap
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 4
-                    visible: root.isImportMode
-                }
-            }
+            Layout.fillWidth: true
+            spacing: 4
 
             M3FileField {
                 Layout.fillWidth: true
-                label: "Prefix path (optional)"
-                placeholder: "auto — created per game"
+                label: root.isImportMode ? "Install path" : "Library folder"
+                placeholder: "/home/you/Games"
                 selectFolder: true
                 gameModel: root.gameModel
-                text: root.prefixPath
-                onTextEdited: (t) => root.prefixPath = t
-                onAccepted: (p) => root.prefixPath = p
+                text: root.installPath
+                readOnly: root.isImportMode
+                trailingHint: root.isImportMode || !root.gameData || !root.gameData.title
+                    ? ""
+                    : "/" + (root.gameData.title || "").replace(/[\\/:*?"<>|]/g, "").trim()
+                onTextEdited: (t) => root.installPath = t
+                onAccepted: (p) => root.installPath = p
             }
 
-            M3Dropdown {
-                Layout.fillWidth: true
-                label: "Runner"
-                options: root.runnerOptions
-                currentIndex: root.runnerIndex
-                onSelected: (v) => {
-                    for (let i = 0; i < root.runnerOptions.length; i++) {
-                        if (root.runnerOptions[i].value === v) { root.runnerIndex = i; break }
+            Text {
+                text: {
+                    let parts = []
+                    if (root.existingInstallBytes > 0 || root.hasResumeState) {
+                        let label = "Found existing files"
+                        if (root.existingInstallBytes > 0) label += " · " + root.formatBytes(root.existingInstallBytes)
+                        if (root.hasResumeState) label += " · resume state"
+                        parts.push(label)
                     }
+                    if (root.downloadBytes === -2) {
+                        parts.push("Calculating size…")
+                    } else if (root.sizeError !== "") {
+                        parts.push("Size unavailable")
+                    } else if (root.installBytes >= 0) {
+                        parts.push(root.formatBytes(root.installBytes) + " install")
+                        if (root.downloadBytes > 0) {
+                            parts.push(root.formatBytes(root.downloadBytes) + " download")
+                        }
+                    }
+                    if (root.freeSpaceBytes >= 0) {
+                        parts.push(root.formatBytes(root.freeSpaceBytes) + " free")
+                    }
+                    return parts.join(" · ")
                 }
+                color: (root.existingInstallBytes > 0 || root.hasResumeState)
+                    ? theme.accent
+                    : (root.hasEnoughSpace() ? theme.textFaint : "#e06060")
+                font.pixelSize: 11
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+                Layout.leftMargin: 4
+                visible: text !== ""
             }
 
-            RowLayout {
+            Text {
+                text: "Epic Games allows only one install. To reinstall elsewhere, delete the game files first."
+                color: theme.accent
+                font.pixelSize: 11
+                wrapMode: Text.WordWrap
                 Layout.fillWidth: true
-                Layout.topMargin: 8
-                spacing: 12
+                Layout.leftMargin: 4
+                visible: root.isImportMode
+            }
+        }
 
-                Item { Layout.fillWidth: true }
+        M3FileField {
+            Layout.fillWidth: true
+            label: "Prefix path (optional)"
+            placeholder: "auto — created per game"
+            selectFolder: true
+            gameModel: root.gameModel
+            text: root.prefixPath
+            onTextEdited: (t) => root.prefixPath = t
+            onAccepted: (p) => root.prefixPath = p
+        }
 
-                Item {
-                    implicitWidth: 100
-                    implicitHeight: 38
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 19
-                        color: cancelHover.containsPress ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.12)
-                            : cancelHover.containsMouse ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
-                            : "transparent"
-                        Behavior on color { ColorAnimation { duration: 100 } }
-                    }
-                    Text {
-                        anchors.centerIn: parent
-                        text: "Cancel"
-                        color: theme.text
-                        font.pixelSize: 13
-                        font.weight: Font.Medium
-                    }
-                    MouseArea {
-                        id: cancelHover
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.cancelled()
-                    }
-                }
-
-                Item {
-                    id: installBtn
-                    implicitWidth: 110
-                    implicitHeight: 38
-                    property bool canInstall: root.installPath.trim().length > 0 && root.hasEnoughSpace()
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 19
-                        color: installBtn.canInstall
-                            ? theme.accent
-                            : Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
-                        opacity: installBtn.canInstall
-                            ? (installHover.containsPress ? 0.8 : installHover.containsMouse ? 0.95 : 0.9)
-                            : 1.0
-                        scale: installBtn.canInstall && installHover.containsPress ? 0.97 : 1.0
-                        Behavior on color { ColorAnimation { duration: 120 } }
-                        Behavior on opacity { NumberAnimation { duration: 100 } }
-                        Behavior on scale { NumberAnimation { duration: 100 } }
-                    }
-                    Text {
-                        anchors.centerIn: parent
-                        text: {
-                            if (root.gameData && root.gameData.isInstalled) {
-                                return root.gameData.hasLibraryEntry ? "Repair" : "Import"
-                            }
-                            if (root.existingInstallBytes > 0 || root.hasResumeState) return "Resume"
-                            return "Install"
-                        }
-                        color: installBtn.canInstall
-                            ? theme.accentOn
-                            : Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.35)
-                        font.pixelSize: 13
-                        font.weight: Font.DemiBold
-                        Behavior on color { ColorAnimation { duration: 120 } }
-                    }
-                    MouseArea {
-                        id: installHover
-                        anchors.fill: parent
-                        hoverEnabled: installBtn.canInstall
-                        enabled: installBtn.canInstall
-                        cursorShape: installBtn.canInstall ? Qt.PointingHandCursor : Qt.ForbiddenCursor
-                        onClicked: {
-                            let runner = root.runnerOptions.length > 0
-                                ? root.runnerOptions[root.runnerIndex].value
-                                : ""
-                            // game subdir not the library folder, install_path is the rm -rf target on cancel
-                            let id = root.epicModel.enqueue_install(
-                                root.gameIndex,
-                                root.effectiveInstallPath,
-                                root.prefixPath,
-                                runner,
-                                root.isImportMode
-                            )
-                            if (id && id.length > 0) {
-                                root.installEnqueued(id)
-                            }
-                        }
-                    }
+        M3Dropdown {
+            Layout.fillWidth: true
+            label: "Runner"
+            options: root.runnerOptions
+            currentIndex: root.runnerIndex
+            onSelected: (v) => {
+                for (let i = 0; i < root.runnerOptions.length; i++) {
+                    if (root.runnerOptions[i].value === v) { root.runnerIndex = i; break }
                 }
             }
         }
+    }
+
+    actions: Row {
+        spacing: theme.space.sm
+
+        M3Button {
+            text: "Cancel"
+            variant: "text"
+            onClicked: { root.cancelled(); root.close() }
+        }
+        M3Button {
+            text: {
+                if (root.gameData && root.gameData.isInstalled) {
+                    return root.gameData.hasLibraryEntry ? "Repair" : "Import"
+                }
+                if (root.existingInstallBytes > 0 || root.hasResumeState) return "Resume"
+                return "Install"
+            }
+            variant: "filled"
+            enabled: root.installPath.trim().length > 0 && root.hasEnoughSpace()
+            onClicked: {
+                let runner = root.runnerOptions.length > 0
+                    ? root.runnerOptions[root.runnerIndex].value
+                    : ""
+                let id = root.epicModel.enqueue_install(
+                    root.gameIndex,
+                    root.effectiveInstallPath,
+                    root.prefixPath,
+                    runner,
+                    root.isImportMode
+                )
+                if (id && id.length > 0) {
+                    root.installEnqueued(id)
+                }
+                root.close()
+            }
         }
     }
 }

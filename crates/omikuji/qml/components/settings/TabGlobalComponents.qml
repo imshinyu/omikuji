@@ -310,7 +310,7 @@ Item {
                             // hug the label and animate width so Install to Working to Reinstall reads as intentional
                             width: btnLabel.implicitWidth + 28
                             height: 32
-                            radius: 16
+                            radius: theme.radius.lg
                             Behavior on width {
                                 NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
                             }
@@ -324,7 +324,7 @@ Item {
                             color: {
                                 if (kind === "muted") return "transparent"
                                 if (kind === "ghost") return btnArea.containsMouse
-                                    ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+                                    ? theme.alpha(theme.text, 0.08)
                                     : "transparent"
                                 if (kind === "primary") return btnArea.containsMouse
                                     ? Qt.darker(theme.accent, 1.1)

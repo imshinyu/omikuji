@@ -123,7 +123,7 @@ Item {
                         anchors.margins: 4
                         height: 24
                         radius: 10
-                        color: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.9)
+                        color: theme.alpha(theme.accent, 0.9)
                         visible: epicCard.isDownloading
 
                         Text {

@@ -41,10 +41,10 @@ Item {
         anchors.centerIn: parent
         width: Math.min(parent.width - 80, 460)
         height: Math.min(parent.height - 120, 420)
-        radius: 22
+        radius: theme.radius.xl
         color: theme.surface
         border.width: 1
-        border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+        border.color: theme.alpha(theme.text, 0.08)
 
         MouseArea {
             anchors.fill: parent
@@ -100,9 +100,9 @@ Item {
                                 anchors.fill: parent
                                 radius: 10
                                 color: popup.selected === modelData
-                                    ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.18)
+                                    ? theme.alpha(theme.accent, 0.18)
                                     : tapArea.containsMouse
-                                        ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+                                        ? theme.alpha(theme.text, 0.08)
                                         : "transparent"
                                 border.width: popup.selected === modelData ? 1 : 0
                                 border.color: theme.accent

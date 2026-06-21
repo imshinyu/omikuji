@@ -100,7 +100,6 @@ Item {
                         text: uiSettings ? Math.round(uiSettings.uiScale * 100) + "%" : "100%"
                         color: theme.text
                         font.pixelSize: 13
-                        font.family: "monospace"
                         width: 50
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -130,7 +129,6 @@ Item {
                         text: uiSettings ? Math.round(uiSettings.cardZoom * 100) + "%" : "100%"
                         color: theme.text
                         font.pixelSize: 13
-                        font.family: "monospace"
                         width: 50
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -160,7 +158,6 @@ Item {
                         text: uiSettings ? uiSettings.cardSpacing + "px" : "16px"
                         color: theme.text
                         font.pixelSize: 13
-                        font.family: "monospace"
                         width: 50
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -330,7 +327,7 @@ Item {
                 delegate: Item {
                     id: wrapper
                     required property int index
-                    required property bool enabled
+                    required property var model
                     required property string name
                     required property string icon
                     required property string kind
@@ -428,7 +425,7 @@ Item {
                                 icon: "tune"
                                 size: 32
                                 onClicked: root.categoryEditRequested(wrapper.index, {
-                                    enabled: wrapper.enabled, name: wrapper.name, icon: wrapper.icon,
+                                    enabled: wrapper.model.enabled, name: wrapper.name, icon: wrapper.icon,
                                     kind: wrapper.kind, value: wrapper.value
                                 })
                             }
@@ -436,7 +433,7 @@ Item {
                                 icon: "close"
                                 size: 32
                                 onClicked: root.categoryDeleteRequested(wrapper.index, {
-                                    enabled: wrapper.enabled, name: wrapper.name, icon: wrapper.icon,
+                                    enabled: wrapper.model.enabled, name: wrapper.name, icon: wrapper.icon,
                                     kind: wrapper.kind, value: wrapper.value
                                 })
                             }
@@ -445,7 +442,7 @@ Item {
                                 height: 32
                                 M3Switch {
                                     anchors.centerIn: parent
-                                    checked: wrapper.enabled
+                                    checked: wrapper.model.enabled
                                     onToggled: (v) => root._setCategoryEnabled(wrapper.index, v)
                                 }
                             }
@@ -493,9 +490,9 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    radius: 8
+                    radius: theme.radius.sm
                     color: addHover.containsMouse
-                        ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                        ? theme.alpha(theme.text, 0.06)
                         : "transparent"
                     Behavior on color { ColorAnimation { duration: 100 } }
                 }

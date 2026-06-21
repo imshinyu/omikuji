@@ -68,7 +68,7 @@ Row {
         border.width: searchField.activeFocus ? Math.max(2, 2 * bar._scale) : 1
         border.color: searchField.activeFocus
             ? theme.accent
-            : Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.15)
+            : theme.alpha(theme.text, 0.15)
         clip: true
         visible: width > 1
         opacity: bar.searchExpanded ? 1 : 0

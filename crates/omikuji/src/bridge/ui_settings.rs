@@ -50,6 +50,8 @@ pub mod qobject {
         #[qproperty(bool, follow_system_colors, cxx_name = "followSystemColors")]
         #[qproperty(bool, follow_system_font, cxx_name = "followSystemFont")]
         #[qproperty(QString, font_family, cxx_name = "fontFamily")]
+        #[qproperty(bool, fill_fields, cxx_name = "fillFields")]
+        #[qproperty(f64, radius_scale, cxx_name = "radiusScale")]
         type UiSettingsBridge = super::UiSettingsRust;
     }
 
@@ -233,6 +235,8 @@ pub struct UiSettingsRust {
     pub follow_system_colors: bool,
     pub follow_system_font: bool,
     pub font_family: cxx_qt_lib::QString,
+    pub fill_fields: bool,
+    pub radius_scale: f64,
     pub color_overrides: BTreeMap<String, String>,
     pub categories: Vec<CategoryEntry>,
     pub watcher: Option<FileWatcher>,
@@ -275,6 +279,8 @@ impl UiSettingsRust {
             follow_system_colors: s.theme.follow_system_colors,
             follow_system_font: s.theme.follow_system_font,
             font_family: cxx_qt_lib::QString::from(&s.theme.font_family),
+            fill_fields: s.theme.fill_fields,
+            radius_scale: s.theme.radius_scale,
             color_overrides: s.theme.colors.clone(),
             categories: s.categories.clone(),
             watcher: None,
@@ -322,6 +328,8 @@ impl qobject::UiSettingsBridge {
                 follow_system_font: self.follow_system_font,
                 font_family: self.font_family.to_string(),
                 colors: self.color_overrides.clone(),
+                fill_fields: self.fill_fields,
+                radius_scale: self.radius_scale,
             },
             console_mode: ConsoleModeSettings {
                 background: self.console_background.to_string(),
@@ -483,6 +491,8 @@ impl qobject::UiSettingsBridge {
         self.as_mut().set_follow_system_colors(s.theme.follow_system_colors);
         self.as_mut().set_follow_system_font(s.theme.follow_system_font);
         self.as_mut().set_font_family(cxx_qt_lib::QString::from(&s.theme.font_family));
+        self.as_mut().set_fill_fields(s.theme.fill_fields);
+        self.as_mut().set_radius_scale(s.theme.radius_scale);
         self.as_mut().rust_mut().get_mut().color_overrides = s.theme.colors;
         self.as_mut().rust_mut().get_mut().categories = s.categories;
         self.as_mut().categories_changed();

@@ -47,7 +47,7 @@ Row {
                     radius: width / 2
                     color: theme.surface
                     border.width: 1
-                    border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.15)
+                    border.color: theme.alpha(theme.text, 0.15)
                     antialiasing: true
                 }
 

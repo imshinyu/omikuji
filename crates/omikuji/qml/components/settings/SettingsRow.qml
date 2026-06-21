@@ -12,14 +12,16 @@ Item {
     property int contentRightMargin: 98
     default property alias content: contentSlot.children
 
+    readonly property var _content: contentSlot.children.length > 0 ? contentSlot.children[0] : null
+
     implicitWidth: parent ? parent.width : 400
-    implicitHeight: Math.max(labelCol.height, contentSlot.height)
+    implicitHeight: Math.max(labelCol.implicitHeight, _content ? _content.implicitHeight : 0)
 
     Column {
         id: labelCol
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
-        width: root.labelWidth
+        width: Math.max(root.labelWidth, contentSlot.x - theme.space.xl)
         spacing: 2
 
         Text {
@@ -33,7 +35,7 @@ Item {
             text: root.description
             color: theme.textSubtle
             font.pixelSize: 13
-            width: Math.max(labelText.width, root.labelWidth)
+            width: parent.width
             wrapMode: Text.WordWrap
             visible: root.description !== ""
         }
@@ -43,8 +45,8 @@ Item {
         id: contentSlot
         anchors.right: parent.right
         anchors.rightMargin: root.contentRightMargin
-        anchors.verticalCenter: parent.verticalCenter
-        width: childrenRect.width
-        height: childrenRect.height
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: root._content ? root._content.implicitWidth : 0
     }
 }

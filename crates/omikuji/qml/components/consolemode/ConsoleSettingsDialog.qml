@@ -83,10 +83,10 @@ Item {
         anchors.centerIn: parent
         width: Math.min(parent.width - 120, 520)
         height: contentCol.implicitHeight + 44
-        radius: 22
+        radius: theme.radius.xl
         color: theme.surface
         border.width: 1
-        border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+        border.color: theme.alpha(theme.text, 0.08)
 
         MouseArea {
             anchors.fill: parent
@@ -124,9 +124,9 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    radius: 12
+                    radius: theme.radius.md
                     color: root.focusedRow === 0
-                        ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.08)
+                        ? theme.alpha(theme.accent, 0.08)
                         : "transparent"
                     border.width: root.focusedRow === 0 ? 2 : 0
                     border.color: theme.accent

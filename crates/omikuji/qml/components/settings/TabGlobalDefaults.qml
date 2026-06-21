@@ -65,7 +65,7 @@ Item {
             anchors.fill: parent
             radius: width / 2
             color: iconArea.containsMouse
-                ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.10)
+                ? theme.alpha(theme.text, 0.10)
                 : "transparent"
             Behavior on color { ColorAnimation { duration: 100 } }
         }
@@ -131,14 +131,14 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    radius: 8
+                    radius: theme.radius.sm
                     color: applyMouse.containsPress
-                        ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.14)
+                        ? theme.alpha(theme.text, 0.14)
                         : (applyMouse.containsMouse
-                            ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+                            ? theme.alpha(theme.text, 0.08)
                             : "transparent")
                     border.width: 1
-                    border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.18)
+                    border.color: theme.alpha(theme.text, 0.18)
                     Behavior on color { ColorAnimation { duration: 100 } }
                 }
 
@@ -407,7 +407,7 @@ Item {
                     placeholder: "prepended to every game's command"
                     text: root.cfg["launch.command_prefix"] || ""
                     width: parent.width - 32
-                    onTextEdited: root.update("launch.command_prefix", text)
+                    onTextEdited: (t) => root.update("launch.command_prefix", t)
                 }
                 ResetBadge {
                     anchors.verticalCenter: cmdPrefixTf.verticalCenter

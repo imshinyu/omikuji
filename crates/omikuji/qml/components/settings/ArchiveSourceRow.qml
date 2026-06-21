@@ -58,8 +58,8 @@ Item {
                     Rectangle {
                         height: 16
                         width: kindLabel.width + 12
-                        radius: 8
-                        color: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.13)
+                        radius: theme.radius.sm
+                        color: theme.alpha(theme.accent, 0.13)
                         anchors.verticalCenter: parent.verticalCenter
                         Text {
                             id: kindLabel
@@ -93,9 +93,9 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             width: manageLabel.implicitWidth + 28
             height: 32
-            radius: 16
+            radius: theme.radius.lg
             color: btnArea.containsMouse
-                ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+                ? theme.alpha(theme.text, 0.08)
                 : "transparent"
             border.width: 1
             border.color: theme.surfaceBorder
@@ -158,9 +158,9 @@ Item {
             // max 240 so long tags elide instead of pushing off-screen, no min so short values shrink naturally
             width: Math.min(240, pickerRow.implicitWidth + 20)
             height: 32
-            radius: 16
+            radius: theme.radius.lg
             color: pickerArea.containsMouse
-                ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+                ? theme.alpha(theme.text, 0.08)
                 : "transparent"
             border.width: 1
             border.color: theme.surfaceBorder

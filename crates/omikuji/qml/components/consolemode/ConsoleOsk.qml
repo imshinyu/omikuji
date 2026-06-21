@@ -87,7 +87,7 @@ Item {
         color: Qt.darker(theme.surface, 1.45)
         radius: 14 * osk.uiScale
         border.width: 1
-        border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+        border.color: theme.alpha(theme.text, 0.08)
     }
 
     Column {

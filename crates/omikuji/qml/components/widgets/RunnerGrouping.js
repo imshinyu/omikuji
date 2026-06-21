@@ -94,3 +94,9 @@ function pickPreferred(options, substrings) {
     }
     return firstNonHeader(options)
 }
+
+function preferredIndex(options, defaultValue, fallbackSubstrings) {
+    var idx = indexOfValue(options, defaultValue || "")
+    if (idx >= 0) return idx
+    return pickPreferred(options, fallbackSubstrings)
+}

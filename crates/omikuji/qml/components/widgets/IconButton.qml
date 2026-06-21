@@ -24,7 +24,9 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: rounded ? size / 2 : 8
-        color: hoverArea.containsMouse ? theme.surfaceHover : "transparent"
+        color: hoverArea.containsPress ? theme.statePressed
+              : hoverArea.containsMouse ? theme.stateHover
+              : theme.alpha(theme.text, 0)
         scale: hoverArea.containsPress ? 0.9 : 1.0
 
         Behavior on color {

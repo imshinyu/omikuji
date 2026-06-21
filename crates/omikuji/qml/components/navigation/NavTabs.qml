@@ -77,7 +77,7 @@ Item {
         width: root.width - 20
         height: 36
         radius: 18
-        color: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.15)
+        color: theme.alpha(theme.accent, 0.15)
         z: 0
 
         property real baseY: {
@@ -162,7 +162,7 @@ Item {
                     height: 36
                     radius: 18
                     color: tabHover.containsMouse && !(index === root.currentIndex && root.currentStore === "" && root.currentBottom === "")
-                        ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                        ? theme.alpha(theme.text, 0.06)
                         : "transparent"
                     visible: !(index === root.currentIndex && root.currentStore === "" && root.currentBottom === "")
 
@@ -249,7 +249,7 @@ Item {
                 height: 36
                 radius: 18
                 color: steamHover.containsMouse && (root.currentStore !== "Steam" || root.currentBottom !== "")
-                    ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                    ? theme.alpha(theme.text, 0.06)
                     : "transparent"
                 visible: (root.currentStore !== "Steam" || root.currentBottom !== "")
 
@@ -308,7 +308,7 @@ Item {
                 height: 36
                 radius: 18
                 color: epicHover.containsMouse && (root.currentStore !== "Epic" || root.currentBottom !== "")
-                    ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                    ? theme.alpha(theme.text, 0.06)
                     : "transparent"
                 visible: (root.currentStore !== "Epic" || root.currentBottom !== "")
 
@@ -367,7 +367,7 @@ Item {
                 height: 36
                 radius: 18
                 color: gogHover.containsMouse && (root.currentStore !== "GOG" || root.currentBottom !== "")
-                    ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                    ? theme.alpha(theme.text, 0.06)
                     : "transparent"
                 visible: (root.currentStore !== "GOG" || root.currentBottom !== "")
 
@@ -426,7 +426,7 @@ Item {
                 height: 36
                 radius: 18
                 color: hoyoHover.containsMouse && (root.currentStore !== "HoYo" || root.currentBottom !== "")
-                    ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                    ? theme.alpha(theme.text, 0.06)
                     : "transparent"
                 visible: (root.currentStore !== "HoYo" || root.currentBottom !== "")
 
@@ -490,7 +490,7 @@ Item {
             height: 36
             radius: 18
             color: downloadsHover.containsMouse && root.currentBottom !== "downloads"
-                ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                ? theme.alpha(theme.text, 0.06)
                 : "transparent"
             visible: root.currentBottom !== "downloads"
             Behavior on color { ColorAnimation { duration: 100 } }
@@ -565,7 +565,7 @@ Item {
             height: 36
             radius: 18
             color: settingsHover.containsMouse && root.currentBottom !== "settings"
-                ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                ? theme.alpha(theme.text, 0.06)
                 : "transparent"
             visible: root.currentBottom !== "settings"
             Behavior on color { ColorAnimation { duration: 100 } }

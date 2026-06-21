@@ -98,7 +98,7 @@ Item {
             radius: root.toastRadius
             color: theme.popup
             border.width: 1
-            border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+            border.color: theme.alpha(theme.text, 0.08)
 
             Rectangle {
                 z: -1
@@ -179,7 +179,7 @@ Item {
                     anchors.margins: 3
                     radius: width / 2
                     color: closeArea.containsMouse
-                        ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+                        ? theme.alpha(theme.text, 0.08)
                         : "transparent"
                     Behavior on color { ColorAnimation { duration: 120 } }
                 }

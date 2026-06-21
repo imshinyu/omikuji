@@ -170,7 +170,7 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 1
-                    color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+                    color: theme.alpha(theme.text, 0.08)
                 }
 
                 Text {

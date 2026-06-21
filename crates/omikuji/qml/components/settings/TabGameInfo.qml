@@ -29,7 +29,7 @@ Item {
                 label: "Name"
                 text: config["meta.name"] || ""
                 width: parent.width
-                onTextEdited: updateField("meta.name", text)
+                onTextEdited: (t) => updateField("meta.name", t)
             }
 
             M3TextField {
@@ -37,7 +37,7 @@ Item {
                 placeholder: "optional, for custom sort order"
                 text: config["meta.sort_name"] || ""
                 width: parent.width
-                onTextEdited: updateField("meta.sort_name", text)
+                onTextEdited: (t) => updateField("meta.sort_name", t)
             }
 
             M3TextField {
@@ -45,7 +45,7 @@ Item {
                 placeholder: "for API lookups (auto-derived from name)"
                 text: config["meta.slug"] || ""
                 width: parent.width
-                onTextEdited: updateField("meta.slug", text)
+                onTextEdited: (t) => updateField("meta.slug", t)
             }
 
             M3Dropdown {
@@ -117,14 +117,14 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    radius: 8
+                    radius: theme.radius.sm
                     color: refetchMouse.containsPress
-                        ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.14)
+                        ? theme.alpha(theme.text, 0.14)
                         : (refetchMouse.containsMouse
-                            ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+                            ? theme.alpha(theme.text, 0.08)
                             : "transparent")
                     border.width: 1
-                    border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.18)
+                    border.color: theme.alpha(theme.text, 0.18)
 
                     Behavior on color { ColorAnimation { duration: 100 } }
                 }
@@ -164,7 +164,7 @@ Item {
                 placeholder: "#1a1a2e"
                 text: config["meta.color"] || ""
                 width: parent.width
-                onTextEdited: updateField("meta.color", text)
+                onTextEdited: (t) => updateField("meta.color", t)
             }
         }
     }

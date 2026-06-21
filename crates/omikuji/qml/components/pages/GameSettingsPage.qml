@@ -1,9 +1,4 @@
 import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
-
-import "../widgets"
-import "../settings"
 
 Item {
     id: root
@@ -20,22 +15,26 @@ Item {
     property var gameData: null
     property var config: ({})
 
-    signal cancelRequested()
+    readonly property string modalTitle: gameData ? (gameData["name"] || "") : ""
+    readonly property string modalSubtitle: gameId
+    readonly property string primaryLabel: "Save & Play"
+    readonly property string secondaryLabel: "Save"
+    readonly property bool primaryEnabled: true
+    readonly property bool secondaryEnabled: true
+
     signal saveRequested(int gameIndex)
     signal saveAndPlayRequested(int gameIndex)
     signal refetchMediaRequested(string gameId)
 
-    // tabs live in the TopBar so Main can surface them in the centered pill
-    // could DRY this with AddGamePage.qml's tabs array... one day
     property var tabs: {
         let base = [
-            { label: "Game Info", kind: "info" },
-            { label: "Runner",    kind: "runner" }
+            { label: "Game Info", kind: "info",   icon: "sports_esports" },
+            { label: "Runner",    kind: "runner", icon: "wine_bar" }
         ]
         let isFlatpakLauncher = gameModel ? gameModel.is_flatpak() : false
         let isSteamGame = root.config["runner.type"] === "steam"
         if (!(isFlatpakLauncher && isSteamGame)) {
-            base.push({ label: "System", kind: "system" })
+            base.push({ label: "System", kind: "system", icon: "terminal" })
         }
         if (root.config["source.kind"] === "epic") {
             base.push({ label: "Epic", kind: "epic", icon: "shield_moon" })
@@ -79,10 +78,9 @@ Item {
         root.saveAndPlayRequested(gameIndex)
     }
 
-    function cancel() {
-        if (gameModel) gameModel.discard_draft()
-        root.cancelRequested()
-    }
+    function primaryAction() { saveAndPlay() }
+    function secondaryAction() { save() }
+    function closeAction() { if (gameModel) gameModel.discard_draft() }
 
     function updateField(key, value) {
         if (gameModel && gameId !== "") {
@@ -110,94 +108,64 @@ Item {
         if (idx >= 0) config = gameModel.begin_edit_game(idx)
     }
 
-    Item {
-        id: contentHost
-        property bool isDropdownHost: true
-        anchors.fill: parent
+    implicitHeight: contentCol.implicitHeight
 
-        Flickable {
-            id: contentFlick
-            anchors.fill: parent
-            contentHeight: contentCol.height + 100
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
+    Column {
+        id: contentCol
+        anchors.left: parent.left
+        anchors.right: parent.right
+        spacing: 0
 
-            Column {
-                id: contentCol
-                anchors.top: parent.top
-                anchors.topMargin: 20
-                anchors.left: parent.left
-                anchors.leftMargin: 48
-                anchors.right: parent.right
-                anchors.rightMargin: 48
-                spacing: 0
+        Loader {
+            width: parent.width
+            active: root.currentKind === "info"
+            visible: active
+            source: "../settings/TabGameInfo.qml"
+            onLoaded: {
+                item.config = Qt.binding(() => root.config)
+                item.updateField = root.updateField
+                item.gameModel = root.gameModel
+                item.refetchMediaRequested.connect(() => root.refetchMediaRequested(root.gameId))
+            }
+        }
 
-                Loader {
-                    width: parent.width
-                    active: root.currentKind === "info"
-                    visible: active
-                    source: "../settings/TabGameInfo.qml"
-                    onLoaded: {
-                        item.config = Qt.binding(() => root.config)
-                        item.updateField = root.updateField
-                        item.gameModel = root.gameModel
-                        item.refetchMediaRequested.connect(() => root.refetchMediaRequested(root.gameId))
-                    }
-                }
+        Loader {
+            width: parent.width
+            active: root.currentKind === "runner"
+            visible: active
+            source: "../settings/TabRunnerOptions.qml"
+            onLoaded: {
+                item.config = Qt.binding(() => root.config)
+                item.updateField = root.updateField
+                item.gameModel = root.gameModel
+                item.runnersVersion = Qt.binding(() => root.runnersVersion)
+            }
+        }
 
-                Loader {
-                    width: parent.width
-                    active: root.currentKind === "runner"
-                    visible: active
-                    source: "../settings/TabRunnerOptions.qml"
-                    onLoaded: {
-                        item.config = Qt.binding(() => root.config)
-                        item.updateField = root.updateField
-                        item.gameModel = root.gameModel
-                        item.runnersVersion = Qt.binding(() => root.runnersVersion)
-                    }
-                }
+        Loader {
+            width: parent.width
+            active: root.currentKind === "system"
+            visible: active
+            source: "../settings/TabSystem.qml"
+            onLoaded: {
+                item.config = Qt.binding(() => root.config)
+                item.updateField = root.updateField
+                item.gameModel = root.gameModel
+            }
+        }
 
-                Loader {
-                    width: parent.width
-                    active: root.currentKind === "system"
-                    visible: active
-                    source: "../settings/TabSystem.qml"
-                    onLoaded: {
-                        item.config = Qt.binding(() => root.config)
-                        item.updateField = root.updateField
-                        item.gameModel = root.gameModel
-                    }
-                }
-
-                Loader {
-                    width: parent.width
-                    active: root.currentKind === "epic"
-                    visible: active
-                    source: "../settings/TabEpic.qml"
-                    onLoaded: {
-                        item.config = Qt.binding(() => root.config)
-                        item.updateField = root.updateField
-                        item.refreshConfig = root.refreshConfig
-                        item.gameModel = root.gameModel
-                        item.gameId = Qt.binding(() => root.gameId)
-                    }
-                }
+        Loader {
+            width: parent.width
+            active: root.currentKind === "epic"
+            visible: active
+            source: "../settings/TabEpic.qml"
+            onLoaded: {
+                item.config = Qt.binding(() => root.config)
+                item.updateField = root.updateField
+                item.refreshConfig = root.refreshConfig
+                item.gameModel = root.gameModel
+                item.gameId = Qt.binding(() => root.gameId)
             }
         }
     }
-
-    // z 100 so it covers dropdown popups (z 50) whose trigger sits near the bottom of the flickable
-    SettingsActionBar {
-        id: actionBar
-        z: 100
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-
-        onCancelClicked: root.cancel()
-        onSaveClicked: root.save()
-        onSaveAndPlayClicked: root.saveAndPlay()
-    }
-
 }

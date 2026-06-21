@@ -84,7 +84,7 @@ Item {
                     placeholder: "leave empty to use detected path"
                     text: config["source.save_path"] || ""
                     width: parent.width
-                    onTextEdited: updateField("source.save_path", text)
+                    onTextEdited: (t) => updateField("source.save_path", t)
                 }
             }
         }

@@ -63,21 +63,13 @@ Item {
         Behavior on color { ColorAnimation { duration: 100 } }
     }
 
-    Rectangle {
+    FieldSurface {
         id: button
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: 44
-        radius: 8
-        color: "transparent"
-        border.width: popup.visible ? 2 : 1
-        border.color: popup.visible
-            ? theme.accent
-            : Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.15)
-
-        Behavior on border.width { NumberAnimation { duration: 100 } }
-        Behavior on border.color { ColorAnimation { duration: 100 } }
+        focused: popup.visible
 
         Text {
             anchors.left: parent.left
@@ -158,7 +150,7 @@ Item {
             return Math.min(wanted, Math.max(80, maxAvail))
         }
         z: 50
-        radius: 8
+        radius: theme.radius.sm
         color: theme.bg
         border.width: 1
         border.color: theme.surfaceBorder
@@ -228,7 +220,7 @@ Item {
                         readonly property bool isHeader: modelData && modelData.header === true
                         width: col.width
                         height: isHeader ? (index === 0 ? 22 : 28) : 40
-                        radius: 6
+                        radius: theme.radius.xs
                         color: !isHeader && optionMouse.containsMouse ? theme.surfaceHover : "transparent"
 
                         // group caption, non-interactive

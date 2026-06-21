@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Window
+import Qt5Compat.GraphicalEffects
 import "../widgets"
 
 Popup {
@@ -217,9 +218,16 @@ Popup {
         color: theme.active.window.hslLightness > 0.5
             ? Qt.darker(theme.popup, 1.06)
             : Qt.lighter(theme.popup, 1.3)
-        radius: 12
-        border.width: 1
-        border.color: Qt.rgba(theme.active.windowText.r, theme.active.windowText.g, theme.active.windowText.b, 0.08)
+        radius: theme.radius.md
+        layer.enabled: true
+        layer.effect: DropShadow {
+            transparentBorder: true
+            horizontalOffset: 0
+            verticalOffset: 3
+            radius: 16
+            samples: 33
+            color: Qt.rgba(0, 0, 0, 0.35)
+        }
     }
 
     enter: Transition {
@@ -251,14 +259,14 @@ Popup {
                     Rectangle {
                         width: root.itemWidth
                         height: 32
-                        radius: 8
+                        radius: theme.radius.sm
                         // danger items tint red, normal items use ~2x the old 0.08 alpha so light-mode hovers are actually visible
                         color: hoverArea.containsMouse
                             ? (modelData.danger
-                                ? Qt.rgba(theme.error.r, theme.error.g, theme.error.b, 0.18)
+                                ? theme.alpha(theme.error, 0.18)
                                 : modelData.accent
-                                    ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.18)
-                                    : Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.14))
+                                    ? theme.alpha(theme.accent, 0.18)
+                                    : theme.alpha(theme.text, 0.14))
                             : "transparent"
 
                         Behavior on color {
