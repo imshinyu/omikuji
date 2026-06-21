@@ -192,7 +192,8 @@ Item {
 
                 Loader {
                     id: pageLoader
-                    width: contentFlick.width - theme.space.sm
+                    readonly property int rightGap: 64
+                    width: contentFlick.width - rightGap
                     active: cardWrap.visible
                     sourceComponent: root.pageComponent
                 }
