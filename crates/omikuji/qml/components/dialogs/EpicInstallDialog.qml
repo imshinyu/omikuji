@@ -233,7 +233,7 @@ DialogCard {
 
             M3FileField {
                 Layout.fillWidth: true
-                label: root.isImportMode ? "Install path" : "Library folder"
+                label: "Installation path"
                 placeholder: "/home/you/Games"
                 selectFolder: true
                 gameModel: root.gameModel
