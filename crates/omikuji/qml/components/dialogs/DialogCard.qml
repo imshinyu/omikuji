@@ -66,7 +66,7 @@ Item {
             actionsLoader.active ? actionsLoader.implicitHeight : 0,
             footerLeftLoader.active ? footerLeftLoader.implicitHeight : 0)
         readonly property real naturalHeight: header.height + bodyLoader.implicitHeight
-            + theme.space.lg * 2 + (footerActive ? footerHeight + theme.space.md : 0)
+            + theme.space.lg * 2 + (footerActive ? footerHeight + theme.space.xl : 0)
 
         Behavior on opacity { NumberAnimation { duration: theme.dur.med; easing.type: theme.ease.standard } }
         Behavior on scale { NumberAnimation { duration: theme.dur.med; easing.type: theme.ease.emphasized; easing.overshoot: theme.ease.overshoot } }
@@ -125,7 +125,7 @@ Item {
             anchors.bottom: actionsLoader.active ? actionsLoader.top
                 : (footerLeftLoader.active ? footerLeftLoader.top : parent.bottom)
             anchors.leftMargin: theme.space.xl
-            anchors.bottomMargin: cardWrap.footerActive ? theme.space.md : theme.space.lg
+            anchors.bottomMargin: cardWrap.footerActive ? (root.fillHeight ? theme.space.md : theme.space.xl) : theme.space.lg
             contentWidth: width
             contentHeight: root.fillHeight ? height : bodyLoader.implicitHeight
             clip: true

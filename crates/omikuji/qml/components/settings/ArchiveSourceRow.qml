@@ -19,12 +19,10 @@ Item {
 
     height: showAutoInject ? 100 : 56
 
-    Rectangle {
+    Squircle {
         anchors.fill: parent
-        color: theme.cardBg
-        radius: 10
-        border.width: 1
-        border.color: theme.surfaceBorder
+        radius: theme.radius.md
+        fillColor: theme.cardBg
     }
 
     Item {
@@ -86,38 +84,14 @@ Item {
             }
         }
 
-        Rectangle {
+        M3Button {
             id: manageBtn
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            width: manageLabel.implicitWidth + 28
-            height: 32
-            radius: theme.radius.lg
-            color: btnArea.containsMouse
-                ? theme.alpha(theme.text, 0.08)
-                : "transparent"
-            border.width: 1
-            border.color: theme.surfaceBorder
-
-            Behavior on color { ColorAnimation { duration: 120 } }
-
-            Text {
-                id: manageLabel
-                anchors.centerIn: parent
-                text: "Manage"
-                color: theme.text
-                font.pixelSize: 13
-                font.weight: Font.Medium
-            }
-
-            MouseArea {
-                id: btnArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.manageClicked()
-            }
+            text: "Manage"
+            variant: "tonal"
+            onClicked: root.manageClicked()
         }
     }
 
@@ -150,22 +124,14 @@ Item {
             font.pixelSize: 13
         }
 
-        Rectangle {
+        FieldSurface {
             id: picker
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            // max 240 so long tags elide instead of pushing off-screen, no min so short values shrink naturally
             width: Math.min(240, pickerRow.implicitWidth + 20)
             height: 32
-            radius: theme.radius.lg
-            color: pickerArea.containsMouse
-                ? theme.alpha(theme.text, 0.08)
-                : "transparent"
-            border.width: 1
-            border.color: theme.surfaceBorder
-
-            Behavior on color { ColorAnimation { duration: 120 } }
+            focused: menu.visible
 
             Row {
                 id: pickerRow

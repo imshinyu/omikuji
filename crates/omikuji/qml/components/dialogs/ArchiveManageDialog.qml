@@ -206,9 +206,15 @@ DialogCard {
 
                 Rectangle {
                     anchors.fill: parent
+                    anchors.leftMargin: theme.space.sm
+                    anchors.rightMargin: theme.space.sm
+                    anchors.topMargin: 3
+                    anchors.bottomMargin: 3
+                    radius: theme.radius.sm
                     color: rowMouse.containsMouse
-                        ? theme.alpha(theme.text, 0.03)
+                        ? theme.alpha(theme.text, 0.05)
                         : "transparent"
+                    Behavior on color { ColorAnimation { duration: theme.dur.fast } }
                 }
 
                 MouseArea {
@@ -263,36 +269,16 @@ DialogCard {
                     width: 96
                     height: 30
 
-                    Rectangle {
+                    M3Button {
                         anchors.centerIn: parent
                         visible: !installed && !busy
-                        width: 82
-                        height: 28
-                        radius: 14
-                        color: installArea.containsMouse
-                            ? Qt.darker(theme.accent, 1.1)
-                            : theme.accent
-                        Behavior on color { ColorAnimation { duration: 100 } }
-                        Text {
-                            anchors.centerIn: parent
-                            text: "Install"
-                            color: theme.accentOn
-                            font.pixelSize: 12
-                            font.weight: Font.Medium
-                        }
-                        MouseArea {
-                            id: installArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                archiveManager.installVersion(
-                                    root.category,
-                                    root.sourceName,
-                                    JSON.stringify(modelData)
-                                )
-                            }
-                        }
+                        text: "Install"
+                        variant: "filled"
+                        onClicked: archiveManager.installVersion(
+                            root.category,
+                            root.sourceName,
+                            JSON.stringify(modelData)
+                        )
                     }
 
                     Row {
@@ -300,18 +286,12 @@ DialogCard {
                         visible: installed && !busy
                         spacing: 8
 
-                        Rectangle {
+                        Text {
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 26
-                            height: 26
-                            radius: 13
-                            color: theme.alpha(theme.success, 0.18)
-                            SvgIcon {
-                                anchors.centerIn: parent
-                                name: "check_circle"
-                                size: 14
-                                color: theme.success
-                            }
+                            text: "Installed"
+                            color: theme.success
+                            font.pixelSize: 12
+                            font.weight: Font.Medium
                         }
 
                         Rectangle {
