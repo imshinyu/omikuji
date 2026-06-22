@@ -1,4 +1,6 @@
 /target/
+/target-fedora/
+/target-debian/
 **/*.rs.bk
 **/*.qsb
 

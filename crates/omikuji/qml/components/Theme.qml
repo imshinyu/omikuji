@@ -7,27 +7,28 @@ QtObject {
     property SystemPalette inactive: SystemPalette { colorGroup: SystemPalette.Inactive }
 
     property bool followSystemColors: true
+    readonly property bool systemColorsAvailable: Application.styleHints.colorScheme !== Qt.ColorScheme.Unknown
     property bool followSystemFont: true
     property string fontFamily: ""
     property var overrides: ({})
 
-    function _resolve(token, fallback) {
-        if (followSystemColors) return fallback
+    function _resolve(token, system, fallback) {
+        if (followSystemColors) return systemColorsAvailable ? system : fallback
         var v = overrides[token]
         return v ? v : fallback
     }
 
-    property color accent: _resolve("accent", active.highlight)
-    property color accentText: _resolve("accentText", active.highlightedText)
+    property color accent: _resolve("accent", active.highlight, "#bdc2ff")
+    property color accentText: _resolve("accentText", active.highlightedText, "#1d2678")
     property color accentOn: accent.hslLightness > 0.5 ? "#000000" : "#ffffff"
 
-    property color bg: _resolve("bg", active.base)
+    property color bg: _resolve("bg", active.base, "#111111")
     property color bgAlt: Qt.darker(bg, 1.1)
-    property color surface: _resolve("surface", active.base)
+    property color surface: _resolve("surface", active.base, "#111111")
     property color surfaceHover: Qt.lighter(surface, 1.1)
     property color surfaceBorder: Qt.rgba(text.r, text.g, text.b, 0.08)
 
-    property color text: _resolve("text", active.windowText)
+    property color text: _resolve("text", active.windowText, "#c5c6c6")
     property color textMuted: Qt.rgba(text.r, text.g, text.b, 0.55)
     property color textSubtle: Qt.rgba(text.r, text.g, text.b, 0.35)
     property color textFaint: Qt.rgba(text.r, text.g, text.b, 0.2)
@@ -54,9 +55,9 @@ QtObject {
     property color tooltipBg: text
     property color tooltipText: bg
 
-    property color error: _resolve("error", bg.hslLightness > 0.5 ? "#d32f2f" : "#ef5350")
-    property color success: _resolve("success", bg.hslLightness > 0.5 ? "#388e3c" : "#66bb6a")
-    property color warning: _resolve("warning", bg.hslLightness > 0.5 ? "#f57c00" : "#ffa726")
+    property color error: _resolve("error", bg.hslLightness > 0.5 ? "#d32f2f" : "#ef5350", "#ef5350")
+    property color success: _resolve("success", bg.hslLightness > 0.5 ? "#388e3c" : "#66bb6a", "#66bb6a")
+    property color warning: _resolve("warning", bg.hslLightness > 0.5 ? "#f57c00" : "#ffa726", "#ffa726")
 
     function alpha(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
     function mix(a, b, t) {
