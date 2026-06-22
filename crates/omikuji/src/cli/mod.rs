@@ -9,11 +9,14 @@ use std::io::{self, IsTerminal, Write};
     name = "omikuji",
     version,
     about = "Qt/QML based wine apps launcher for Linux",
-    disable_help_subcommand = true
+    disable_help_subcommand = true,
+    args_conflicts_with_subcommands = true
 )]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Cmd>,
+    #[arg(value_name = "FILE", help = "Windows executable to run via a wine runner + prefix picker")]
+    pub file: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -28,6 +31,7 @@ pub enum CliAction {
     Exit(i32),
     Gui,
     Console,
+    RunExe(String),
 }
 
 pub fn dispatch() -> CliAction {
@@ -40,7 +44,9 @@ pub fn dispatch() -> CliAction {
         }
         Some(Cmd::Console) => CliAction::Console,
         None => {
-            if UiSettings::load().console_mode.active {
+            if let Some(file) = cli.file {
+                CliAction::RunExe(file)
+            } else if UiSettings::load().console_mode.active {
                 CliAction::Console
             } else {
                 CliAction::Gui

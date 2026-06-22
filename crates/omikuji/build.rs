@@ -141,6 +141,7 @@ fn main() {
             .qml_files([
                 "qml/Main.qml",
                 "qml/ConsoleMode.qml",
+                "qml/RunExe.qml",
                 // root
                 "qml/components/Theme.qml",
 

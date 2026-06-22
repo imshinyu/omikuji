@@ -159,6 +159,15 @@ pub mod qobject {
         fn launch_game_force(self: &GameModel, index: i32) -> bool;
 
         #[qinvokable]
+        fn launch_exe(self: &GameModel, exe: &QString, runner: &QString, prefix: &QString) -> bool;
+
+        #[qinvokable]
+        fn run_exe_path(self: &GameModel) -> QString;
+
+        #[qinvokable]
+        fn quit_now(self: &GameModel);
+
+        #[qinvokable]
         fn check_epic_update(self: &GameModel, game_id: &QString) -> bool;
 
         #[qinvokable]

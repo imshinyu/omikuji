@@ -75,6 +75,64 @@ impl super::qobject::GameModel {
         self.try_spawn_launch(game)
     }
 
+    pub fn launch_exe(&self, exe: &QString, runner: &QString, prefix: &QString) -> bool {
+        let exe_path = std::path::PathBuf::from(exe.to_string());
+        let name = exe_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("Program")
+            .to_string();
+        let runner_v = runner.to_string();
+        let prefix_v = prefix.to_string();
+        let game = Game::with_options(
+            name,
+            exe_path,
+            (!prefix_v.is_empty()).then_some(prefix_v),
+            Some("wine".to_string()),
+            (!runner_v.is_empty()).then_some(runner_v),
+        );
+        let config = match omikuji_core::launch::build_launch(&game) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!("run-exe build_launch failed: {}", e);
+                return false;
+            }
+        };
+        if config.command.is_empty() {
+            return false;
+        }
+        let mut cmd = std::process::Command::new(&config.command[0]);
+        cmd.args(&config.command[1..]);
+        cmd.current_dir(&config.working_dir);
+        cmd.env_clear();
+        cmd.envs(&config.env);
+        cmd.stdin(std::process::Stdio::null());
+        use std::os::unix::process::CommandExt;
+        unsafe {
+            cmd.pre_exec(|| {
+                if libc::setsid() == -1 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                Ok(())
+            });
+        }
+        match cmd.spawn() {
+            Ok(_) => true,
+            Err(e) => {
+                tracing::error!("run-exe spawn failed: {}", e);
+                false
+            }
+        }
+    }
+
+    pub fn run_exe_path(&self) -> QString {
+        QString::from(&std::env::var("OMIKUJI_RUN_EXE").unwrap_or_default())
+    }
+
+    pub fn quit_now(&self) {
+        unsafe { libc::_exit(0) }
+    }
+
     fn try_spawn_launch(&self, game: &Game) -> bool {
         if omikuji_core::process::is_game_running(&game.metadata.id) {
             tracing::warn!("game '{}' is already running", game.metadata.name);

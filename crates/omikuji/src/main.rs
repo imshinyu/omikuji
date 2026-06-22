@@ -27,13 +27,19 @@ async fn main() {
         )
         .init();
 
-    let qml_root = match cli::dispatch() {
-        cli::CliAction::Exit(code) => std::process::exit(code),
+    let action = cli::dispatch();
+
+    let qml_root = match &action {
+        cli::CliAction::Exit(code) => std::process::exit(*code),
         cli::CliAction::Gui => "qrc:/qt/qml/omikuji/qml/Main.qml",
         cli::CliAction::Console => "qrc:/qt/qml/omikuji/qml/ConsoleMode.qml",
+        cli::CliAction::RunExe(exe) => {
+            unsafe { std::env::set_var("OMIKUJI_RUN_EXE", exe) };
+            "qrc:/qt/qml/omikuji/qml/RunExe.qml"
+        }
     };
 
-    if !single_instance::check().await {
+    if !matches!(action, cli::CliAction::RunExe(_)) && !single_instance::check().await {
         return;
     }
 
