@@ -140,12 +140,7 @@ Item {
                     bottomPadding: 10
                     text: ""
 
-                    background: Rectangle {
-                        radius: theme.radius.sm
-                        color: theme.bgAlt
-                        border.width: 1
-                        border.color: theme.outline
-                    }
+                    background: FieldSurface {}
                 }
 
                 M3Button {
