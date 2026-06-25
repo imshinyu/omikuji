@@ -337,6 +337,21 @@ macro_rules! kv_json_accessor {
     };
 }
 
+macro_rules! apply_setting {
+    ($apply:ident, $set:ident, $ty:ty) => {
+        fn $apply(mut self: Pin<&mut Self>, value: $ty) {
+            self.as_mut().$set(value);
+            self.persist();
+        }
+    };
+    (qstr $apply:ident, $set:ident) => {
+        fn $apply(mut self: Pin<&mut Self>, value: &cxx_qt_lib::QString) {
+            self.as_mut().$set(value.clone());
+            self.persist();
+        }
+    };
+}
+
 impl qobject::UiSettingsBridge {
     fn snapshot(&self) -> UiSettings {
         UiSettings {
@@ -398,90 +413,23 @@ impl qobject::UiSettingsBridge {
         }
     }
 
-    fn apply_card_zoom(mut self: Pin<&mut Self>, value: f64) {
-        self.as_mut().set_card_zoom(value);
-        self.persist();
-    }
-
-    fn apply_card_spacing(mut self: Pin<&mut Self>, value: i32) {
-        self.as_mut().set_card_spacing(value);
-        self.persist();
-    }
-
-    fn apply_card_elevation(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_card_elevation(value);
-        self.persist();
-    }
-
-    fn apply_unload_store_pages(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_unload_store_pages(value);
-        self.persist();
-    }
-
-    fn apply_show_gachas(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_show_gachas(value);
-        self.persist();
-    }
-
-    fn apply_show_epic(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_show_epic(value);
-        self.persist();
-    }
-
-    fn apply_show_gog(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_show_gog(value);
-        self.persist();
-    }
-
-    fn apply_show_steam(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_show_steam(value);
-        self.persist();
-    }
-
-    fn apply_nav_width(mut self: Pin<&mut Self>, value: i32) {
-        self.as_mut().set_nav_width(value);
-        self.persist();
-    }
-
-    fn apply_nav_collapsed(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_nav_collapsed(value);
-        self.persist();
-    }
-
-    fn apply_minimize_on_launch(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_minimize_on_launch(value);
-        self.persist();
-    }
-
-    fn apply_save_game_logs(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_save_game_logs(value);
-        self.persist();
-    }
-
-    fn apply_double_click_launches(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_double_click_launches(value);
-        self.persist();
-    }
-
-    fn apply_auto_check_epic_updates_on_launch(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_auto_check_epic_updates_on_launch(value);
-        self.persist();
-    }
-
-    fn apply_auto_check_gog_updates_on_launch(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_auto_check_gog_updates_on_launch(value);
-        self.persist();
-    }
-
-    fn apply_auto_check_updates_on_boot(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_auto_check_updates_on_boot(value);
-        self.persist();
-    }
-
-    fn apply_show_tray_icon(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_show_tray_icon(value);
-        self.persist();
-    }
+    apply_setting!(apply_card_zoom, set_card_zoom, f64);
+    apply_setting!(apply_card_spacing, set_card_spacing, i32);
+    apply_setting!(apply_card_elevation, set_card_elevation, bool);
+    apply_setting!(apply_unload_store_pages, set_unload_store_pages, bool);
+    apply_setting!(apply_show_gachas, set_show_gachas, bool);
+    apply_setting!(apply_show_epic, set_show_epic, bool);
+    apply_setting!(apply_show_gog, set_show_gog, bool);
+    apply_setting!(apply_show_steam, set_show_steam, bool);
+    apply_setting!(apply_nav_width, set_nav_width, i32);
+    apply_setting!(apply_nav_collapsed, set_nav_collapsed, bool);
+    apply_setting!(apply_minimize_on_launch, set_minimize_on_launch, bool);
+    apply_setting!(apply_save_game_logs, set_save_game_logs, bool);
+    apply_setting!(apply_double_click_launches, set_double_click_launches, bool);
+    apply_setting!(apply_auto_check_epic_updates_on_launch, set_auto_check_epic_updates_on_launch, bool);
+    apply_setting!(apply_auto_check_gog_updates_on_launch, set_auto_check_gog_updates_on_launch, bool);
+    apply_setting!(apply_auto_check_updates_on_boot, set_auto_check_updates_on_boot, bool);
+    apply_setting!(apply_show_tray_icon, set_show_tray_icon, bool);
 
     fn apply_discord_rpc(mut self: Pin<&mut Self>, value: bool) {
         self.as_mut().set_discord_rpc(value);
@@ -495,10 +443,7 @@ impl qobject::UiSettingsBridge {
         self.persist();
     }
 
-    fn apply_muted_icons(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_muted_icons(value);
-        self.persist();
-    }
+    apply_setting!(apply_muted_icons, set_muted_icons, bool);
 
     fn apply_card_flow(mut self: Pin<&mut Self>, value: &cxx_qt_lib::QString) {
         let v = value.to_string();
@@ -508,10 +453,7 @@ impl qobject::UiSettingsBridge {
         self.persist();
     }
 
-    fn apply_console_background(mut self: Pin<&mut Self>, value: &cxx_qt_lib::QString) {
-        self.as_mut().set_console_background(value.clone());
-        self.persist();
-    }
+    apply_setting!(qstr apply_console_background, set_console_background);
 
     fn reload_from_disk(mut self: Pin<&mut Self>) {
         let s = UiSettings::load();
