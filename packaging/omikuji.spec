@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           omikuji
-Version:        0.4.2
+Version:        0.4.3
 Release:        1%{?dist}
 Summary:        Qt/QML based wine apps launcher for Linux
 
@@ -53,6 +53,9 @@ install -Dm0644 packaging/io.github.reakjra.omikuji.metainfo.xml %{buildroot}%{_
 %{_datadir}/metainfo/io.github.reakjra.omikuji.metainfo.xml
 
 %changelog
+* gio giu 25 2026 reakjra <reakjra@proton.me> - 0.4.3-1
+- Fix GOG and Epic Games login page (+ DRY)
+
 * Tue Jun 23 2026 reakjra <reakjra@proton.me> - 0.4.2-1
 - "Open with Omikuji" picker for .exe files
 - Theme fallbacks when the system color scheme is unknown
