@@ -4,6 +4,8 @@ Item {
     id: root
 
     property var gameModel: null
+    property var envSetsDialog: null
+    property var dllSetsDialog: null
 
     // forwarded to TabRunnerOptions so the runner dropdown refreshes after an install without restart
     property int runnersVersion: 0
@@ -60,6 +62,14 @@ Item {
         }
     }
 
+    function openEnvSets() {
+        if (envSetsDialog) envSetsDialog.openForGame(root.config["launch.env"] || "{}", root.config["launch.env_sets"] || "[]", root.updateField)
+    }
+
+    function openDllSets() {
+        if (dllSetsDialog) dllSetsDialog.openForGame(root.config["wine.dll_overrides"] || "{}", root.config["wine.dll_override_sets"] || "[]", root.updateField)
+    }
+
     // returns new game id or empty on validation failure, draft is presevred
     function save() {
         if (!gameModel) return ""
@@ -114,6 +124,7 @@ Item {
                 item.updateField = root.updateField
                 item.gameModel = root.gameModel
                 item.runnersVersion = Qt.binding(() => root.runnersVersion)
+                item.openDllSets = root.openDllSets
             }
         }
 
@@ -126,6 +137,7 @@ Item {
                 item.config = Qt.binding(() => root.config)
                 item.updateField = root.updateField
                 item.gameModel = root.gameModel
+                item.openEnvSets = root.openEnvSets
             }
         }
     }

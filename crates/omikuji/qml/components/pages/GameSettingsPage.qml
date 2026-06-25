@@ -5,6 +5,8 @@ Item {
 
     property var gameModel: null
     property int gameIndex: -1
+    property var envSetsDialog: null
+    property var dllSetsDialog: null
 
     // TabRunnerOptions re-queries list_runners without restart when this bumps
     property int runnersVersion: 0
@@ -93,6 +95,14 @@ Item {
         }
     }
 
+    function openEnvSets() {
+        if (envSetsDialog) envSetsDialog.openForGame(root.config["launch.env"] || "{}", root.config["launch.env_sets"] || "[]", root.updateField)
+    }
+
+    function openDllSets() {
+        if (dllSetsDialog) dllSetsDialog.openForGame(root.config["wine.dll_overrides"] || "{}", root.config["wine.dll_override_sets"] || "[]", root.updateField)
+    }
+
     // lookup by id because index may shift after a refresh
     function findIndex() {
         if (!gameModel || gameId === "") return -1
@@ -139,6 +149,7 @@ Item {
                 item.updateField = root.updateField
                 item.gameModel = root.gameModel
                 item.runnersVersion = Qt.binding(() => root.runnersVersion)
+                item.openDllSets = root.openDllSets
             }
         }
 
@@ -151,6 +162,7 @@ Item {
                 item.config = Qt.binding(() => root.config)
                 item.updateField = root.updateField
                 item.gameModel = root.gameModel
+                item.openEnvSets = root.openEnvSets
             }
         }
 

@@ -10,6 +10,7 @@ Item {
     property var config: ({})
     property var updateField: function(key, value) {}
     property var gameModel: null
+    property var openEnvSets: function() {}
 
     implicitHeight: content.height
 
@@ -281,6 +282,17 @@ Item {
                 valuePlaceholder: "value"
                 addLabel: "Add variable"
                 onChanged: (j) => updateField("launch.env", j)
+            }
+
+            M3Button {
+                text: {
+                    let n = 0
+                    try { n = JSON.parse(config["launch.env_sets"] || "[]").length } catch (e) {}
+                    return n > 0 ? "Sets · " + n + " synced" : "Sets"
+                }
+                variant: "tonal"
+                icon: "view_list"
+                onClicked: root.openEnvSets()
             }
         }
 

@@ -22,6 +22,10 @@ pub struct UiSettings {
     pub console_mode: ConsoleModeSettings,
     #[serde(default = "default_categories")]
     pub categories: Vec<CategoryEntry>,
+    #[serde(default)]
+    pub env_sets: Vec<KvSet>,
+    #[serde(default)]
+    pub dll_sets: Vec<KvSet>,
 }
 
 impl Default for UiSettings {
@@ -35,6 +39,8 @@ impl Default for UiSettings {
             theme: ThemeSettings::default(),
             console_mode: ConsoleModeSettings::default(),
             categories: default_categories(),
+            env_sets: Vec::new(),
+            dll_sets: Vec::new(),
         }
     }
 }
@@ -61,6 +67,21 @@ fn default_categories() -> Vec<CategoryEntry> {
         CategoryEntry { enabled: true, name: "Wine".into(), icon: "wine_bar".into(), kind: "runner".into(), value: "wine".into() },
         CategoryEntry { enabled: true, name: "Native".into(), icon: "terminal".into(), kind: "runner".into(), value: "native".into() },
     ]
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct KvPair {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct KvSet {
+    #[serde(default)]
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub vars: Vec<KvPair>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

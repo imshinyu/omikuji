@@ -482,6 +482,18 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path) -> HashMap<
         }
     }
 
+    if !game.wine.dll_override_sets.is_empty() {
+        let ui = crate::ui_settings::UiSettings::load();
+        for set_id in &game.wine.dll_override_sets {
+            let Some(set) = ui.dll_sets.iter().find(|s| &s.id == set_id) else { continue };
+            for pair in &set.vars {
+                if !pair.key.trim().is_empty() {
+                    append_dll_override(&mut env, &format!("{}={}", pair.key, pair.value));
+                }
+            }
+        }
+    }
+
     if game.system.pulse_latency {
         env.insert("PULSE_LATENCY_MSEC".to_string(), "60".to_string());
     }
@@ -492,6 +504,18 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path) -> HashMap<
 
     for (k, v) in &game.launch.env {
         env.insert(k.clone(), v.clone());
+    }
+
+    if !game.launch.env_sets.is_empty() {
+        let ui = crate::ui_settings::UiSettings::load();
+        for set_id in &game.launch.env_sets {
+            let Some(set) = ui.env_sets.iter().find(|s| &s.id == set_id) else { continue };
+            for var in &set.vars {
+                if !var.key.trim().is_empty() {
+                    env.insert(var.key.clone(), var.value.clone());
+                }
+            }
+        }
     }
 
     env

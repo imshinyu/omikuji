@@ -4,7 +4,7 @@
 use cxx_qt::{CxxQtType, Threading};
 use omikuji_core::fs_watcher::FileWatcher;
 use omikuji_core::ui_settings::{
-    BehaviorSettings, CategoryEntry, ConsoleModeSettings, DisplaySettings, LibrarySettings,
+    BehaviorSettings, CategoryEntry, ConsoleModeSettings, DisplaySettings, KvSet, LibrarySettings,
     NavSettings, TabsSettings, ThemeSettings, UiSettings, ui_settings_path,
 };
 use std::collections::BTreeMap;
@@ -59,6 +59,14 @@ pub mod qobject {
         #[qsignal]
         #[cxx_name = "categoriesChanged"]
         fn categories_changed(self: Pin<&mut UiSettingsBridge>);
+
+        #[qsignal]
+        #[cxx_name = "envSetsChanged"]
+        fn env_sets_changed(self: Pin<&mut UiSettingsBridge>);
+
+        #[qsignal]
+        #[cxx_name = "dllSetsChanged"]
+        fn dll_sets_changed(self: Pin<&mut UiSettingsBridge>);
 
         #[qsignal]
         #[cxx_name = "themeChanged"]
@@ -170,6 +178,22 @@ pub mod qobject {
         fn apply_categories_json(self: Pin<&mut UiSettingsBridge>, json: &QString);
 
         #[qinvokable]
+        #[cxx_name = "envSetsJson"]
+        fn env_sets_json(self: &UiSettingsBridge) -> QString;
+
+        #[qinvokable]
+        #[cxx_name = "applyEnvSetsJson"]
+        fn apply_env_sets_json(self: Pin<&mut UiSettingsBridge>, json: &QString);
+
+        #[qinvokable]
+        #[cxx_name = "dllSetsJson"]
+        fn dll_sets_json(self: &UiSettingsBridge) -> QString;
+
+        #[qinvokable]
+        #[cxx_name = "applyDllSetsJson"]
+        fn apply_dll_sets_json(self: Pin<&mut UiSettingsBridge>, json: &QString);
+
+        #[qinvokable]
         #[cxx_name = "initWatcher"]
         fn init_watcher(self: Pin<&mut UiSettingsBridge>);
 
@@ -239,6 +263,8 @@ pub struct UiSettingsRust {
     pub radius_scale: f64,
     pub color_overrides: BTreeMap<String, String>,
     pub categories: Vec<CategoryEntry>,
+    pub env_sets: Vec<KvSet>,
+    pub dll_sets: Vec<KvSet>,
     pub watcher: Option<FileWatcher>,
     pub suppress_reload_until: Option<Instant>,
 }
@@ -283,6 +309,8 @@ impl UiSettingsRust {
             radius_scale: s.theme.radius_scale,
             color_overrides: s.theme.colors.clone(),
             categories: s.categories.clone(),
+            env_sets: s.env_sets.clone(),
+            dll_sets: s.dll_sets.clone(),
             watcher: None,
             suppress_reload_until: None,
         }
@@ -336,6 +364,8 @@ impl qobject::UiSettingsBridge {
                 active: UiSettings::load().console_mode.active,
             },
             categories: self.categories.clone(),
+            env_sets: self.env_sets.clone(),
+            dll_sets: self.dll_sets.clone(),
         }
     }
 
@@ -496,6 +526,10 @@ impl qobject::UiSettingsBridge {
         self.as_mut().rust_mut().get_mut().color_overrides = s.theme.colors;
         self.as_mut().rust_mut().get_mut().categories = s.categories;
         self.as_mut().categories_changed();
+        self.as_mut().rust_mut().get_mut().env_sets = s.env_sets;
+        self.as_mut().env_sets_changed();
+        self.as_mut().rust_mut().get_mut().dll_sets = s.dll_sets;
+        self.as_mut().dll_sets_changed();
         self.as_mut().theme_changed();
     }
 
@@ -513,6 +547,40 @@ impl qobject::UiSettingsBridge {
                 self.as_mut().categories_changed();
             }
             Err(e) => tracing::error!("bad categories json: {e}"),
+        }
+    }
+
+    fn env_sets_json(&self) -> cxx_qt_lib::QString {
+        let json = serde_json::to_string(&self.env_sets).unwrap_or_else(|_| "[]".to_string());
+        cxx_qt_lib::QString::from(&json)
+    }
+
+    fn apply_env_sets_json(mut self: Pin<&mut Self>, json: &cxx_qt_lib::QString) {
+        let s = json.to_string();
+        match serde_json::from_str::<Vec<KvSet>>(&s) {
+            Ok(entries) => {
+                self.as_mut().rust_mut().get_mut().env_sets = entries;
+                self.as_mut().persist();
+                self.as_mut().env_sets_changed();
+            }
+            Err(e) => tracing::error!("bad env sets json: {e}"),
+        }
+    }
+
+    fn dll_sets_json(&self) -> cxx_qt_lib::QString {
+        let json = serde_json::to_string(&self.dll_sets).unwrap_or_else(|_| "[]".to_string());
+        cxx_qt_lib::QString::from(&json)
+    }
+
+    fn apply_dll_sets_json(mut self: Pin<&mut Self>, json: &cxx_qt_lib::QString) {
+        let s = json.to_string();
+        match serde_json::from_str::<Vec<KvSet>>(&s) {
+            Ok(entries) => {
+                self.as_mut().rust_mut().get_mut().dll_sets = entries;
+                self.as_mut().persist();
+                self.as_mut().dll_sets_changed();
+            }
+            Err(e) => tracing::error!("bad dll sets json: {e}"),
         }
     }
 

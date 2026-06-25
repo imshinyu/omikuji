@@ -129,6 +129,8 @@ pub struct WineConfig {
     #[serde(default)]
     pub dll_overrides: HashMap<String, String>,
     #[serde(default)]
+    pub dll_override_sets: Vec<String>,
+    #[serde(default)]
     pub audio_driver: String,
     #[serde(default)]
     pub graphics_driver: String,
@@ -161,6 +163,7 @@ impl Default for WineConfig {
             dpi_scaling: false,
             dpi: 96,
             dll_overrides: HashMap::new(),
+            dll_override_sets: Vec::new(),
             audio_driver: String::new(),
             graphics_driver: String::new(),
         }
@@ -181,6 +184,8 @@ pub struct LaunchConfig {
     pub post_exit_script: String,
     #[serde(default)]
     pub env: HashMap<String, String>,
+    #[serde(default)]
+    pub env_sets: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

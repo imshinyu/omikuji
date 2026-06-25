@@ -168,6 +168,7 @@ fn main() {
                 "qml/components/dialogs/GogInstallDialog.qml",
                 "qml/components/dialogs/ErrorDialog.qml",
                 "qml/components/dialogs/GameLogsWindow.qml",
+                "qml/components/dialogs/SetsDialog.qml",
                 "qml/components/dialogs/UpdateAvailableDialog.qml",
                 // downloads
                 "qml/components/downloads/ComponentRow.qml",

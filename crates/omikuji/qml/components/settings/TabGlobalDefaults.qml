@@ -12,6 +12,7 @@ Item {
     property var gameModel: null
 
     signal applyToExistingRequested()
+    signal manageSetsRequested(string kind)
 
     property var cfg: ({})
     property var setKeys: []
@@ -437,6 +438,54 @@ Item {
                     anchors.top: parent.top
                     anchors.topMargin: 8
                     fieldKey: "launch.env"
+                }
+            }
+        }
+
+        SettingsSection {
+            label: "Environment Sets"
+            icon: "view_list"
+            width: parent.width
+
+            RowLayout {
+                width: parent.width
+
+                Text {
+                    Layout.fillWidth: true
+                    text: "Create and edit reusable env sets, applied or copied per-game."
+                    color: theme.textSubtle
+                    font.pixelSize: 13
+                    wrapMode: Text.WordWrap
+                }
+
+                M3Button {
+                    text: "Manage"
+                    variant: "tonal"
+                    onClicked: root.manageSetsRequested("env")
+                }
+            }
+        }
+
+        SettingsSection {
+            label: "DLL Override Sets"
+            icon: "view_list"
+            width: parent.width
+
+            RowLayout {
+                width: parent.width
+
+                Text {
+                    Layout.fillWidth: true
+                    text: "Create and edit reusable DLL override sets, applied or copied per-game."
+                    color: theme.textSubtle
+                    font.pixelSize: 13
+                    wrapMode: Text.WordWrap
+                }
+
+                M3Button {
+                    text: "Manage"
+                    variant: "tonal"
+                    onClicked: root.manageSetsRequested("dll")
                 }
             }
         }

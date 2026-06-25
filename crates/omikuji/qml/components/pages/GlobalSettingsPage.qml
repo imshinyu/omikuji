@@ -19,6 +19,7 @@ Item {
     signal categoryDeleteRequested(int index, var entry)
 
     signal defaultsApplyToExistingRequested()
+    signal manageSetsRequested(string kind)
 
     readonly property string modalTitle: "Settings"
     readonly property string modalSubtitle: ""
@@ -74,6 +75,7 @@ Item {
                 item.defaults = root.defaults
                 item.gameModel = root.gameModel
                 item.applyToExistingRequested.connect(() => root.defaultsApplyToExistingRequested())
+                item.manageSetsRequested.connect((kind) => root.manageSetsRequested(kind))
             }
         }
 

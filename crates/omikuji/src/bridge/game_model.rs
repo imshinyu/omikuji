@@ -755,6 +755,7 @@ game_fields! {
     "wine.audio_driver" => str, wine.audio_driver,
     "wine.graphics_driver" => str, wine.graphics_driver,
     "wine.dll_overrides" => json, wine.dll_overrides,
+    "wine.dll_override_sets" => json, wine.dll_override_sets,
 
     "launch.args" => args, launch.args,
     "launch.working_dir" => str, launch.working_dir,
@@ -762,6 +763,7 @@ game_fields! {
     "launch.pre_launch_script" => str, launch.pre_launch_script,
     "launch.post_exit_script" => str, launch.post_exit_script,
     "launch.env" => json, launch.env,
+    "launch.env_sets" => json, launch.env_sets,
 
     "graphics.mangohud" => bool, graphics.mangohud,
     "graphics.gpu" => str, graphics.gpu,

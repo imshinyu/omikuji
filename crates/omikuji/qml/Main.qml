@@ -239,6 +239,8 @@ ApplicationWindow {
     readonly property var epicModelRef: epicModel
     readonly property var gogModelRef: gogModel
     readonly property var uiSettingsRef: uiSettings
+    readonly property var envSetsDialogRef: envSetsDialog
+    readonly property var dllSetsDialogRef: dllSetsDialog
     readonly property var componentsBridgeRef: componentsBridge
     readonly property var archiveManagerRef: archiveManager
 
@@ -938,6 +940,30 @@ property real cardZoom: uiSettings.cardZoom
         gameModel: root.gameModelRef
     }
 
+    SetsDialog {
+        id: envSetsDialog
+        libRead: () => uiSettings.envSetsJson()
+        libWrite: (j) => uiSettings.applyEnvSetsJson(j)
+        copyKey: "launch.env"
+        syncKey: "launch.env_sets"
+        keyPlaceholder: "VAR_NAME"
+        valuePlaceholder: "value"
+        titleText: "Environment sets"
+        manageTitle: "Manage env sets"
+    }
+
+    SetsDialog {
+        id: dllSetsDialog
+        libRead: () => uiSettings.dllSetsJson()
+        libWrite: (j) => uiSettings.applyDllSetsJson(j)
+        copyKey: "wine.dll_overrides"
+        syncKey: "wine.dll_override_sets"
+        keyPlaceholder: "dll_name"
+        valuePlaceholder: "n,b"
+        titleText: "DLL override sets"
+        manageTitle: "Manage DLL sets"
+    }
+
     CategoriesController {
         id: categoriesController
         uiSettings: uiSettings
@@ -1049,6 +1075,8 @@ property real cardZoom: uiSettings.cardZoom
                 gameModel: root.gameModelRef
                 runnersVersion: root.runnersVersion
                 gameIndex: root.settingsGameIndex
+                envSetsDialog: root.envSetsDialogRef
+                dllSetsDialog: root.dllSetsDialogRef
                 onSaveRequested: (idx) => root.activeModal = ""
                 onSaveAndPlayRequested: (idx) => {
                     root.activeModal = ""
@@ -1067,6 +1095,8 @@ property real cardZoom: uiSettings.cardZoom
             AddGamePage {
                 gameModel: root.gameModelRef
                 runnersVersion: root.runnersVersion
+                envSetsDialog: root.envSetsDialogRef
+                dllSetsDialog: root.dllSetsDialogRef
                 onGameCreated: (gameId) => {
                     root.activeModal = ""
                     for (let i = 0; i < gameModel.count; i++) {
@@ -1107,6 +1137,7 @@ property real cardZoom: uiSettings.cardZoom
                 onManageRequested: (category, source, kind) => {
                     archiveManageDialog.show(category, source, kind)
                 }
+                onManageSetsRequested: (kind) => (kind === "dll" ? dllSetsDialog : envSetsDialog).openManage()
                 onCategoryAddRequested: categoriesController.showAdd()
                 onCategoryEditRequested: (idx, entry) => categoriesController.showEdit(idx, entry)
                 onCategoryDeleteRequested: (idx, entry) => categoriesController.showDelete(idx, entry)
