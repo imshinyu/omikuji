@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           omikuji
-Version:        0.4.4
+Version:        0.5.0
 Release:        1%{?dist}
 Summary:        Qt/QML based wine apps launcher for Linux
 
@@ -53,6 +53,11 @@ install -Dm0644 packaging/io.github.reakjra.omikuji.metainfo.xml %{buildroot}%{_
 %{_datadir}/metainfo/io.github.reakjra.omikuji.metainfo.xml
 
 %changelog
+* Sat Jun 27 2026 reakjra <reakjra@proton.me> - 0.5.0-1
+- Ofuda system (prefix manager)
+- Prefix prep modal
+- Shared scroll between fixed in modals
+
 * Thu Jun 25 2026 reakjra <reakjra@proton.me> - 0.4.4-1
 - Lazy runtime tools fetch (Only umu will be fetched on boot)
 - Added env/dll sets.
