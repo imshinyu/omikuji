@@ -56,11 +56,11 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                text: row.isFailed ? ("Failed: " + row.error)
-                    : row.isDone ? (row.version ? ("v" + row.version) : "Installed")
+                text: row.isFailed ? qsTr("Failed: %1").arg(row.error)
+                    : row.isDone ? (row.version ? ("v" + row.version) : qsTr("Installed"))
                     : row.isActive ? (capitalize(row.status)
                           + (row.status === "downloading" ? " · " + Math.round(row.percent) + "%" : "…"))
-                    : "Pending"
+                    : qsTr("Pending")
                 color: row.isFailed ? (theme.error || "#e06060") : theme.textMuted
                 font.pixelSize: 12
                 elide: Text.ElideRight

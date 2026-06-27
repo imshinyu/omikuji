@@ -13,6 +13,7 @@ use std::time::{Duration, Instant};
 
 unsafe extern "C" {
     fn omikuji_set_app_font(family: *const std::os::raw::c_char);
+    fn omikuji_available_languages_json() -> *const std::os::raw::c_char;
 }
 
 #[cxx_qt::bridge]
@@ -52,6 +53,7 @@ pub mod qobject {
         #[qproperty(QString, font_family, cxx_name = "fontFamily")]
         #[qproperty(bool, fill_fields, cxx_name = "fillFields")]
         #[qproperty(f64, radius_scale, cxx_name = "radiusScale")]
+        #[qproperty(QString, language)]
         type UiSettingsBridge = super::UiSettingsRust;
     }
 
@@ -228,6 +230,14 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "availableFontsJson"]
         fn available_fonts_json(self: &UiSettingsBridge) -> QString;
+
+        #[qinvokable]
+        #[cxx_name = "applyLanguage"]
+        fn apply_language(self: Pin<&mut UiSettingsBridge>, value: &QString);
+
+        #[qinvokable]
+        #[cxx_name = "availableLanguagesJson"]
+        fn available_languages_json(self: &UiSettingsBridge) -> QString;
     }
 }
 
@@ -261,6 +271,7 @@ pub struct UiSettingsRust {
     pub font_family: cxx_qt_lib::QString,
     pub fill_fields: bool,
     pub radius_scale: f64,
+    pub language: cxx_qt_lib::QString,
     pub color_overrides: BTreeMap<String, String>,
     pub categories: Vec<CategoryEntry>,
     pub env_sets: Vec<KvSet>,
@@ -307,6 +318,7 @@ impl UiSettingsRust {
             font_family: cxx_qt_lib::QString::from(&s.theme.font_family),
             fill_fields: s.theme.fill_fields,
             radius_scale: s.theme.radius_scale,
+            language: cxx_qt_lib::QString::from(&s.language),
             color_overrides: s.theme.colors.clone(),
             categories: s.categories.clone(),
             env_sets: s.env_sets.clone(),
@@ -355,6 +367,7 @@ macro_rules! apply_setting {
 impl qobject::UiSettingsBridge {
     fn snapshot(&self) -> UiSettings {
         UiSettings {
+            language: self.language.to_string(),
             library: LibrarySettings {
                 card_zoom: self.card_zoom,
                 card_spacing: self.card_spacing,
@@ -454,6 +467,7 @@ impl qobject::UiSettingsBridge {
     }
 
     apply_setting!(qstr apply_console_background, set_console_background);
+    apply_setting!(qstr apply_language, set_language);
 
     fn reload_from_disk(mut self: Pin<&mut Self>) {
         let s = UiSettings::load();
@@ -485,6 +499,7 @@ impl qobject::UiSettingsBridge {
         self.as_mut().set_font_family(cxx_qt_lib::QString::from(&s.theme.font_family));
         self.as_mut().set_fill_fields(s.theme.fill_fields);
         self.as_mut().set_radius_scale(s.theme.radius_scale);
+        self.as_mut().set_language(cxx_qt_lib::QString::from(&s.language));
         self.as_mut().rust_mut().get_mut().color_overrides = s.theme.colors;
         self.as_mut().rust_mut().get_mut().categories = s.categories;
         self.as_mut().categories_changed();
@@ -562,6 +577,17 @@ impl qobject::UiSettingsBridge {
 
     fn available_fonts_json(&self) -> cxx_qt_lib::QString {
         let json = serde_json::to_string(&list_system_fonts()).unwrap_or_else(|_| "[]".to_string());
+        cxx_qt_lib::QString::from(&json)
+    }
+
+    fn available_languages_json(&self) -> cxx_qt_lib::QString {
+        let ptr = unsafe { omikuji_available_languages_json() };
+        if ptr.is_null() {
+            return cxx_qt_lib::QString::from("[]");
+        }
+        let json = unsafe { std::ffi::CStr::from_ptr(ptr) }
+            .to_string_lossy()
+            .into_owned();
         cxx_qt_lib::QString::from(&json)
     }
 

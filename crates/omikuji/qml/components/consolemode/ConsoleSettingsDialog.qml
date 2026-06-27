@@ -21,12 +21,12 @@ Item {
     z: 2000
 
     readonly property var _options: [
-        { label: "Wave", value: "wave" },
-        { label: "Metaballs", value: "metaballs" },
-        { label: "Veins", value: "veins" },
-        { label: "Aurora", value: "aurora" },
-        { label: "Sakura", value: "sakura" },
-        { label: "Hero", value: "hero" }
+        { label: qsTr("Wave"),      value: "wave" },
+        { label: qsTr("Metaballs"), value: "metaballs" },
+        { label: qsTr("Veins"),     value: "veins" },
+        { label: qsTr("Aurora"),    value: "aurora" },
+        { label: qsTr("Sakura"),    value: "sakura" },
+        { label: qsTr("Hero"),      value: "hero" }
     ]
 
     function open() {
@@ -112,7 +112,7 @@ Item {
 
             Text {
                 Layout.fillWidth: true
-                text: "Settings"
+                text: qsTr("Settings")
                 color: theme.text
                 font.pixelSize: 18
                 font.weight: Font.DemiBold
@@ -148,7 +148,7 @@ Item {
                     }
 
                     Text {
-                        text: "Background"
+                        text: qsTr("Background")
                         color: theme.text
                         font.pixelSize: 14
                         font.weight: Font.Medium

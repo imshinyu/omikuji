@@ -158,7 +158,7 @@ Item {
                     }
 
                     Tooltip {
-                        text: "don't you dare."
+                        text: qsTr("don't you dare.")
                         tipVisible: pauseBtn.hovered && row.isUninterruptible
                     }
                 }
@@ -194,7 +194,7 @@ Item {
         let parts = []
 
         if (status === "Failed" && error) {
-            return "Failed: " + error
+            return qsTr("Failed: %1").arg(error)
         }
 
         if (status !== "Queued" && bytesTotal > 0) {
@@ -204,18 +204,18 @@ Item {
         }
 
         if (status === "Extracting") {
-            return "Extracting · " + progress.toFixed(0) + "%"
+            return qsTr("Extracting · %1%").arg(progress.toFixed(0))
         }
 
         if (status === "Patching") {
-            return "Patching · " + progress.toFixed(0) + "%"
+            return qsTr("Patching · %1%").arg(progress.toFixed(0))
         }
 
         if (status === "Downloading" && speed > 0) {
             parts.push(formatBytes(speed) + "/s")
             if (bytesTotal > bytesDownloaded) {
                 let etaSecs = (bytesTotal - bytesDownloaded) / speed
-                parts.push(formatEta(etaSecs) + " left")
+                parts.push(qsTr("%1 left").arg(formatEta(etaSecs)))
             }
         }
 

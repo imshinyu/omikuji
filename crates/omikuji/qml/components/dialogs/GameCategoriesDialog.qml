@@ -73,7 +73,7 @@ DialogCard {
         spacing: theme.space.sm
 
         Text {
-            text: "Categories"
+            text: qsTr("Categories")
             color: theme.text
             font.pixelSize: theme.type.title.size
             font.weight: Font.DemiBold
@@ -90,7 +90,7 @@ DialogCard {
 
         Text {
             Layout.fillWidth: true
-            text: "No tag categories yet. Create one to start tagging."
+            text: qsTr("No tag categories yet. Create one to start tagging.")
             color: theme.textSubtle
             font.pixelSize: theme.type.caption.size
             wrapMode: Text.Wrap
@@ -174,7 +174,7 @@ DialogCard {
     }
 
     footerLeft: M3Button {
-        text: "New category"
+        text: qsTr("New category")
         variant: "tonal"
         icon: "add"
         onClicked: root.requestNewCategory()
@@ -184,13 +184,13 @@ DialogCard {
         spacing: theme.space.sm
 
         M3Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             variant: "text"
             onClicked: root.close()
         }
 
         M3Button {
-            text: "Save"
+            text: qsTr("Save")
             variant: "filled"
             onClicked: root._save()
         }

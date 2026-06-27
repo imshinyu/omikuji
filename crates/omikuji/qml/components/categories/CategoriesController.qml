@@ -18,7 +18,7 @@ Item {
 
     function showDelete(index, entry) {
         deleteConfirm.pendingIndex = index
-        deleteConfirm.message = "Delete \"" + (entry.name || "") + "\" from your categories?"
+        deleteConfirm.message = qsTr("Delete \"%1\" from your categories?").arg(entry.name || "")
         deleteConfirm.show()
     }
 
@@ -68,9 +68,9 @@ Item {
         id: deleteConfirm
         anchors.fill: parent
         property int pendingIndex: -1
-        title: "Delete category"
-        confirmText: "Delete"
-        cancelText: "Keep"
+        title: qsTr("Delete category")
+        confirmText: qsTr("Delete")
+        cancelText: qsTr("Keep")
         destructive: true
         onConfirmed: {
             let idx = deleteConfirm.pendingIndex

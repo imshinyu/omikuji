@@ -12,6 +12,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct UiSettings {
+    pub language: String,
     pub library: LibrarySettings,
     pub tabs: TabsSettings,
     pub nav: NavSettings,
@@ -31,6 +32,7 @@ pub struct UiSettings {
 impl Default for UiSettings {
     fn default() -> Self {
         Self {
+            language: "system".into(),
             library: LibrarySettings::default(),
             tabs: TabsSettings::default(),
             nav: NavSettings::default(),

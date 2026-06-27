@@ -28,7 +28,7 @@ Item {
     // z:10 so it sits above the CardGrid's empty Flow during load
     Text {
         anchors.centerIn: parent
-        text: loading ? "Loading Steam games..." : "No Steam games found"
+        text: loading ? qsTr("Loading Steam games...") : qsTr("No Steam games found")
         color: theme.textFaint
         font.pixelSize: 13
         visible: loading || steamGames.length === 0

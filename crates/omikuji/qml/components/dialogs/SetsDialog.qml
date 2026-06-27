@@ -178,8 +178,8 @@ DialogCard {
             Text {
                 Layout.fillWidth: true
                 text: root.manageOnly
-                    ? "Create and edit reusable sets. Apply them per-game from a game's settings."
-                    : "Check + Add to copy a set's entries into this game. Sync applies a set live at launch, atop this game's values."
+                    ? qsTr("Create and edit reusable sets. Apply them per-game from a game's settings.")
+                    : qsTr("Check + Add to copy a set's entries into this game. Sync applies a set live at launch, atop this game's values.")
                 color: theme.textMuted
                 font.pixelSize: theme.type.caption.size
                 wrapMode: Text.Wrap
@@ -187,7 +187,7 @@ DialogCard {
 
             Text {
                 Layout.fillWidth: true
-                text: "No sets yet. Create one to reuse values across games."
+                text: qsTr("No sets yet. Create one to reuse values across games.")
                 color: theme.textSubtle
                 font.pixelSize: theme.type.caption.size
                 wrapMode: Text.Wrap
@@ -245,14 +245,14 @@ DialogCard {
                         }
 
                         Text {
-                            text: (setRow.modelData.vars ? setRow.modelData.vars.length : 0) + " vars"
+                            text: qsTr("%1 vars").arg(setRow.modelData.vars ? setRow.modelData.vars.length : 0)
                             color: theme.textSubtle
                             font.pixelSize: theme.type.caption.size
                         }
 
                         M3Button {
                             visible: !root.manageOnly
-                            text: setRow.synced ? "Unsync" : "Sync"
+                            text: setRow.synced ? qsTr("Unsync") : qsTr("Sync")
                             variant: "tonal"
                             danger: setRow.synced
                             onClicked: root._toggleSync(setRow.modelData.id)
@@ -274,13 +274,13 @@ DialogCard {
 
             M3TextField {
                 Layout.fillWidth: true
-                label: "Set name"
+                label: qsTr("Set name")
                 text: root.editName
                 onTextEdited: (t) => root.editName = t
             }
 
             Text {
-                text: "Variables"
+                text: qsTr("Variables")
                 color: theme.textMuted
                 font.pixelSize: theme.type.body.size
                 font.weight: Font.Medium
@@ -288,7 +288,7 @@ DialogCard {
 
             Text {
                 Layout.fillWidth: true
-                text: "No variables yet."
+                text: qsTr("No variables yet.")
                 color: theme.textSubtle
                 font.pixelSize: theme.type.caption.size
                 visible: editVars.count === 0
@@ -329,7 +329,7 @@ DialogCard {
             }
 
             M3Button {
-                text: "Add variable"
+                text: qsTr("Add variable")
                 variant: "tonal"
                 icon: "add"
                 onClicked: editVars.append({ key: "", value: "" })
@@ -342,7 +342,7 @@ DialogCard {
 
         M3Button {
             visible: root.editingIndex < 0
-            text: "New set"
+            text: qsTr("New set")
             variant: "tonal"
             icon: "add"
             onClicked: root._newSet()
@@ -350,7 +350,7 @@ DialogCard {
 
         M3Button {
             visible: root.editingIndex >= 0
-            text: "Delete set"
+            text: qsTr("Delete set")
             variant: "tonal"
             danger: true
             icon: "remove"
@@ -363,21 +363,21 @@ DialogCard {
 
         M3Button {
             visible: root.editingIndex >= 0
-            text: "Done"
+            text: qsTr("Done")
             variant: "filled"
             onClicked: root._doneEdit()
         }
 
         M3Button {
             visible: root.editingIndex < 0
-            text: "Close"
+            text: qsTr("Close")
             variant: "text"
             onClicked: root.close()
         }
 
         M3Button {
             visible: root.editingIndex < 0 && !root.manageOnly
-            text: "Add"
+            text: qsTr("Add")
             variant: "filled"
             enabled: root.checkedIds.length > 0
             onClicked: root._add()

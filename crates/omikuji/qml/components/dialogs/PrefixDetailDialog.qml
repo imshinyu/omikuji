@@ -33,10 +33,10 @@ DialogCard {
     }
 
     readonly property var tools: [
-        { icon: "settings", label: "Winecfg",         act: "winecfg" },
-        { icon: "download", label: "Winetricks",      act: "winetricks" },
-        { icon: "folder",   label: "Open folder",     act: "open" },
-        { icon: "close",    label: "Kill wineserver", act: "kill" }
+        { icon: "settings", label: "Winecfg",                  act: "winecfg" },
+        { icon: "download", label: "Winetricks",               act: "winetricks" },
+        { icon: "folder",   label: qsTr("Open folder"),        act: "open" },
+        { icon: "close",    label: qsTr("Kill wineserver"),    act: "kill" }
     ]
 
     onCloseRequested: close()
@@ -72,7 +72,7 @@ DialogCard {
             visible: root.games.length > 0
 
             Text {
-                text: "Used by"
+                text: qsTr("Used by")
                 color: theme.textSubtle
                 font.pixelSize: 11
                 font.weight: Font.DemiBold
@@ -93,7 +93,7 @@ DialogCard {
         Text {
             width: parent.width
             visible: root.games.length === 0
-            text: "Orphan prefix, no game uses it."
+            text: qsTr("Orphan prefix, no game uses it.")
             color: theme.textSubtle
             font.pixelSize: 12
             wrapMode: Text.WordWrap
@@ -156,14 +156,14 @@ DialogCard {
     }
 
     footerLeft: M3Button {
-        text: "Delete prefix"
+        text: qsTr("Delete prefix")
         variant: "tonal"
         danger: true
         onClicked: root.deleteRequested(root.prefix)
     }
 
     actions: M3Button {
-        text: "Close"
+        text: qsTr("Close")
         variant: "tonal"
         onClicked: root.close()
     }

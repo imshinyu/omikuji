@@ -215,8 +215,8 @@ ApplicationWindow {
             if (componentsBridge.pendingCount > 0 && !componentsBridge.inProgress) {
                 toastManager.show(
                     "info",
-                    "Setting up omikuji",
-                    "Fetching runtime components — see Downloads for progress."
+                    qsTr("Setting up omikuji"),
+                    qsTr("Fetching runtime components — see Downloads for progress.")
                 )
                 componentsBridge.installEager()
             }
@@ -226,11 +226,11 @@ ApplicationWindow {
     Connections {
         target: componentsBridge
         function onComponentFailed(name, error) {
-            toastManager.show("error", name + " failed", "Retry it from the Downloads tab.")
+            toastManager.show("error", qsTr("%1 failed").arg(name), qsTr("Retry it from the Downloads tab."))
         }
         function onAllDoneChanged() {
             if (componentsBridge.allDone && componentsBridge.totalCount > 0) {
-                toastManager.show("success", "omikuji is ready", "Runtime components installed.")
+                toastManager.show("success", qsTr("omikuji is ready"), qsTr("Runtime components installed."))
             }
         }
     }
@@ -268,7 +268,7 @@ ApplicationWindow {
             let bits = []
             if (epicCount > 0) bits.push(epicCount + " Epic")
             if (gogCount > 0) bits.push(gogCount + " GOG")
-            toastManager.show("info", "Updates available", bits.join(" + ") + " queued in Downloads")
+            toastManager.show("info", qsTr("Updates available"), qsTr("%1 queued in Downloads").arg(bits.join(" + ")))
         }
 
         Component.onCompleted: {
@@ -858,7 +858,7 @@ property real cardZoom: uiSettings.cardZoom
                 pageVisible: root.currentView === "downloads"
                 onCancelRequested: (id, displayName) => {
                     cancelDownloadConfirm.message =
-                        "This will stop \"" + displayName + "\" and delete the partially downloaded files."
+                        qsTr("This will stop \"%1\" and delete the partially downloaded files.").arg(displayName)
                     cancelDownloadConfirm.show(id)
                 }
             }
@@ -927,9 +927,9 @@ property real cardZoom: uiSettings.cardZoom
     ConfirmDialog {
         id: cancelDownloadConfirm
         anchors.fill: parent
-        title: "Cancel download?"
-        confirmText: "Cancel & delete"
-        cancelText: "Keep"
+        title: qsTr("Cancel download?")
+        confirmText: qsTr("Cancel & delete")
+        cancelText: qsTr("Keep")
         destructive: true
         onConfirmed: (id) => { if (downloadModel) downloadModel.cancel(id) }
     }
@@ -937,10 +937,10 @@ property real cardZoom: uiSettings.cardZoom
     ConfirmDialog {
         id: refetchMediaConfirm
         anchors.fill: parent
-        title: "Refetch art from SGDB"
-        message: "Replaces the cached banner, cover art, and icon with a fresh pull from SteamGridDB. Manual overrides you've set won't be touched."
-        confirmText: "Refetch"
-        cancelText: "Cancel"
+        title: qsTr("Refetch art from SGDB")
+        message: qsTr("Replaces the cached banner, cover art, and icon with a fresh pull from SteamGridDB. Manual overrides you've set won't be touched.")
+        confirmText: qsTr("Refetch")
+        cancelText: qsTr("Cancel")
         onConfirmed: (id) => { if (id && gameModel) gameModel.refetch_media(id) }
     }
 
@@ -959,8 +959,8 @@ property real cardZoom: uiSettings.cardZoom
         syncKey: "launch.env_sets"
         keyPlaceholder: "VAR_NAME"
         valuePlaceholder: "value"
-        titleText: "Environment sets"
-        manageTitle: "Manage env sets"
+        titleText: qsTr("Environment sets")
+        manageTitle: qsTr("Manage env sets")
     }
 
     SetsDialog {
@@ -971,8 +971,8 @@ property real cardZoom: uiSettings.cardZoom
         syncKey: "wine.dll_override_sets"
         keyPlaceholder: "dll_name"
         valuePlaceholder: "n,b"
-        titleText: "DLL override sets"
-        manageTitle: "Manage DLL sets"
+        titleText: qsTr("DLL override sets")
+        manageTitle: qsTr("Manage DLL sets")
     }
 
     CategoriesController {
@@ -1011,9 +1011,9 @@ property real cardZoom: uiSettings.cardZoom
         onUpdateRequested: (gid, aid, fromV) => {
             let newId = gameModel.enqueue_game_update(gid, fromV)
             if (newId && newId.length > 0) {
-                toastManager.show("info", "Update queued", root.selectedGame ? root.selectedGame.name : "")
+                toastManager.show("info", qsTr("Update queued"), root.selectedGame ? root.selectedGame.name : "")
             } else {
-                toastManager.show("error", "Update failed", "Could not enqueue update")
+                toastManager.show("error", qsTr("Update failed"), qsTr("Could not enqueue update"))
             }
         }
         onRunAnywayRequested: (gid) => {
@@ -1059,8 +1059,10 @@ property real cardZoom: uiSettings.cardZoom
         onDeleteRequested: (p) => {
             const n = (p.games || []).length
             deletePrefixConfirm.message = n > 0
-                ? "This deletes the prefix and everything in it. " + n + (n === 1 ? " game uses" : " games use") + " it, and it won't be recoverable."
-                : "This deletes the prefix and everything in it. It won't be recoverable."
+                ? (n === 1
+                    ? qsTr("This deletes the prefix and everything in it. 1 game uses it, and it won't be recoverable.")
+                    : qsTr("This deletes the prefix and everything in it. %1 games use it, and it won't be recoverable.").arg(n))
+                : qsTr("This deletes the prefix and everything in it. It won't be recoverable.")
             prefixDetailDialog.escEnabled = false
             deletePrefixConfirm.show(p)
         }
@@ -1069,9 +1071,9 @@ property real cardZoom: uiSettings.cardZoom
     ConfirmDialog {
         id: deletePrefixConfirm
         anchors.fill: parent
-        title: "Delete prefix?"
-        confirmText: "Delete"
-        cancelText: "Cancel"
+        title: qsTr("Delete prefix?")
+        confirmText: qsTr("Delete")
+        cancelText: qsTr("Cancel")
         destructive: true
         onConfirmed: (p) => {
             if (ofudaBridge && p) ofudaBridge.deletePrefix(p.path)
@@ -1086,13 +1088,13 @@ property real cardZoom: uiSettings.cardZoom
         property string pendingRunExeRequestId: ""
 
         items: [
-            { text: "Configure (winecfg)", action: "winecfg" },
-            { text: "Winetricks", action: "winetricks" },
-            { text: "Registry (regedit)", action: "regedit" },
-            { text: "Command Prompt (cmd)", action: "cmd" },
-            { text: "File Explorer (explorer)", action: "explorer" },
-            { text: "Run EXE in prefix…", action: "run_exe" },
-            { text: "Kill wineserver", action: "killwineserver", danger: true }
+            { text: qsTr("Configure (winecfg)"),    action: "winecfg" },
+            { text: "Winetricks",                    action: "winetricks" },
+            { text: qsTr("Registry (regedit)"),      action: "regedit" },
+            { text: qsTr("Command Prompt (cmd)"),    action: "cmd" },
+            { text: qsTr("File Explorer (explorer)"), action: "explorer" },
+            { text: qsTr("Run EXE in prefix…"),      action: "run_exe" },
+            { text: qsTr("Kill wineserver"),         action: "killwineserver", danger: true }
         ] // TODO: dry up the dispatcher mighjt aswell kill it
 
         onItemClicked: (action) => {
@@ -1101,7 +1103,7 @@ property real cardZoom: uiSettings.cardZoom
             if (action === "run_exe") {
                 let rid = "wine_run_exe_" + Date.now().toString(36)
                 pendingRunExeRequestId = rid
-                gameModel.open_file_dialog(rid, false, "Select EXE to run in prefix", "/home")
+                gameModel.open_file_dialog(rid, false, qsTr("Select EXE to run in prefix"), "/home")
             } else {
                 gameModel.run_wine_tool(gid, action)
             }

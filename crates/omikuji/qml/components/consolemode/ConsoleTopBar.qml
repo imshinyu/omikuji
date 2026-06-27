@@ -108,7 +108,7 @@ Row {
             anchors.leftMargin: 16 * bar._scale
             anchors.rightMargin: 16 * bar._scale
             verticalAlignment: Text.AlignVCenter
-            text: "Search"
+            text: qsTr("Search")
             color: theme.textMuted
             font.pixelSize: 16 * bar._scale
             font.weight: Font.Medium

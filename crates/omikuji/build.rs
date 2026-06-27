@@ -26,6 +26,23 @@ fn collect_icons() -> (Vec<String>, Vec<String>) {
     (paths, names)
 }
 
+fn collect_translations() -> Vec<String> {
+    let dir = Path::new("i18n");
+    let Ok(entries) = fs::read_dir(dir) else {
+        return vec![];
+    };
+    let mut paths: Vec<String> = vec![];
+    for entry in entries.flatten() {
+        let p = entry.path();
+        if p.extension().and_then(|s| s.to_str()) == Some("qm") {
+            let filename = p.file_name().unwrap().to_string_lossy().into_owned();
+            paths.push(format!("i18n/{filename}"));
+        }
+    }
+    paths.sort();
+    paths
+}
+
 fn find_qsb() -> PathBuf {
     if let Ok(out) = Command::new("which").arg("qsb").output()
         && out.status.success()
@@ -133,8 +150,12 @@ fn main() {
     let shader_paths = compile_shaders();
     println!("cargo:rerun-if-changed=qml/components/consolemode/shaders");
 
+    let translation_paths = collect_translations();
+    println!("cargo:rerun-if-changed=i18n");
+
     let mut qrc_paths = icon_paths;
     qrc_paths.extend(shader_paths);
+    qrc_paths.extend(translation_paths);
     qrc_paths.push("qml/components/widgets/RunnerGrouping.js".to_string());
 
     let builder = CxxQtBuilder::new_qml_module(
@@ -279,11 +300,13 @@ fn main() {
             cc.file("src/app_icon.cpp");
             cc.file("src/app_font.cpp");
             cc.file("src/tray_native.cpp");
+            cc.file("src/i18n.cpp");
         })
     };
     println!("cargo:rerun-if-changed=src/app_icon.cpp");
     println!("cargo:rerun-if-changed=src/app_font.cpp");
     println!("cargo:rerun-if-changed=src/tray_native.cpp");
+    println!("cargo:rerun-if-changed=src/i18n.cpp");
 
     builder.build();
 }

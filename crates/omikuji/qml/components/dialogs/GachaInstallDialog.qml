@@ -286,7 +286,7 @@ DialogCard {
 
             Text {
                 Layout.fillWidth: true
-                text: root.displayName ? "Install " + root.displayName : "Install"
+                text: root.displayName ? qsTr("Install %1").arg(root.displayName) : qsTr("Install")
                 color: theme.text
                 font.pixelSize: 18
                 font.weight: Font.DemiBold
@@ -300,7 +300,7 @@ DialogCard {
             visible: root.editions.length > 1
 
             Text {
-                text: "Edition"
+                text: qsTr("Edition")
                 color: theme.textMuted
                 font.pixelSize: 13
                 font.weight: Font.Medium
@@ -360,7 +360,7 @@ DialogCard {
             visible: root.voiceLocales.length > 0
 
             Text {
-                text: "Voice Packs"
+                text: qsTr("Voice Packs")
                 color: theme.textMuted
                 font.pixelSize: 13
                 font.weight: Font.Medium
@@ -408,7 +408,7 @@ DialogCard {
 
             M3FileField {
                 Layout.fillWidth: true
-                label: "Installation path"
+                label: qsTr("Installation path")
                 placeholder: root.defaultInstallPath()
                 selectFolder: true
                 gameModel: root.gameModel
@@ -422,20 +422,20 @@ DialogCard {
                 text: {
                     let parts = []
                     if (root.downloadBytes === -2) {
-                        parts.push("Calculating size…")
+                        parts.push(qsTr("Calculating size…"))
                     } else if (root.sizeError !== "") {
-                        parts.push("Size unavailable")
+                        parts.push(qsTr("Size unavailable"))
                     } else if (root.installBytes >= 0) {
-                        parts.push(root.formatBytes(root.installBytes) + " install")
+                        parts.push(qsTr("%1 install").arg(root.formatBytes(root.installBytes)))
                     }
                     if (root.installFreeBytes >= 0) {
-                        parts.push(root.formatBytes(root.installFreeBytes) + " free")
+                        parts.push(qsTr("%1 free").arg(root.formatBytes(root.installFreeBytes)))
                     }
                     if (root.existingInstall) {
                         if (root.existingVersion !== "") {
-                            parts.push("existing install detected · v" + root.existingVersion)
+                            parts.push(qsTr("existing install detected · v%1").arg(root.existingVersion))
                         } else {
-                            parts.push("Unknown Version")
+                            parts.push(qsTr("Unknown version"))
                         }
                     }
                     return parts.join(" · ")
@@ -461,8 +461,8 @@ DialogCard {
 
             M3FileField {
                 Layout.fillWidth: true
-                label: "Temp path (optional)"
-                placeholder: "auto — next to install path"
+                label: qsTr("Temp path (optional)")
+                placeholder: qsTr("auto — next to install path")
                 selectFolder: true
                 gameModel: root.gameModel
                 text: root.tempPath
@@ -474,13 +474,13 @@ DialogCard {
                 text: {
                     let parts = []
                     if (root.existingTempSegments > 0) {
-                        parts.push("Found existing files · " + root.formatBytes(root.existingTempBytes))
+                        parts.push(qsTr("Found existing files · %1").arg(root.formatBytes(root.existingTempBytes)))
                     }
                     if (root.downloadBytes >= 0) {
-                        parts.push(root.formatBytes(root.downloadBytes) + " download")
+                        parts.push(qsTr("%1 download").arg(root.formatBytes(root.downloadBytes)))
                     }
                     if (root.tempFreeBytes >= 0) {
-                        parts.push(root.formatBytes(root.tempFreeBytes) + " free")
+                        parts.push(qsTr("%1 free").arg(root.formatBytes(root.tempFreeBytes)))
                     }
                     return parts.join(" · ")
                 }
@@ -499,8 +499,8 @@ DialogCard {
 
         M3FileField {
             Layout.fillWidth: true
-            label: "Prefix path (optional)"
-            placeholder: "auto — created per game"
+            label: qsTr("Prefix path (optional)")
+            placeholder: qsTr("auto — created per game")
             selectFolder: true
             gameModel: root.gameModel
             text: root.prefixPath
@@ -510,7 +510,7 @@ DialogCard {
 
         M3Dropdown {
             Layout.fillWidth: true
-            label: "Runner"
+            label: qsTr("Runner")
             options: root.runnerOptions
             currentIndex: root.runnerIndex
             onSelected: (v) => {
@@ -525,14 +525,14 @@ DialogCard {
         spacing: theme.space.sm
 
         M3Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             variant: "text"
             onClicked: { root.cancelled(); root.close() }
         }
         M3Button {
             text: root.existingInstall
-                ? "Import"
-                : (root.existingTempSegments > 0 ? "Resume" : "Install")
+                ? qsTr("Import")
+                : (root.existingTempSegments > 0 ? qsTr("Resume") : qsTr("Install"))
             variant: "filled"
             enabled: root.manifest !== null
                 && root.installPath.trim().length > 0

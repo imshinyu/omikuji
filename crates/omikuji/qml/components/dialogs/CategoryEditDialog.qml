@@ -16,11 +16,11 @@ DialogCard {
     property string formValue: ""
 
     readonly property var kindOptions: [
-        { label: "All games",  value: "all" },
-        { label: "Favourites", value: "favourite" },
-        { label: "Recent",     value: "recent" },
-        { label: "Runner",     value: "runner" },
-        { label: "Tag",        value: "tag" }
+        { label: qsTr("All games"),  value: "all" },
+        { label: qsTr("Favourites"), value: "favourite" },
+        { label: qsTr("Recent"),     value: "recent" },
+        { label: qsTr("Runner"),     value: "runner" },
+        { label: qsTr("Tag"),        value: "tag" }
     ]
 
     readonly property var runnerOptions: [
@@ -86,7 +86,7 @@ DialogCard {
         spacing: theme.space.md
 
         Text {
-            text: root._editingIndex === -1 ? "Add category" : "Edit category"
+            text: root._editingIndex === -1 ? qsTr("Add category") : qsTr("Edit category")
             color: theme.text
             font.pixelSize: theme.type.title.size
             font.weight: Font.DemiBold
@@ -95,7 +95,7 @@ DialogCard {
         M3TextField {
             id: nameField
             Layout.fillWidth: true
-            label: "Name"
+            label: qsTr("Name")
             text: root.formName
             onTextEdited: (t) => root.formName = t
         }
@@ -105,7 +105,7 @@ DialogCard {
             spacing: 4
 
             Text {
-                text: "Icon"
+                text: qsTr("Icon")
                 color: theme.textMuted
                 font.pixelSize: theme.type.body.size
                 font.weight: Font.Medium
@@ -132,7 +132,7 @@ DialogCard {
                 }
 
                 M3Button {
-                    text: "Change"
+                    text: qsTr("Change")
                     variant: "tonal"
                     onClicked: iconPicker.show(root.formIcon)
                 }
@@ -144,7 +144,7 @@ DialogCard {
         M3Dropdown {
             id: kindDropdown
             Layout.fillWidth: true
-            label: "Kind"
+            label: qsTr("Kind")
             options: root.kindOptions
             currentIndex: root._kindIndex
             onSelected: (value) => root.formKind = value
@@ -154,8 +154,8 @@ DialogCard {
             id: tagValueField
             Layout.fillWidth: true
             visible: root.formKind === "tag"
-            label: "Tag value"
-            placeholder: "e.g. anime, speedrun"
+            label: qsTr("Tag value")
+            placeholder: qsTr("e.g. anime, speedrun")
             text: root.formValue
             onTextEdited: (t) => root.formValue = t
         }
@@ -164,7 +164,7 @@ DialogCard {
             id: runnerDropdown
             Layout.fillWidth: true
             visible: root.formKind === "runner"
-            label: "Runner"
+            label: qsTr("Runner")
             options: root.runnerOptions
             currentIndex: root._runnerIndex
             onSelected: (value) => root.formValue = value
@@ -175,13 +175,13 @@ DialogCard {
         spacing: theme.space.sm
 
         M3Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             variant: "text"
             onClicked: { root.closed(); root.close() }
         }
 
         M3Button {
-            text: "Save"
+            text: qsTr("Save")
             variant: "filled"
             enabled: root.formName.trim().length > 0
             onClicked: {

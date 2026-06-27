@@ -132,7 +132,7 @@ Item {
         anchors.topMargin: visible ? 12 : 0
         anchors.left: parent.left
         anchors.leftMargin: 20
-        text: "Library"
+        text: qsTr("Library")
         color: theme.textMuted
         font.pixelSize: 12
         font.weight: Font.Medium
@@ -223,7 +223,7 @@ Item {
         anchors.topMargin: visible ? 24 : 0
         anchors.left: parent.left
         anchors.leftMargin: 20
-        text: "Stores"
+        text: qsTr("Stores")
         color: theme.textMuted
         font.pixelSize: 12
         font.weight: Font.Medium
@@ -456,7 +456,7 @@ Item {
                 }
 
                 Text {
-                    text: "Gachas"
+                    text: qsTr("Gachas")
                     color: theme.text
                     font.pixelSize: 13
                     font.weight: root.currentStore === "HoYo" && root.currentBottom === "" ? Font.DemiBold : Font.Normal
@@ -537,7 +537,7 @@ Item {
             }
 
             Text {
-                text: root.downloadCount > 0 ? "Downloads (" + root.downloadCount + ")" : "Downloads"
+                text: root.downloadCount > 0 ? qsTr("Downloads (%1)").arg(root.downloadCount) : qsTr("Downloads")
                 color: theme.text
                 font.pixelSize: 13
                 font.weight: root.currentBottom === "downloads" ? Font.DemiBold : Font.Normal
@@ -590,7 +590,7 @@ Item {
             }
 
             Text {
-                text: "Settings"
+                text: qsTr("Settings")
                 color: theme.text
                 font.pixelSize: 13
                 font.weight: root.currentBottom === "settings" ? Font.DemiBold : Font.Normal

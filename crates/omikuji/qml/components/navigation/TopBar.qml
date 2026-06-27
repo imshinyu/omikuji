@@ -83,7 +83,7 @@ Item {
                 Text {
                     anchors.fill: parent
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Search games..."
+                    text: qsTr("Search games...")
                     color: theme.textSubtle
                     font.pixelSize: 14
                     visible: !searchInput.text && !searchInput.activeFocus
@@ -107,7 +107,7 @@ Item {
             onClicked: root.consoleModeClicked()
 
             Tooltip {
-                text: "Console Mode"
+                text: qsTr("Console Mode")
                 tipVisible: consoleBtn.hovered
                 y: parent.height + 8
             }
@@ -123,7 +123,7 @@ Item {
             onClicked: displayPopup.visible ? displayPopup.close() : displayPopup.open()
 
             Tooltip {
-                text: "Quick Settings"
+                text: qsTr("Quick Settings")
                 tipVisible: displayBtn.hovered && !displayPopup.visible
                 y: parent.height + 8
             }
@@ -139,7 +139,7 @@ Item {
             onClicked: root.addClicked()
 
             Tooltip {
-                text: "Add Game"
+                text: qsTr("Add Game")
                 tipVisible: addBtn.hovered
                 y: parent.height + 8
             }

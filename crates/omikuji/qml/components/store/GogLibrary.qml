@@ -52,7 +52,7 @@ Item {
                 spacing: 8
 
                 Text {
-                    text: "Logged in as: " + (gogModel ? gogModel.displayName : "")
+                    text: qsTr("Logged in as: %1").arg(gogModel ? gogModel.displayName : "")
                     color: theme.textMuted
                     font.pixelSize: 13
                 }
@@ -155,7 +155,7 @@ Item {
 
         LoadingDots {
             anchors.centerIn: parent
-            text: "Loading library"
+            text: qsTr("Loading library")
             running: loadingOverlay.visible
         }
     }
@@ -179,7 +179,7 @@ Item {
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "No games in this store"
+                text: qsTr("No games in this store")
                 color: theme.textMuted
                 font.pixelSize: 16
                 font.weight: Font.Medium
@@ -190,8 +190,8 @@ Item {
     StoreLoginOverlay {
         visible: gogModel && !gogModel.isLoggedIn
         iconName: "gog"
-        title: "Login to GOG"
-        description: "To sync your GOG library, sign in on gog.com and paste the authorization code from the redirect URL."
+        title: qsTr("Login to GOG")
+        description: qsTr("To sync your GOG library, sign in on gog.com and paste the authorization code from the redirect URL.")
         loginUrl: gogModel ? gogModel.get_login_url() : ""
         toolName: "gogdl"
         toolReady: gogModel && gogModel.toolReady

@@ -53,7 +53,7 @@ Popup {
                 spacing: 8
 
                 Text {
-                    text: "Card size"
+                    text: qsTr("Card size")
                     color: theme.textMuted
                     font.pixelSize: 12
                     font.weight: Font.Medium
@@ -90,7 +90,7 @@ Popup {
                 spacing: 8
 
                 Text {
-                    text: "Card spacing"
+                    text: qsTr("Card spacing")
                     color: theme.textMuted
                     font.pixelSize: 12
                     font.weight: Font.Medium

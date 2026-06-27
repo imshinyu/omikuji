@@ -74,10 +74,10 @@ Item {
 
                 Text {
                     text: root.installedCount === 0
-                        ? "No versions installed"
+                        ? qsTr("No versions installed")
                         : root.installedCount === 1
-                            ? "1 version installed"
-                            : root.installedCount + " versions installed"
+                            ? qsTr("1 version installed")
+                            : qsTr("%1 versions installed").arg(root.installedCount)
                     color: root.installedCount > 0 ? theme.success : theme.textSubtle
                     font.pixelSize: 12
                 }
@@ -89,7 +89,7 @@ Item {
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            text: "Manage"
+            text: qsTr("Manage")
             variant: "tonal"
             onClicked: root.manageClicked()
         }
@@ -119,7 +119,7 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter
-            text: "Auto install on prefix"
+            text: qsTr("Auto install on prefix")
             color: theme.text
             font.pixelSize: 13
         }
@@ -131,7 +131,7 @@ Item {
             width: Math.min(240, labelMetrics.width + 56)
             fieldHeight: 32
             options: {
-                let opts = [{ label: "Disabled", value: "" }]
+                let opts = [{ label: qsTr("Disabled"), value: "" }]
                 for (let i = 0; i < root.installedVersions.length; i++) {
                     let tag = root.installedVersions[i]
                     opts.push({ label: tag, value: tag })
@@ -149,7 +149,7 @@ Item {
             TextMetrics {
                 id: labelMetrics
                 font.pixelSize: 14
-                text: root.activeVersion === "" ? "Disabled" : root.activeVersion
+                text: root.activeVersion === "" ? qsTr("Disabled") : root.activeVersion
             }
         }
     }

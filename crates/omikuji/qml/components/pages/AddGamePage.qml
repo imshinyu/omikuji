@@ -17,10 +17,10 @@ Item {
 
     readonly property bool canSave: (config["meta.name"] || "").trim().length > 0
 
-    readonly property string modalTitle: "New Game"
+    readonly property string modalTitle: qsTr("New Game")
     readonly property string modalSubtitle: ""
-    readonly property string primaryLabel: "Create & Play"
-    readonly property string secondaryLabel: "Create"
+    readonly property string primaryLabel: qsTr("Create & Play")
+    readonly property string secondaryLabel: qsTr("Create")
     readonly property bool primaryEnabled: canSave
     readonly property bool secondaryEnabled: canSave
 
@@ -29,13 +29,13 @@ Item {
 
     property var tabs: {
         let base = [
-            { label: "Game Info", kind: "info",   icon: "sports_esports" },
-            { label: "Runner",    kind: "runner", icon: "wine_bar" }
+            { label: qsTr("Game Info"), kind: "info",   icon: "sports_esports" },
+            { label: qsTr("Runner"),    kind: "runner", icon: "wine_bar" }
         ]
         let isFlatpakLauncher = gameModel ? gameModel.is_flatpak() : false
         let isSteamGame = root.config["runner.type"] === "steam"
         if (!(isFlatpakLauncher && isSteamGame)) {
-            base.push({ label: "System", kind: "system", icon: "terminal" })
+            base.push({ label: qsTr("System"), kind: "system", icon: "terminal" })
         }
         return base
     }

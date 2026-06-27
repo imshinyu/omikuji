@@ -19,8 +19,8 @@ Item {
 
     readonly property string modalTitle: gameData ? (gameData["name"] || "") : ""
     readonly property string modalSubtitle: gameId
-    readonly property string primaryLabel: "Save & Play"
-    readonly property string secondaryLabel: "Save"
+    readonly property string primaryLabel: qsTr("Save & Play")
+    readonly property string secondaryLabel: qsTr("Save")
     readonly property bool primaryEnabled: true
     readonly property bool secondaryEnabled: true
 
@@ -30,13 +30,13 @@ Item {
 
     property var tabs: {
         let base = [
-            { label: "Game Info", kind: "info",   icon: "sports_esports" },
-            { label: "Runner",    kind: "runner", icon: "wine_bar" }
+            { label: qsTr("Game Info"), kind: "info",   icon: "sports_esports" },
+            { label: qsTr("Runner"),    kind: "runner", icon: "wine_bar" }
         ]
         let isFlatpakLauncher = gameModel ? gameModel.is_flatpak() : false
         let isSteamGame = root.config["runner.type"] === "steam"
         if (!(isFlatpakLauncher && isSteamGame)) {
-            base.push({ label: "System", kind: "system", icon: "terminal" })
+            base.push({ label: qsTr("System"), kind: "system", icon: "terminal" })
         }
         if (root.config["source.kind"] === "epic") {
             base.push({ label: "Epic", kind: "epic", icon: "shield_moon" })

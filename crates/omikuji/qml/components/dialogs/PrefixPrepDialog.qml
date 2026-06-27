@@ -21,7 +21,7 @@ DialogCard {
     fillHeight: true
     preferredHeight: 440
     scrollable: false
-    title: "Preparing prefix"
+    title: qsTr("Preparing prefix")
 
     function start(idx, skip) {
         gameIndex = idx
@@ -47,7 +47,7 @@ DialogCard {
                 root.close()
                 root.launchReady(root.gameIndex, root.skipUpdateCheck)
             } else {
-                root.errorText = (error && error.length > 0) ? error : "prefix setup failed"
+                root.errorText = (error && error.length > 0) ? error : qsTr("prefix setup failed")
             }
         }
     }
@@ -63,7 +63,7 @@ DialogCard {
             anchors.right: parent.right
             text: root.errorText !== ""
                 ? root.errorText
-                : "First launch for this game, setting up the wine prefix. It'll start once this finishes."
+                : qsTr("First launch for this game, setting up the wine prefix. It'll start once this finishes.")
             color: root.errorText !== "" ? theme.error : theme.textMuted
             font.pixelSize: 12
             wrapMode: Text.WordWrap
@@ -100,7 +100,7 @@ DialogCard {
     }
 
     actions: M3Button {
-        text: root.busy ? "Cancel" : "Close"
+        text: root.busy ? qsTr("Cancel") : qsTr("Close")
         variant: "tonal"
         onClicked: { root.cancelled = true; root.close() }
     }

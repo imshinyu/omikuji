@@ -28,13 +28,13 @@ Item {
     function activityLabel() {
         if (!hasActivity) return ""
         let s = downloadActivity.status || ""
-        let kindWord = downloadActivity.kind === "update" ? "Updating" : "Installing"
-        if (s === "Paused") return "Paused"
-        if (s === "Queued") return kindWord + " · Queued"
-        if (s === "Extracting") return "Extracting"
-        if (s === "Patching") return "Patching"
+        let kindWord = downloadActivity.kind === "update" ? qsTr("Updating") : qsTr("Installing")
+        if (s === "Paused") return qsTr("Paused")
+        if (s === "Queued") return qsTr("%1 · Queued").arg(kindWord)
+        if (s === "Extracting") return qsTr("Extracting")
+        if (s === "Patching") return qsTr("Patching")
         let pct = Math.round(downloadActivity.progress || 0)
-        return kindWord + " · " + pct + "%"
+        return qsTr("%1 · %2%").arg(kindWord).arg(pct)
     }
 
     property var displayedGame: null
@@ -272,7 +272,7 @@ Item {
                         anchors.fill: parent
                         variant: "filled"
                         danger: true
-                        text: "Stop"
+                        text: qsTr("Stop")
                         onClicked: root.stopClicked()
                     }
                 }
@@ -352,7 +352,7 @@ Item {
                     M3Button {
                         anchors.fill: parent
                         variant: "filled"
-                        text: "Play"
+                        text: qsTr("Play")
                         onClicked: root.playClicked()
                     }
                 }

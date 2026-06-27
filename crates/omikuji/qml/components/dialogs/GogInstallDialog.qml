@@ -193,7 +193,7 @@ DialogCard {
 
             Text {
                 Layout.fillWidth: true
-                text: "Install " + (root.gameData ? root.gameData.title : "")
+                text: root.gameData ? qsTr("Install %1").arg(root.gameData.title) : qsTr("Install")
                 color: theme.text
                 font.pixelSize: 18
                 font.weight: Font.DemiBold
@@ -234,7 +234,7 @@ DialogCard {
 
             M3FileField {
                 Layout.fillWidth: true
-                label: "Installation path"
+                label: qsTr("Installation path")
                 placeholder: "/home/you/Games"
                 selectFolder: true
                 gameModel: root.gameModel
@@ -251,25 +251,25 @@ DialogCard {
                 text: {
                     let parts = []
                     if (root.existingInstallBytes > 0 || root.hasResumeState) {
-                        let label = "Found existing files"
+                        let label = qsTr("Found existing files")
                         if (root.existingInstallBytes > 0) label += " · " + root.formatBytes(root.existingInstallBytes)
-                        if (root.hasResumeState) label += " · resume state"
+                        if (root.hasResumeState) label += " · " + qsTr("resume state")
                         parts.push(label)
                     }
                     if (root.downloadBytes === -2) {
-                        parts.push("Calculating size…")
+                        parts.push(qsTr("Calculating size…"))
                     } else if (root.sizeError !== "") {
-                        parts.push("Size unavailable")
+                        parts.push(qsTr("Size unavailable"))
                     } else if (root.installBytes === 0 && root.downloadBytes === 0) {
-                        parts.push("Size unknown")
+                        parts.push(qsTr("Size unknown"))
                     } else if (root.installBytes >= 0) {
-                        parts.push(root.formatBytes(root.installBytes) + " install")
+                        parts.push(qsTr("%1 install").arg(root.formatBytes(root.installBytes)))
                         if (root.downloadBytes > 0) {
-                            parts.push(root.formatBytes(root.downloadBytes) + " download")
+                            parts.push(qsTr("%1 download").arg(root.formatBytes(root.downloadBytes)))
                         }
                     }
                     if (root.freeSpaceBytes >= 0) {
-                        parts.push(root.formatBytes(root.freeSpaceBytes) + " free")
+                        parts.push(qsTr("%1 free").arg(root.formatBytes(root.freeSpaceBytes)))
                     }
                     return parts.join(" · ")
                 }
@@ -286,8 +286,8 @@ DialogCard {
 
         M3FileField {
             Layout.fillWidth: true
-            label: "Prefix path (optional)"
-            placeholder: "auto — created per game"
+            label: qsTr("Prefix path (optional)")
+            placeholder: qsTr("auto — created per game")
             selectFolder: true
             gameModel: root.gameModel
             text: root.prefixPath
@@ -297,7 +297,7 @@ DialogCard {
 
         M3Dropdown {
             Layout.fillWidth: true
-            label: "Runner"
+            label: qsTr("Runner")
             options: root.runnerOptions
             currentIndex: root.runnerIndex
             onSelected: (v) => {
@@ -312,17 +312,17 @@ DialogCard {
         spacing: theme.space.sm
 
         M3Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             variant: "text"
             onClicked: { root.cancelled(); root.close() }
         }
         M3Button {
             text: {
                 if (root.gameData && root.gameData.isInstalled) {
-                    return root.gameData.hasLibraryEntry ? "Repair" : "Import"
+                    return root.gameData.hasLibraryEntry ? qsTr("Repair") : qsTr("Import")
                 }
-                if (root.existingInstallBytes > 0 || root.hasResumeState) return "Resume"
-                return "Install"
+                if (root.existingInstallBytes > 0 || root.hasResumeState) return qsTr("Resume")
+                return qsTr("Install")
             }
             variant: "filled"
             enabled: root.installPath.trim().length > 0 && root.hasEnoughSpace()

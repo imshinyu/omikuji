@@ -74,14 +74,14 @@ Item {
             }
             Text {
                 Layout.alignment: Qt.AlignHCenter
-                text: "No active downloads"
+                text: qsTr("No active downloads")
                 color: theme.textMuted
                 font.pixelSize: 16
                 font.weight: Font.Medium
             }
             Text {
                 Layout.alignment: Qt.AlignHCenter
-                text: "Install a game from one of the connected stores to see it here."
+                text: qsTr("Install a game from one of the connected stores to see it here.")
                 color: theme.textFaint
                 font.pixelSize: 13
             }
@@ -109,7 +109,7 @@ Item {
                 visible: root.componentsVisible
 
                 Text {
-                    text: "Runtime components"
+                    text: qsTr("Runtime components")
                     color: theme.textMuted
                     font.pixelSize: 11
                     font.weight: Font.DemiBold
@@ -138,7 +138,7 @@ Item {
                 visible: downloadModel && (downloadModel.count - downloadModel.completedCount) > 0
 
                 Text {
-                    text: "Downloads"
+                    text: qsTr("Downloads")
                     color: theme.textMuted
                     font.pixelSize: 11
                     font.weight: Font.DemiBold
@@ -174,7 +174,7 @@ Item {
                 }
 
                 Text {
-                    text: "Completed"
+                    text: qsTr("Completed")
                     color: theme.text
                     font.pixelSize: 18
                     font.weight: Font.DemiBold

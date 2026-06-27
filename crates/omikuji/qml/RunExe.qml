@@ -15,7 +15,7 @@ ApplicationWindow {
     minimumWidth: 380
     minimumHeight: 260
     visible: true
-    title: "Run with Omikuji"
+    title: qsTr("Run with Omikuji")
     color: theme.surface
 
     flags: Qt.Window
@@ -78,7 +78,7 @@ ApplicationWindow {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
-            text: root.exeName || "Run with Omikuji"
+            text: root.exeName || qsTr("Run with Omikuji")
             color: theme.text
             font.pixelSize: theme.type.title.size
             font.weight: theme.type.title.weight
@@ -93,7 +93,7 @@ ApplicationWindow {
             spacing: theme.space.lg
 
             M3Dropdown {
-                label: "Runner"
+                label: qsTr("Runner")
                 width: parent.width
                 options: RG.groupRunners(JSON.parse(gameModel.list_runners()))
                 currentIndex: {
@@ -108,8 +108,8 @@ ApplicationWindow {
             }
 
             M3FileField {
-                label: "Prefix"
-                placeholder: "empty = auto-create"
+                label: qsTr("Prefix")
+                placeholder: qsTr("empty = auto-create")
                 selectFolder: true
                 width: parent.width
                 gameModel: gameModel
@@ -125,13 +125,13 @@ ApplicationWindow {
             spacing: theme.space.md
 
             M3Button {
-                text: "Close"
+                text: qsTr("Close")
                 variant: "text"
                 onClicked: gameModel.quit_now()
             }
 
             M3Button {
-                text: "Run"
+                text: qsTr("Run")
                 variant: "filled"
                 enabled: root.exePath !== "" && root.runnerValue !== ""
                 onClicked: {

@@ -157,7 +157,7 @@ Item {
             return
         }
 
-        let title = root.selectFolder ? "Select Folder" : "Select File"
+        let title = root.selectFolder ? qsTr("Select Folder") : qsTr("Select File")
         let defaultPath = root.text || "/home"
 
         let id = Date.now().toString(36) + Math.random().toString(36).substring(2, 8)

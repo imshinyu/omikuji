@@ -52,12 +52,12 @@ Item {
 
     implicitHeight: cardHeight + 220 * uiScale
 
-    property var _categories: [{ kind: "all", value: "", name: "Library" }]
+    property var _categories: [{ kind: "all", value: "", name: qsTr("Library") }]
     property int _categoryIndex: 0
     property var _filteredGames: []
     property var _recentIds: ({})
 
-    readonly property var _currentCategory: _categories[_categoryIndex] || { kind: "all", value: "", name: "Library" }
+    readonly property var _currentCategory: _categories[_categoryIndex] || { kind: "all", value: "", name: qsTr("Library") }
 
     function _loadCategories() {
         let arr = []
@@ -66,7 +66,7 @@ Item {
         }
         let enabled = arr.filter(c => c.enabled !== false)
         if (enabled.length === 0) {
-            enabled = [{ kind: "all", value: "", name: "Library" }]
+            enabled = [{ kind: "all", value: "", name: qsTr("Library") }]
         }
         _categories = enabled
         if (_categoryIndex >= _categories.length) _categoryIndex = 0
@@ -212,7 +212,7 @@ Item {
                         id: label
                         anchors.bottom: parent.bottom
                         anchors.bottomMargin: 2
-                        text: catItem.modelData.name || "Library"
+                        text: catItem.modelData.name || qsTr("Library")
                         color: catItem.isSelected ? theme.text : theme.textMuted
                         font.pixelSize: catItem.isSelected ? 38 * row.uiScale : 22 * row.uiScale
                         font.weight: catItem.isSelected ? Font.Bold : Font.Medium
@@ -314,7 +314,7 @@ Item {
             Text {
                 text: {
                     const h = listView.currentItem ? listView.currentItem.playtimeHours : ""
-                    return h !== "" ? h + " hrs" : ""
+                    return h !== "" ? qsTr("%1 hrs").arg(h) : ""
                 }
                 color: theme.text
                 font.pixelSize: 16 * row.uiScale
@@ -325,7 +325,7 @@ Item {
             Text {
                 text: {
                     const d = listView.currentItem ? listView.currentItem.lastPlayedDate : ""
-                    return d !== "" ? "Last played " + d : "Never played"
+                    return d !== "" ? qsTr("Last played %1").arg(d) : qsTr("Never played")
                 }
                 color: theme.textMuted
                 font.pixelSize: 16 * row.uiScale

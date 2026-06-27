@@ -54,36 +54,36 @@ Item {
             let hasMenuShortcut = ctrl.gameModel.has_menu_shortcut(index)
 
             let shortcuts = [
-                { text: hasDesktopShortcut ? "Remove desktop shortcut" : "Create desktop shortcut", action: "desktop_shortcut" },
-                { text: hasMenuShortcut ? "Remove application menu shortcut" : "Create application menu shortcut", action: "menu_shortcut" }
+                { text: hasDesktopShortcut ? qsTr("Remove desktop shortcut") : qsTr("Create desktop shortcut"), action: "desktop_shortcut" },
+                { text: hasMenuShortcut ? qsTr("Remove application menu shortcut") : qsTr("Create application menu shortcut"), action: "menu_shortcut" }
             ]
             if (ctrl.gameModel.steam_shortcut_available(index)) {
                 let hasSteamShortcut = ctrl.gameModel.has_steam_shortcut(index)
-                shortcuts.push({ text: hasSteamShortcut ? "Remove Steam shortcut" : "Create Steam shortcut", action: "steam_shortcut" })
+                shortcuts.push({ text: hasSteamShortcut ? qsTr("Remove Steam shortcut") : qsTr("Create Steam shortcut"), action: "steam_shortcut" })
             }
 
             let built = [
-                { text: "Play", action: "play" },
-                { text: "Show logs", action: "logs" },
-                { text: "Configure", action: "configure" },
-                { text: "Categories", action: "categories" },
-                { text: "Browse files", action: "browse" },
-                { text: isFav ? "Remove from favorites" : "Add to favorites", action: "favorite" },
-                { text: "Shortcuts", submenu: shortcuts },
-                { text: "Duplicate", action: "duplicate" }
+                { text: qsTr("Play"), action: "play" },
+                { text: qsTr("Show logs"), action: "logs" },
+                { text: qsTr("Configure"), action: "configure" },
+                { text: qsTr("Categories"), action: "categories" },
+                { text: qsTr("Browse files"), action: "browse" },
+                { text: isFav ? qsTr("Remove from favorites") : qsTr("Add to favorites"), action: "favorite" },
+                { text: qsTr("Shortcuts"), submenu: shortcuts },
+                { text: qsTr("Duplicate"), action: "duplicate" }
             ]
             if (isEpic || isGog) {
-                built.push({ text: "Check for updates", action: "check_update", accent: true })
+                built.push({ text: qsTr("Check for updates"), action: "check_update", accent: true })
             }
             if (ctrl.gameModel.game_supports_repair(game.gameId)) {
-                built.push({ text: "Repair", action: "repair", accent: true })
+                built.push({ text: qsTr("Repair"), action: "repair", accent: true })
             }
             if (isEpic) {
-                built.push({ text: "Uninstall (Epic Games)", action: "uninstall_epic", danger: true })
+                built.push({ text: qsTr("Uninstall (Epic Games)"), action: "uninstall_epic", danger: true })
             }
-            let removeItem = { text: "Remove", action: "remove", danger: true }
+            let removeItem = { text: qsTr("Remove"), action: "remove", danger: true }
             if (pinfo.hasPrefix) {
-                removeItem.shiftText = "Remove + prefix"
+                removeItem.shiftText = qsTr("Remove + prefix")
                 removeItem.shiftAction = "remove_prefix"
             }
             built.push(removeItem)
@@ -144,20 +144,20 @@ Item {
                 case "remove_prefix": {
                     let g = ctrl.gameModel.get_game(idx)
                     let info = menu.currentPrefixInfo || {}
-                    let nm = (g && g.name) ? g.name : "this game"
+                    let nm = (g && g.name) ? g.name : qsTr("this game")
                     let others = (info.gameCount || 1) - 1
-                    removeWithPrefixConfirm.title = "Remove " + nm + " + prefix?"
+                    removeWithPrefixConfirm.title = qsTr("Remove %1 + prefix?").arg(nm)
                     removeWithPrefixConfirm.message = others > 0
-                        ? "This removes " + nm + " and deletes its prefix. " + others + (others === 1 ? " other game uses" : " other games use") + " this prefix and will lose it too. It won't be recoverable."
-                        : "This removes " + nm + " and deletes its prefix. It won't be recoverable."
+                        ? qsTr("This removes %1 and deletes its prefix. %n other game(s) use this prefix and will lose it too. It won't be recoverable.", "", others).arg(nm)
+                        : qsTr("This removes %1 and deletes its prefix. It won't be recoverable.").arg(nm)
                     removeWithPrefixConfirm.show({ idx: idx })
                     break
                 }
                 case "uninstall_epic": {
                     let g = ctrl.gameModel.get_game(idx)
                     if (g && g.gameId) {
-                        epicUninstallConfirm.title = "Uninstall " + (g.name || "this game") + "?"
-                        epicUninstallConfirm.message = "Legendary will delete the game files from disk. This cannot be undone."
+                        epicUninstallConfirm.title = qsTr("Uninstall %1?").arg(g.name || qsTr("this game"))
+                        epicUninstallConfirm.message = qsTr("Legendary will delete the game files from disk. This cannot be undone.")
                         epicUninstallConfirm.show({ id: g.gameId })
                     }
                     break
@@ -182,8 +182,8 @@ Item {
     ConfirmDialog {
         id: epicUninstallConfirm
         anchors.fill: parent
-        confirmText: "Uninstall"
-        cancelText: "Keep"
+        confirmText: qsTr("Uninstall")
+        cancelText: qsTr("Keep")
         destructive: true
         onConfirmed: (payload) => {
             if (payload && payload.id && ctrl.gameModel) ctrl.gameModel.epic_uninstall(payload.id)
@@ -193,8 +193,8 @@ Item {
     ConfirmDialog {
         id: removeWithPrefixConfirm
         anchors.fill: parent
-        confirmText: "Remove + delete"
-        cancelText: "Cancel"
+        confirmText: qsTr("Remove + delete")
+        cancelText: qsTr("Cancel")
         destructive: true
         onConfirmed: (payload) => {
             if (payload && ctrl.gameModel) {

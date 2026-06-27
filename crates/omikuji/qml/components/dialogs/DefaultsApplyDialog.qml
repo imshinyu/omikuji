@@ -9,20 +9,20 @@ DialogCard {
     property var gameModel: null
 
     property var sectionLabels: ({
-        "wine": "Wine (version, architecture)",
-        "sync": "Sync (esync, fsync, ntsync)",
-        "translation_layers": "Translation Layers (DXVK, VKD3D, …)",
-        "compatibility": "Compatibility (BattlEye, EAC, FSR)",
-        "display": "Display (DPI scaling)",
-        "drivers": "Drivers (audio, graphics)",
-        "dll_overrides": "DLL Overrides",
-        "launch": "Launch (command prefix)",
-        "environment": "Environment Variables",
-        "graphics": "Graphics (MangoHUD, GPU)",
-        "gamescope": "Gamescope",
-        "performance": "Performance (gamemode, CPU limit)",
-        "audio": "Audio (Pulse latency)",
-        "power": "Power (prevent sleep)"
+        "wine": qsTr("Wine (version, architecture)"),
+        "sync": qsTr("Sync (esync, fsync, ntsync)"),
+        "translation_layers": qsTr("Translation Layers (DXVK, VKD3D, …)"),
+        "compatibility": qsTr("Compatibility (BattlEye, EAC, FSR)"),
+        "display": qsTr("Display (DPI scaling)"),
+        "drivers": qsTr("Drivers (audio, graphics)"),
+        "dll_overrides": qsTr("DLL Overrides"),
+        "launch": qsTr("Launch (command prefix)"),
+        "environment": qsTr("Environment Variables"),
+        "graphics": qsTr("Graphics (MangoHUD, GPU)"),
+        "gamescope": qsTr("Gamescope"),
+        "performance": qsTr("Performance (gamemode, CPU limit)"),
+        "audio": qsTr("Audio (Pulse latency)"),
+        "power": qsTr("Power (prevent sleep)")
     })
 
     property var availableSections: []
@@ -67,7 +67,7 @@ DialogCard {
         spacing: theme.space.sm
 
         Text {
-            text: "Apply defaults to existing games"
+            text: qsTr("Apply defaults to existing games")
             color: theme.text
             font.pixelSize: theme.type.title.size
             font.weight: Font.DemiBold
@@ -75,7 +75,7 @@ DialogCard {
 
         Text {
             Layout.fillWidth: true
-            text: "Sections you tick will be written to every game's TOML, overwriting their current values for those fields. Untouched sections stay as they are per-game."
+            text: qsTr("Sections you tick will be written to every game's TOML, overwriting their current values for those fields. Untouched sections stay as they are per-game.")
             color: theme.textMuted
             font.pixelSize: 12
             wrapMode: Text.Wrap
@@ -84,7 +84,7 @@ DialogCard {
 
         Text {
             Layout.fillWidth: true
-            text: "Nothing to apply — set some fields in the Defaults tab first."
+            text: qsTr("Nothing to apply — set some fields in the Defaults tab first.")
             color: theme.textSubtle
             font.pixelSize: 13
             wrapMode: Text.Wrap
@@ -193,14 +193,14 @@ DialogCard {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 1
                     Text {
-                        text: "Replace env / DLL tables"
+                        text: qsTr("Replace env / DLL tables")
                         color: theme.text
                         font.pixelSize: 13
                     }
                     Text {
                         text: root.replaceMaps
-                            ? "wipes the game's keys, then writes the global ones"
-                            : "merges global keys into the game (game keys win on conflict)"
+                            ? qsTr("wipes the game's keys, then writes the global ones")
+                            : qsTr("merges global keys into the game (game keys win on conflict)")
                         color: theme.textSubtle
                         font.pixelSize: 11
                     }
@@ -221,7 +221,7 @@ DialogCard {
     footerLeft: Text {
         height: 36
         verticalAlignment: Text.AlignVCenter
-        text: root.gameModel ? "Affects " + root.gameModel.count + " game" + (root.gameModel.count === 1 ? "" : "s") : ""
+        text: root.gameModel ? qsTr("Affects %n game(s)", "", root.gameModel.count) : ""
         color: theme.textSubtle
         font.pixelSize: 12
         visible: text.length > 0
@@ -231,13 +231,13 @@ DialogCard {
         spacing: theme.space.sm
 
         M3Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             variant: "text"
             onClicked: root.close()
         }
 
         M3Button {
-            text: "Apply"
+            text: qsTr("Apply")
             variant: "filled"
             enabled: root.checkedSections.length > 0
             onClicked: root._apply()

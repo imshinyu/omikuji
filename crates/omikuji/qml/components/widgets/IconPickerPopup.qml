@@ -70,7 +70,7 @@ Item {
             spacing: 14
 
             Text {
-                text: "Pick an icon"
+                text: qsTr("Pick an icon")
                 color: theme.text
                 font.pixelSize: 17
                 font.weight: Font.DemiBold

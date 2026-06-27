@@ -20,13 +20,13 @@ Item {
         spacing: 20
 
         SettingsSection {
-            label: "Performance"
+            label: qsTr("Performance")
             icon: "speed"
             width: parent.width
 
             SettingsRow {
                 label: "GameMode"
-                description: "Feral GameMode (gamemoderun)"
+                description: qsTr("Feral GameMode (gamemoderun)")
                 width: parent.width
                 M3Switch {
                     checked: config["system.gamemode"] === true
@@ -35,8 +35,8 @@ Item {
             }
 
             SettingsRow {
-                label: "CPU Cores"
-                description: "0 = no limit"
+                label: qsTr("CPU Cores")
+                description: qsTr("0 = no limit")
                 width: parent.width
                 contentRightMargin: 52
                 M3SpinBox {
@@ -51,13 +51,13 @@ Item {
         }
 
         SettingsSection {
-            label: "Display"
+            label: qsTr("Display")
             icon: "fullscreen"
             width: parent.width
 
             SettingsRow {
                 label: "MangoHUD"
-                description: "FPS overlay"
+                description: qsTr("FPS overlay")
                 width: parent.width
                 M3Switch {
                     checked: config["graphics.mangohud"] === true
@@ -66,9 +66,9 @@ Item {
             }
 
             M3Dropdown {
-                label: "GPU"
+                label: qsTr("GPU")
                 width: parent.width
-                options: gameModel ? JSON.parse(gameModel.list_gpus()).map(g => ({ label: g[0], value: g[1] })) : [{ label: "Default", value: "" }]
+                options: gameModel ? JSON.parse(gameModel.list_gpus()).map(g => ({ label: g[0], value: g[1] })) : [{ label: qsTr("Default"), value: "" }]
                 currentIndex: {
                     let v = config["graphics.gpu"] || ""
                     let gpus = gameModel ? JSON.parse(gameModel.list_gpus()) : []
@@ -85,8 +85,8 @@ Item {
             width: parent.width
 
             SettingsRow {
-                label: "Enable Gamescope"
-                description: "run game inside gamescope compositor"
+                label: qsTr("Enable Gamescope")
+                description: qsTr("run game inside gamescope compositor")
                 width: parent.width
                 M3Switch {
                     checked: config["graphics.gamescope.enabled"] === true
@@ -104,8 +104,8 @@ Item {
                     width: parent.width
 
                     M3TextField {
-                        label: "Output Width"
-                        placeholder: "0 = native"
+                        label: qsTr("Output Width")
+                        placeholder: qsTr("0 = native")
                         text: (config["graphics.gamescope.width"] || 0) > 0
                             ? String(config["graphics.gamescope.width"]) : ""
                         width: (parent.width - 12) / 2
@@ -113,8 +113,8 @@ Item {
                     }
 
                     M3TextField {
-                        label: "Output Height"
-                        placeholder: "0 = native"
+                        label: qsTr("Output Height")
+                        placeholder: qsTr("0 = native")
                         text: (config["graphics.gamescope.height"] || 0) > 0
                             ? String(config["graphics.gamescope.height"]) : ""
                         width: (parent.width - 12) / 2
@@ -127,8 +127,8 @@ Item {
                     width: parent.width
 
                     M3TextField {
-                        label: "Game Width"
-                        placeholder: "0 = output"
+                        label: qsTr("Game Width")
+                        placeholder: qsTr("0 = output")
                         text: (config["graphics.gamescope.game_width"] || 0) > 0
                             ? String(config["graphics.gamescope.game_width"]) : ""
                         width: (parent.width - 12) / 2
@@ -136,8 +136,8 @@ Item {
                     }
 
                     M3TextField {
-                        label: "Game Height"
-                        placeholder: "0 = output"
+                        label: qsTr("Game Height")
+                        placeholder: qsTr("0 = output")
                         text: (config["graphics.gamescope.game_height"] || 0) > 0
                             ? String(config["graphics.gamescope.game_height"]) : ""
                         width: (parent.width - 12) / 2
@@ -146,7 +146,7 @@ Item {
                 }
 
                 SettingsRow {
-                    label: "FPS Limit"
+                    label: qsTr("FPS Limit")
                     width: parent.width
                     M3SpinBox {
                         from: 0
@@ -159,7 +159,7 @@ Item {
                 }
 
                 SettingsRow {
-                    label: "Refresh Rate"
+                    label: qsTr("Refresh Rate")
                     width: parent.width
                     M3SpinBox {
                         from: 0
@@ -172,7 +172,7 @@ Item {
                 }
 
                 SettingsRow {
-                    label: "Fullscreen"
+                    label: qsTr("Fullscreen")
                     width: parent.width
                     M3Switch {
                         checked: config["graphics.gamescope.fullscreen"] === true
@@ -181,7 +181,7 @@ Item {
                 }
 
                 SettingsRow {
-                    label: "Borderless"
+                    label: qsTr("Borderless")
                     width: parent.width
                     M3Switch {
                         checked: config["graphics.gamescope.borderless"] === true
@@ -190,7 +190,7 @@ Item {
                 }
 
                 SettingsRow {
-                    label: "Integer Scaling"
+                    label: qsTr("Integer Scaling")
                     width: parent.width
                     M3Switch {
                         checked: config["graphics.gamescope.integer_scaling"] === true
@@ -199,7 +199,7 @@ Item {
                 }
 
                 SettingsRow {
-                    label: "HDR"
+                    label: qsTr("HDR")
                     width: parent.width
                     M3Switch {
                         checked: config["graphics.gamescope.hdr"] === true
@@ -208,15 +208,15 @@ Item {
                 }
 
                 M3Dropdown {
-                    label: "Filter"
+                    label: qsTr("Filter")
                     width: parent.width
                     options: [
-                        { label: "None", value: "" },
-                        { label: "Nearest", value: "nearest" },
-                        { label: "Linear", value: "linear" },
+                        { label: qsTr("None"), value: "" },
+                        { label: qsTr("Nearest"), value: "nearest" },
+                        { label: qsTr("Linear"), value: "linear" },
                         { label: "FSR", value: "fsr" },
                         { label: "NIS", value: "nis" },
-                        { label: "Pixel", value: "pixel" }
+                        { label: qsTr("Pixel"), value: "pixel" }
                     ]
                     currentIndex: {
                         let f = config["graphics.gamescope.filter"] || ""
@@ -227,7 +227,7 @@ Item {
                 }
 
                 M3Slider {
-                    label: "FSR Sharpness"
+                    label: qsTr("FSR Sharpness")
                     from: 0
                     to: 20
                     stepSize: 1
@@ -240,12 +240,12 @@ Item {
         }
 
         SettingsSection {
-            label: "Audio"
+            label: qsTr("Audio")
             icon: "volume_up"
             width: parent.width
 
             SettingsRow {
-                label: "Reduce Pulse Latency"
+                label: qsTr("Reduce Pulse Latency")
                 width: parent.width
                 M3Switch {
                     checked: config["system.pulse_latency"] === true
@@ -255,13 +255,13 @@ Item {
         }
 
         SettingsSection {
-            label: "Power"
+            label: qsTr("Power")
             icon: "power_settings_new"
             width: parent.width
 
             SettingsRow {
-                label: "Prevent Sleep"
-                description: "inhibit screensaver and sleep"
+                label: qsTr("Prevent Sleep")
+                description: qsTr("inhibit screensaver and sleep")
                 width: parent.width
                 M3Switch {
                     checked: config["system.prevent_sleep"] === true
@@ -271,7 +271,7 @@ Item {
         }
 
         SettingsSection {
-            label: "Environment"
+            label: qsTr("Environment")
             icon: "tune"
             width: parent.width
 
@@ -280,7 +280,7 @@ Item {
                 json: config["launch.env"] || "{}"
                 keyPlaceholder: "VAR_NAME"
                 valuePlaceholder: "value"
-                addLabel: "Add variable"
+                addLabel: qsTr("Add variable")
                 onChanged: (j) => updateField("launch.env", j)
             }
 
@@ -288,7 +288,7 @@ Item {
                 text: {
                     let n = 0
                     try { n = JSON.parse(config["launch.env_sets"] || "[]").length } catch (e) {}
-                    return n > 0 ? "Sets · " + n + " synced" : "Sets"
+                    return n > 0 ? qsTr("Sets · %1 synced").arg(n) : qsTr("Sets")
                 }
                 variant: "tonal"
                 icon: "view_list"
@@ -297,13 +297,13 @@ Item {
         }
 
         SettingsSection {
-            label: "Scripts"
+            label: qsTr("Scripts")
             icon: "code"
             width: parent.width
 
             M3FileField {
-                label: "Pre-Launch Script"
-                placeholder: "runs before game starts"
+                label: qsTr("Pre-Launch Script")
+                placeholder: qsTr("runs before game starts")
                 text: config["launch.pre_launch_script"] || ""
                 width: parent.width
                 gameModel: root.gameModel
@@ -311,8 +311,8 @@ Item {
             }
 
             M3FileField {
-                label: "Post-Exit Script"
-                placeholder: "runs after game exits"
+                label: qsTr("Post-Exit Script")
+                placeholder: qsTr("runs after game exits")
                 text: config["launch.post_exit_script"] || ""
                 width: parent.width
                 gameModel: root.gameModel

@@ -29,8 +29,8 @@ Item {
             SettingsRow {
                 label: "EOS Overlay"
                 description: gameModel && gameModel.epic_overlay_is_installed()
-                    ? "in-game overlay for friends, invites and achievements"
-                    : "installs on first enable — one-time download"
+                    ? qsTr("in-game overlay for friends, invites and achievements")
+                    : qsTr("installs on first enable — one-time download")
                 width: parent.width
 
                 M3Switch {
@@ -45,13 +45,13 @@ Item {
         }
 
         SettingsSection {
-            label: "Cloud Saves"
+            label: qsTr("Cloud Saves")
             icon: "sync"
             width: parent.width
 
             SettingsRow {
-                label: "Auto-sync"
-                description: "download before launch, upload after exit"
+                label: qsTr("Auto-sync")
+                description: qsTr("download before launch, upload after exit")
                 width: parent.width
 
                 M3Switch {
@@ -71,8 +71,8 @@ Item {
 
                 Text {
                     text: (config["source.save_path"] || "") === ""
-                        ? "No save path detected yet — a toast will appear when discovery finishes, or enter one manually below."
-                        : "Save path: " + config["source.save_path"]
+                        ? qsTr("No save path detected yet — a toast will appear when discovery finishes, or enter one manually below.")
+                        : qsTr("Save path: %1").arg(config["source.save_path"])
                     color: theme.textMuted
                     font.pixelSize: 12
                     wrapMode: Text.WordWrap
@@ -80,8 +80,8 @@ Item {
                 }
 
                 M3TextField {
-                    label: "Save Path Override"
-                    placeholder: "leave empty to use detected path"
+                    label: qsTr("Save Path Override")
+                    placeholder: qsTr("leave empty to use detected path")
                     text: config["source.save_path"] || ""
                     width: parent.width
                     onTextEdited: (t) => updateField("source.save_path", t)

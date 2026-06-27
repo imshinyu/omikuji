@@ -51,7 +51,7 @@ Item {
                 spacing: 8
 
                 Text {
-                    text: "Logged in as: " + (epicModel ? epicModel.displayName : "")
+                    text: qsTr("Logged in as: %1").arg(epicModel ? epicModel.displayName : "")
                     color: theme.textMuted
                     font.pixelSize: 13
                 }
@@ -154,7 +154,7 @@ Item {
 
         LoadingDots {
             anchors.centerIn: parent
-            text: "Loading library"
+            text: qsTr("Loading library")
             running: loadingOverlay.visible
         }
     }
@@ -178,7 +178,7 @@ Item {
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "No games in this store"
+                text: qsTr("No games in this store")
                 color: theme.textMuted
                 font.pixelSize: 16
                 font.weight: Font.Medium
@@ -189,8 +189,8 @@ Item {
     StoreLoginOverlay {
         visible: epicModel && !epicModel.isLoggedIn
         iconName: "shield_moon"
-        title: "Login to Epic Games"
-        description: "To sync your Epic library, you need to provide an authorization code from Epic's website."
+        title: qsTr("Login to Epic Games")
+        description: qsTr("To sync your Epic library, you need to provide an authorization code from Epic's website.")
         loginUrl: "https://legendary.gl/epiclogin"
         toolName: "Legendary"
         toolReady: epicModel && epicModel.toolReady

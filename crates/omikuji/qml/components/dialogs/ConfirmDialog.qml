@@ -5,8 +5,8 @@ DialogCard {
     id: root
 
     property string message: ""
-    property string confirmText: "Confirm"
-    property string cancelText: "Cancel"
+    property string confirmText: qsTr("Confirm")
+    property string cancelText: qsTr("Cancel")
     property bool destructive: false
     property var payload: null
 

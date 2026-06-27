@@ -19,7 +19,7 @@ DialogCard {
     property string outputText: ""
 
     maxWidth: 460
-    title: "New prefix"
+    title: qsTr("New prefix")
 
     function show() {
         nameValue = ""
@@ -38,7 +38,7 @@ DialogCard {
         }
         function onCreateFinished(ok, error) {
             if (ok) root.close()
-            else root.errorText = (error && error.length > 0) ? error : "winetricks failed"
+            else root.errorText = (error && error.length > 0) ? error : qsTr("winetricks failed")
         }
     }
 
@@ -52,15 +52,15 @@ DialogCard {
             enabled: !root.busy
 
             M3TextField {
-                label: "Name"
-                placeholder: "my-prefix"
+                label: qsTr("Name")
+                placeholder: qsTr("my-prefix")
                 width: parent.width
                 text: root.nameValue
                 onTextEdited: (t) => root.nameValue = t
             }
 
             M3Dropdown {
-                label: "Runner"
+                label: qsTr("Runner")
                 width: parent.width
                 options: RG.groupRunners(JSON.parse(root.gameModel ? root.gameModel.list_runners() : "[]"))
                 currentIndex: {
@@ -72,11 +72,11 @@ DialogCard {
             }
 
             M3Dropdown {
-                label: "Set"
+                label: qsTr("Set")
                 width: parent.width
                 options: [
-                    { label: "Game", value: "game" },
-                    { label: "Application", value: "app" }
+                    { label: qsTr("Game"), value: "game" },
+                    { label: qsTr("Application"), value: "app" }
                 ]
                 onSelected: (v) => root.setValue = v
                 Component.onCompleted: root.setValue = currentValue
@@ -90,7 +90,7 @@ DialogCard {
 
             Text {
                 visible: root.busy
-                text: "Setting up your Ofuda…"
+                text: qsTr("Setting up your Ofuda…")
                 color: theme.accent
                 font.pixelSize: 12
             }
@@ -135,13 +135,13 @@ DialogCard {
         spacing: theme.space.sm
 
         M3Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             variant: "tonal"
             enabled: !root.busy
             onClicked: root.close()
         }
         M3Button {
-            text: root.busy ? "Working…" : "Create"
+            text: root.busy ? qsTr("Working…") : qsTr("Create")
             variant: "filled"
             enabled: !root.busy && root.nameValue.trim() !== "" && !!root.runnerValue
             onClicked: root.ofudaBridge.createPrefix(root.nameValue.trim(), root.runnerValue, root.setValue)

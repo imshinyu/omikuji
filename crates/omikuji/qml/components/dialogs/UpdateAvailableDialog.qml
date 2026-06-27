@@ -69,7 +69,7 @@ DialogCard {
                 spacing: 2
                 Text {
                     Layout.fillWidth: true
-                    text: "Update available"
+                    text: qsTr("Update available")
                     color: theme.text
                     font.pixelSize: theme.type.title.size
                     font.weight: Font.DemiBold
@@ -114,14 +114,14 @@ DialogCard {
                     text: {
                         if (root.canDiff) {
                             return root.downloadBytes > 0
-                                ? ("Delta update · " + root.formatBytes(root.downloadBytes))
-                                : "Delta update"
+                                ? qsTr("Delta update · %1").arg(root.formatBytes(root.downloadBytes))
+                                : qsTr("Delta update")
                         }
-                        let name = root.displayName || "the game"
+                        let name = root.displayName || qsTr("the game")
                         if (!root.deltaSupported) {
-                            return "Seems there's an update for " + name + ", however, it doesn't handle delta patches. Wanna reinstall the game to update?"
+                            return qsTr("Seems there's an update for %1, however, it doesn't handle delta patches. Wanna reinstall the game to update?").arg(name)
                         }
-                        return "Your install is too old for a delta patch. Reinstall " + name + " to update?"
+                        return qsTr("Your install is too old for a delta patch. Reinstall %1 to update?").arg(name)
                     }
                     color: theme.textMuted
                     font.pixelSize: theme.type.caption.size
@@ -135,17 +135,17 @@ DialogCard {
         spacing: theme.space.sm
 
         M3Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             variant: "text"
             onClicked: { root.dismissed(root.gameId); root.close() }
         }
         M3Button {
-            text: "Run anyway"
+            text: qsTr("Run anyway")
             variant: "tonal"
             onClicked: { root.runAnywayRequested(root.gameId); root.close() }
         }
         M3Button {
-            text: root.canDiff ? "Update" : "Reinstall"
+            text: root.canDiff ? qsTr("Update") : qsTr("Reinstall")
             variant: "filled"
             onClicked: {
                 root.updateRequested(root.gameId, root.appId, root.fromVersion)

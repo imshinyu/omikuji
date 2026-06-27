@@ -25,7 +25,7 @@ Item {
     signal prefixOpenRequested(var prefix)
     signal prefixCreateRequested()
 
-    readonly property string modalTitle: "Settings"
+    readonly property string modalTitle: qsTr("Settings")
     readonly property string modalSubtitle: ""
     readonly property string primaryLabel: ""
     readonly property string secondaryLabel: ""
@@ -37,12 +37,12 @@ Item {
     function closeAction() {}
 
     property var tabs: [
-        { label: "Components", kind: "components", icon: "layers" },
-        { label: "Ofuda",      kind: "ofuda",      icon: "ofuda" },
-        { label: "Defaults",   kind: "defaults",   icon: "settings" },
-        { label: "Interface",  kind: "ui",         icon: "tune" },
-        { label: "Theme",      kind: "theme",      icon: "imagesmode" },
-        { label: "About",      kind: "about",      icon: "verified" }
+        { label: qsTr("Components"), kind: "components", icon: "layers" },
+        { label: "Ofuda",            kind: "ofuda",      icon: "ofuda" },
+        { label: qsTr("Defaults"),   kind: "defaults",   icon: "settings" },
+        { label: qsTr("Interface"),  kind: "ui",         icon: "tune" },
+        { label: qsTr("Theme"),      kind: "theme",      icon: "imagesmode" },
+        { label: qsTr("About"),      kind: "about",      icon: "verified" }
     ]
     property int currentTabIndex: 0
     readonly property string currentKind:

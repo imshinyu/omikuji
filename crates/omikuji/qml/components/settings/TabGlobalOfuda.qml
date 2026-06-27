@@ -45,7 +45,7 @@ Item {
             width: parent.width
 
             Text {
-                text: "Wine prefixes omikuji knows about. Each game lives in one; an orphan is a prefix no game uses anymore."
+                text: qsTr("Wine prefixes omikuji knows about. Each game lives in one; an orphan is a prefix no game uses anymore.")
                 color: theme.textSubtle
                 font.pixelSize: 12
                 width: parent.width
@@ -61,7 +61,7 @@ Item {
                     id: newPrefixBtn
                     anchors.right: parent.right
                     anchors.rightMargin: 14
-                    text: "New prefix"
+                    text: qsTr("New prefix")
                     variant: "tonal"
                     onClicked: root.createRequested()
                 }
@@ -104,10 +104,10 @@ Item {
                             }
                             Text {
                                 text: rowItem.modelData.gameCount === 0
-                                    ? "Orphan"
+                                    ? qsTr("Orphan")
                                     : rowItem.modelData.gameCount === 1
-                                        ? "1 game"
-                                        : rowItem.modelData.gameCount + " games"
+                                        ? qsTr("1 game")
+                                        : qsTr("%1 games").arg(rowItem.modelData.gameCount)
                                 color: theme.textSubtle
                                 font.pixelSize: 12
                                 width: parent.width
@@ -120,7 +120,7 @@ Item {
                             anchors.right: parent.right
                             anchors.rightMargin: 14
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Manage"
+                            text: qsTr("Manage")
                             variant: "tonal"
                             onClicked: root.openRequested(rowItem.modelData)
                         }
@@ -129,7 +129,7 @@ Item {
 
                 Text {
                     visible: root.prefixes.length === 0
-                    text: "No prefixes yet."
+                    text: qsTr("No prefixes yet.")
                     color: theme.textSubtle
                     font.pixelSize: 12
                     width: parent.width

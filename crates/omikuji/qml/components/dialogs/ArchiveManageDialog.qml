@@ -69,7 +69,7 @@ DialogCard {
 
     actions: Row {
         M3Button {
-            text: "Close"
+            text: qsTr("Close")
             variant: "tonal"
             onClicked: { root.closed(); root.close() }
         }
@@ -86,7 +86,7 @@ DialogCard {
                 root.versions = JSON.parse(json) || []
             } catch (e) {
                 root.versions = []
-                root.errorMessage = "Couldn't parse versions response."
+                root.errorMessage = qsTr("Couldn't parse versions response.")
             }
         }
         function onVersionsFailed(cat, name, err) {
@@ -149,10 +149,10 @@ DialogCard {
                 }
 
                 Text {
-                    text: root.fetching ? "Fetching versions…"
-                        : root.versions.length > 0 ? root.versions.length + " versions available"
+                    text: root.fetching ? qsTr("Fetching versions…")
+                        : root.versions.length > 0 ? qsTr("%1 versions available").arg(root.versions.length)
                         : root.errorMessage !== "" ? root.errorMessage
-                        : "No versions loaded yet"
+                        : qsTr("No versions loaded yet")
                     color: root.errorMessage !== "" ? theme.error : theme.textSubtle
                     font.pixelSize: 12
                 }
@@ -183,9 +183,9 @@ DialogCard {
             Text {
                 anchors.centerIn: parent
                 visible: list.count === 0
-                text: root.fetching ? "Loading…"
-                    : root.errorMessage !== "" ? "Couldn't load versions."
-                    : "No versions available."
+                text: root.fetching ? qsTr("Loading…")
+                    : root.errorMessage !== "" ? qsTr("Couldn't load versions.")
+                    : qsTr("No versions available.")
                 color: theme.textSubtle
                 font.pixelSize: 13
             }
@@ -272,7 +272,7 @@ DialogCard {
                     M3Button {
                         anchors.centerIn: parent
                         visible: !installed && !busy
-                        text: "Install"
+                        text: qsTr("Install")
                         variant: "filled"
                         onClicked: archiveManager.installVersion(
                             root.category,
@@ -288,7 +288,7 @@ DialogCard {
 
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Installed"
+                            text: qsTr("Installed")
                             color: theme.success
                             font.pixelSize: 12
                             font.weight: Font.Medium
@@ -326,7 +326,7 @@ DialogCard {
                     Text {
                         anchors.centerIn: parent
                         visible: busy
-                        text: "Working…"
+                        text: qsTr("Working…")
                         color: theme.textMuted
                         font.pixelSize: 12
                     }

@@ -7,7 +7,7 @@ DialogCard {
 
     property string gameId: ""
     property string displayName: ""
-    property string headTitle: "Couldn't launch"
+    property string headTitle: qsTr("Couldn't launch")
     property string message: ""
     property string action: ""
 
@@ -116,12 +116,12 @@ DialogCard {
         spacing: theme.space.sm
 
         M3Button {
-            text: "Cancel"
+            text: qsTr("Cancel")
             variant: "text"
             onClicked: { root.dismissed(); root.close() }
         }
         M3Button {
-            text: "Open Settings"
+            text: qsTr("Open Settings")
             variant: "filled"
             visible: root.action.length > 0
             onClicked: { root.actionRequested(root.action, root.gameId); root.close() }

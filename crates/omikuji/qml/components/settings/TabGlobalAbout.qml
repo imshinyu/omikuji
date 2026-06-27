@@ -37,12 +37,12 @@ Item {
                 spacing: 6
 
                 Text {
-                    text: "A Qt/QML based wine apps launcher for Linux."
+                    text: qsTr("A Qt/QML based wine apps launcher for Linux.")
                     color: theme.text
                     font.pixelSize: 15
                 }
                 Text {
-                    text: "Version " + root.appVersion
+                    text: qsTr("Version %1").arg(root.appVersion)
                     color: theme.textMuted
                     font.pixelSize: 13
                     font.family: "monospace"
@@ -51,11 +51,11 @@ Item {
         }
 
         SettingsSection {
-            label: "License"
+            label: qsTr("License")
             width: parent.width
 
             Text {
-                text: "GPL-3.0-or-later. omikuji is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version."
+                text: qsTr("GPL-3.0-or-later. omikuji is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.")
                 color: theme.textSubtle
                 font.pixelSize: 12
                 width: parent.width
@@ -65,7 +65,7 @@ Item {
         }
 
         SettingsSection {
-            label: "Links"
+            label: qsTr("Links")
             width: parent.width
 
             Column {
@@ -74,9 +74,9 @@ Item {
 
                 Repeater {
                     model: [
-                        { label: "Source", url: root.repoUrl },
-                        { label: "Assets", url: root.assetsRepoUrl },
-                        { label: "Docs", url: root.docsUrl }
+                        { label: qsTr("Source"), url: root.repoUrl },
+                        { label: qsTr("Assets"), url: root.assetsRepoUrl },
+                        { label: qsTr("Docs"), url: root.docsUrl }
                     ]
 
                     Row {
@@ -106,7 +106,7 @@ Item {
         }
 
         SettingsSection {
-            label: "System"
+            label: qsTr("System")
             width: parent.width
 
             Column {
@@ -132,7 +132,7 @@ Item {
                 }
 
                 M3Button {
-                    text: "Copy"
+                    text: qsTr("Copy")
                     variant: "tonal"
                     onClicked: {
                         sysText.selectAll()

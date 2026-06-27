@@ -6,10 +6,10 @@ Item {
     property string status: "ready"
 
     property var statusMap: ({
-        "ready":      { text: "Ready",       color: "#4ade80" },
-        "update":     { text: "Update",      color: "#fbbf24" },
-        "installing": { text: "Installing",  color: "#60a5fa" },
-        "patching":   { text: "Patching",    color: "#c084fc" }
+        "ready":      { text: qsTr("Ready"),       color: "#4ade80" },
+        "update":     { text: qsTr("Update"),      color: "#fbbf24" },
+        "installing": { text: qsTr("Installing"),  color: "#60a5fa" },
+        "patching":   { text: qsTr("Patching"),    color: "#c084fc" }
     })
 
     property var info: statusMap[status] ?? statusMap["ready"]

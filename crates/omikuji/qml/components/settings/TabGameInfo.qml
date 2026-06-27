@@ -21,35 +21,35 @@ Item {
         spacing: 24
 
         SettingsSection {
-            label: "Metadata"
+            label: qsTr("Metadata")
             icon: "sports_esports"
             width: parent.width
 
             M3TextField {
-                label: "Name"
+                label: qsTr("Name")
                 text: config["meta.name"] || ""
                 width: parent.width
                 onTextEdited: (t) => updateField("meta.name", t)
             }
 
             M3TextField {
-                label: "Sort Name"
-                placeholder: "optional, for custom sort order"
+                label: qsTr("Sort Name")
+                placeholder: qsTr("optional, for custom sort order")
                 text: config["meta.sort_name"] || ""
                 width: parent.width
                 onTextEdited: (t) => updateField("meta.sort_name", t)
             }
 
             M3TextField {
-                label: "Slug"
-                placeholder: "for API lookups (auto-derived from name)"
+                label: qsTr("Slug")
+                placeholder: qsTr("for API lookups (auto-derived from name)")
                 text: config["meta.slug"] || ""
                 width: parent.width
                 onTextEdited: (t) => updateField("meta.slug", t)
             }
 
             M3Dropdown {
-                label: "Runner"
+                label: qsTr("Runner")
                 width: parent.width
                 options: [
                     { label: "Wine", value: "wine" },
@@ -70,7 +70,7 @@ Item {
             Text {
                 width: parent.width
                 visible: gameModel ? gameModel.is_flatpak() : false
-                text: "It seems you're using a flatpak build, cutie. Make sure omikuji has the proper extra permissions set to run native or flatpak applications."
+                text: qsTr("It seems you're using a flatpak build, cutie. Make sure omikuji has the proper extra permissions set to run native or flatpak applications.")
                 color: theme.warning
                 font.pixelSize: 12
                 font.weight: Font.Medium
@@ -79,13 +79,13 @@ Item {
         }
 
         SettingsSection {
-            label: "Images"
+            label: qsTr("Images")
             icon: "image"
             width: parent.width
 
             M3FileField {
-                label: "Banner Override"
-                placeholder: "empty = auto-fetch from SGDB"
+                label: qsTr("Banner Override")
+                placeholder: qsTr("empty = auto-fetch from SGDB")
                 text: config["meta.banner"] || ""
                 width: parent.width
                 gameModel: root.gameModel
@@ -93,8 +93,8 @@ Item {
             }
 
             M3FileField {
-                label: "Cover Art Override"
-                placeholder: "empty = auto-fetch from SGDB"
+                label: qsTr("Cover Art Override")
+                placeholder: qsTr("empty = auto-fetch from SGDB")
                 text: config["meta.coverart"] || ""
                 width: parent.width
                 gameModel: root.gameModel
@@ -102,8 +102,8 @@ Item {
             }
 
             M3FileField {
-                label: "Icon Override"
-                placeholder: "empty = auto-fetch from SGDB"
+                label: qsTr("Icon Override")
+                placeholder: qsTr("empty = auto-fetch from SGDB")
                 text: config["meta.icon"] || ""
                 width: parent.width
                 gameModel: root.gameModel
@@ -142,7 +142,7 @@ Item {
                     }
 
                     Text {
-                        text: "Refetch art"
+                        text: qsTr("Refetch art")
                         color: theme.text
                         font.pixelSize: 12
                         font.weight: Font.Medium
@@ -160,7 +160,7 @@ Item {
             }
 
             M3TextField {
-                label: "Color"
+                label: qsTr("Color")
                 placeholder: "#1a1a2e"
                 text: config["meta.color"] || ""
                 width: parent.width

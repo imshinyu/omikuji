@@ -51,7 +51,7 @@ Item {
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: "Open Login Page"
+            text: qsTr("Open Login Page")
             color: linkMouseArea.containsMouse ? Qt.lighter(theme.accent, 1.1) : theme.accent
             font.pixelSize: 14
             font.weight: Font.DemiBold
@@ -69,7 +69,7 @@ Item {
         M3TextField {
             id: loginCodeField
             width: parent.width
-            placeholder: "Paste authorization code here..."
+            placeholder: qsTr("Paste authorization code here...")
             onTextEdited: (t) => loginCodeField.text = t
         }
 
@@ -77,7 +77,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 160
             height: 44
-            text: "Login"
+            text: qsTr("Login")
             enabled: root.toolReady && loginCodeField.text.length > 0
             onClicked: {
                 root.loginRequested(loginCodeField.text)
@@ -94,8 +94,8 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: parent.width
                 text: root.toolInstalling
-                    ? "Installing " + root.toolName + "..."
-                    : "No " + root.toolName + " found. Install it to log in."
+                    ? qsTr("Installing %1...").arg(root.toolName)
+                    : qsTr("No %1 found. Install it to log in.").arg(root.toolName)
                 color: theme.textMuted
                 font.pixelSize: 13
                 horizontalAlignment: Text.AlignHCenter
@@ -105,7 +105,7 @@ Item {
             M3Button {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 200
-                text: "Install " + root.toolName
+                text: qsTr("Install %1").arg(root.toolName)
                 variant: "tonal"
                 enabled: !root.toolInstalling
                 onClicked: root.installToolRequested()

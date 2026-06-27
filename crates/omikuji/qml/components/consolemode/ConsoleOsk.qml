@@ -171,7 +171,7 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "Backspace"
+                    text: qsTr("Backspace")
                     color: bsBtn.isFocused ? theme.accentOn : theme.text
                     font.pixelSize: 14 * osk.uiScale
                     font.weight: Font.Medium
@@ -209,7 +209,7 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "Space"
+                    text: qsTr("Space")
                     color: spaceBtn.isFocused ? theme.accentOn : theme.text
                     font.pixelSize: 14 * osk.uiScale
                     font.weight: Font.Medium
@@ -247,7 +247,7 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "Enter"
+                    text: qsTr("Enter")
                     color: enterBtn.isFocused ? theme.accentOn : theme.text
                     font.pixelSize: 14 * osk.uiScale
                     font.weight: Font.Medium

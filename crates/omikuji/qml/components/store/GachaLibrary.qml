@@ -97,7 +97,7 @@ Item {
                 }
 
                 Text {
-                    text: "Gacha Games"
+                    text: qsTr("Gacha Games")
                     color: theme.textMuted
                     font.pixelSize: 13
                 }

@@ -15,3 +15,4 @@
 - [Overview](dev/overview.md)
 - [The cxx-qt bridge](dev/cxx-qt.md)
 - [Adding things](dev/adding.md)
+- [Translations](dev/translations.md)

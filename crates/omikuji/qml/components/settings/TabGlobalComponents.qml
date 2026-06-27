@@ -15,11 +15,11 @@ Item {
     signal manageRequested(string category, string source, string kind)
 
     readonly property var runtimeMeta: ({
-        "umu-run":   { label: "umu-run",    desc: "Launcher wrapper needed for Proton." },
-        "hpatchz":   { label: "HPatchZ",    desc: "Binary patch tool. Required for gacha diff updates." },
-        "legendary": { label: "Legendary",  desc: "Epic Games CLI binary." },
-        "jadeite":   { label: "Jadeite",    desc: "Compatibility shim for Honkai: Star Rail." },
-        "egl-dummy": { label: "EGL dummy",  desc: "Dummy EpicGamesLauncher.exe needed for Epic Games imports." }
+        "umu-run":   { label: "umu-run",    desc: qsTr("Launcher wrapper needed for Proton.") },
+        "hpatchz":   { label: "HPatchZ",    desc: qsTr("Binary patch tool. Required for gacha diff updates.") },
+        "legendary": { label: "Legendary",  desc: qsTr("Epic Games CLI binary.") },
+        "jadeite":   { label: "Jadeite",    desc: qsTr("Compatibility shim for Honkai: Star Rail.") },
+        "egl-dummy": { label: "EGL dummy",  desc: qsTr("Dummy EpicGamesLauncher.exe needed for Epic Games imports.") }
     })
 
     property var runtimeStatuses: ({})
@@ -128,7 +128,7 @@ Item {
         spacing: 20
 
         SettingsSection {
-            label: "Translation Layers"
+            label: qsTr("Translation Layers")
             width: parent.width
 
             Column {
@@ -158,7 +158,7 @@ Item {
 
                 Text {
                     visible: root.dllPacks.length === 0
-                    text: "No DLL packs configured. Add [[dll_packs]] entries to settings.toml."
+                    text: qsTr("No DLL packs configured. Add [[dll_packs]] entries to settings.toml.")
                     color: theme.textSubtle
                     font.pixelSize: 12
                     width: parent.width
@@ -168,7 +168,7 @@ Item {
         }
 
         SettingsSection {
-            label: "Runners"
+            label: qsTr("Runners")
             width: parent.width
 
             Column {
@@ -191,7 +191,7 @@ Item {
 
                 Text {
                     visible: root.runners.length === 0
-                    text: "No runners configured. Add [[runners]] entries to settings.toml."
+                    text: qsTr("No runners configured. Add [[runners]] entries to settings.toml.")
                     color: theme.textSubtle
                     font.pixelSize: 12
                     width: parent.width
@@ -201,11 +201,11 @@ Item {
         }
 
         SettingsSection {
-            label: "Runtime"
+            label: qsTr("Runtime")
             width: parent.width
 
             Text {
-                text: "External tools omikuji downloads on first run. Reinstall if a version is stale or corrupted."
+                text: qsTr("External tools omikuji downloads on first run. Reinstall if a version is stale or corrupted.")
                 color: theme.textSubtle
                 font.pixelSize: 12
                 width: parent.width
@@ -282,7 +282,7 @@ Item {
                                     Text {
                                         visible: busy
                                         text: status.status === "downloading"
-                                            ? "downloading " + Math.round(status.percent) + "%"
+                                            ? qsTr("downloading %1%").arg(Math.round(status.percent))
                                             : status.status
                                         color: theme.accent
                                         font.pixelSize: 12
@@ -308,10 +308,10 @@ Item {
 
                             readonly property bool busyState: busy || (componentsBridge && componentsBridge.inProgress)
 
-                            text: busyState ? "Working…"
-                                : status.status === "completed" ? "Reinstall"
-                                : status.status === "failed" ? "Retry"
-                                : "Install"
+                            text: busyState ? qsTr("Working…")
+                                : status.status === "completed" ? qsTr("Reinstall")
+                                : status.status === "failed" ? qsTr("Retry")
+                                : qsTr("Install")
                             variant: (busyState || status.status === "completed") ? "tonal" : "filled"
                             danger: status.status === "failed" && !busyState
                             enabled: !busyState

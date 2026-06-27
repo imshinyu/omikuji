@@ -13,6 +13,7 @@ unsafe extern "C" {
     fn omikuji_set_desktop_file_name(name: *const std::os::raw::c_char);
     fn omikuji_capture_default_font();
     fn omikuji_set_app_font(family: *const std::os::raw::c_char);
+    fn omikuji_install_translator(lang: *const std::os::raw::c_char);
 }
 
 #[tokio::main]
@@ -45,6 +46,12 @@ async fn main() {
 
     unsafe { omikuji_app_init(); }
 
+    let ui = omikuji_core::ui_settings::UiSettings::load();
+
+    if let Ok(lang) = CString::new(ui.language) {
+        unsafe { omikuji_install_translator(lang.as_ptr()) };
+    }
+
     if let Ok(name) = CString::new("omikuji") {
         unsafe { omikuji_set_desktop_file_name(name.as_ptr()) };
     }
@@ -54,12 +61,9 @@ async fn main() {
     }
 
     unsafe { omikuji_capture_default_font(); }
-    {
-        let ui = omikuji_core::ui_settings::UiSettings::load();
-        if !ui.theme.follow_system_font && !ui.theme.font_family.is_empty() {
-            if let Ok(family) = CString::new(ui.theme.font_family) {
-                unsafe { omikuji_set_app_font(family.as_ptr()) };
-            }
+    if !ui.theme.follow_system_font && !ui.theme.font_family.is_empty() {
+        if let Ok(family) = CString::new(ui.theme.font_family) {
+            unsafe { omikuji_set_app_font(family.as_ptr()) };
         }
     }
 
