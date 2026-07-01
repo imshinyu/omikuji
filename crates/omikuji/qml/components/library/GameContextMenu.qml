@@ -79,7 +79,9 @@ Item {
                 built.push({ text: qsTr("Repair"), action: "repair", accent: true })
             }
             if (isEpic) {
-                built.push({ text: qsTr("Uninstall (Epic Games)"), action: "uninstall_epic", danger: true })
+                built.push({ text: qsTr("Uninstall (Epic Games)"), action: "uninstall_store", danger: true })
+            } else if (isGog) {
+                built.push({ text: qsTr("Uninstall (GOG)"), action: "uninstall_store", danger: true })
             }
             let removeItem = { text: qsTr("Remove"), action: "remove", danger: true }
             if (pinfo.hasPrefix) {
@@ -153,12 +155,14 @@ Item {
                     removeWithPrefixConfirm.show({ idx: idx })
                     break
                 }
-                case "uninstall_epic": {
+                case "uninstall_store": {
                     let g = ctrl.gameModel.get_game(idx)
                     if (g && g.gameId) {
-                        epicUninstallConfirm.title = qsTr("Uninstall %1?").arg(g.name || qsTr("this game"))
-                        epicUninstallConfirm.message = qsTr("Legendary will delete the game files from disk. This cannot be undone.")
-                        epicUninstallConfirm.show({ id: g.gameId })
+                        uninstallConfirm.title = qsTr("Uninstall %1?").arg(g.name || qsTr("this game"))
+                        uninstallConfirm.message = g.sourceKind === "gog"
+                            ? qsTr("The game files will be deleted from disk. This cannot be undone.")
+                            : qsTr("Legendary will delete the game files from disk. This cannot be undone.")
+                        uninstallConfirm.show({ id: g.gameId, kind: g.sourceKind })
                     }
                     break
                 }
@@ -180,13 +184,15 @@ Item {
     }
 
     ConfirmDialog {
-        id: epicUninstallConfirm
+        id: uninstallConfirm
         anchors.fill: parent
         confirmText: qsTr("Uninstall")
         cancelText: qsTr("Keep")
         destructive: true
         onConfirmed: (payload) => {
-            if (payload && payload.id && ctrl.gameModel) ctrl.gameModel.epic_uninstall(payload.id)
+            if (!payload || !payload.id || !ctrl.gameModel) return
+            if (payload.kind === "gog") ctrl.gameModel.gog_uninstall(payload.id)
+            else ctrl.gameModel.epic_uninstall(payload.id)
         }
     }
 

@@ -193,8 +193,14 @@ impl super::qobject::GameModel {
         let app_id = game.source.app_id.clone();
         let name = game.metadata.name.clone();
         let game_id_owned = game.metadata.id.clone();
-        let install_path = omikuji_core::gog::find_installed_info(&app_id)
-            .map(|i| i.install_path.clone());
+        let installed = omikuji_core::gog::find_installed_info(&app_id);
+        let wrapper_name = omikuji_core::gog::install_wrapper_dir_name(
+            installed
+                .as_ref()
+                .and_then(|i| i.title.as_deref())
+                .unwrap_or(&name),
+        );
+        let install_path = installed.map(|i| i.install_path);
 
         std::thread::spawn(move || {
             let entries_to_cancel: Vec<String> = omikuji_core::downloads::manager()
@@ -209,8 +215,8 @@ impl super::qobject::GameModel {
 
             omikuji_core::notifications::info(&name, "Removing GOG game...");
             if let Some(path) = install_path
-                && path.exists()
-                    && let Err(e) = std::fs::remove_dir_all(&path) {
+                && path.exists() {
+                    if let Err(e) = std::fs::remove_dir_all(&path) {
                         omikuji_core::process::notify_error(
                             omikuji_core::process::ErrorNotification {
                                 game_id: game_id_owned.clone(),
@@ -221,6 +227,12 @@ impl super::qobject::GameModel {
                         );
                         return;
                     }
+                    if !wrapper_name.is_empty()
+                        && let Some(parent) = path.parent()
+                            && parent.file_name().is_some_and(|n| n.to_string_lossy() == wrapper_name) {
+                                let _ = std::fs::remove_dir(parent);
+                            }
+                }
             if let Err(e) = omikuji_core::gog::remove_install(&app_id) {
                 tracing::error!("registry remove failed: {}", e);
             }

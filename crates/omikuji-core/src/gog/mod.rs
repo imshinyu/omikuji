@@ -415,6 +415,16 @@ pub fn remove_install(app_name: &str) -> Result<()> {
     Ok(())
 }
 
+// must stay in sync with the folder-name sanitize in GogInstallDialog.qml
+pub fn install_wrapper_dir_name(title: &str) -> String {
+    title
+        .chars()
+        .filter(|c| !"\\/:*?\"<>|".contains(*c))
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct InstallSize {
     pub download_bytes: u64,
