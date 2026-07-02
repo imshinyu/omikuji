@@ -191,9 +191,6 @@ impl EpicStore {
         Ok(games)
     }
 
-    pub fn get_legendary_path() -> Option<PathBuf> {
-        crate::downloads::legendary::find_legendary()
-    }
 }
 
 fn legendary_bin() -> Result<PathBuf> {

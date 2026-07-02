@@ -84,9 +84,6 @@ pub mod qobject {
         fn get_game_at(self: &EpicModel, index: i32) -> QMap_QString_QVariant;
 
         #[qinvokable]
-        fn is_logged_in_sync(self: &EpicModel) -> bool;
-
-        #[qinvokable]
         fn install_tools(self: Pin<&mut EpicModel>);
 
         #[qinvokable]
@@ -198,10 +195,6 @@ impl qobject::EpicModel {
 
     pub fn get_login_url(&self) -> QString {
         QString::from(&EpicStore::get_login_url())
-    }
-
-    pub fn is_logged_in_sync(&self) -> bool {
-        EPIC_STORE.blocking_lock().is_logged_in()
     }
 
     pub fn install_tools(mut self: Pin<&mut Self>) {

@@ -365,10 +365,6 @@ pub fn get_installed_games() -> Vec<AppManifest> {
     games
 }
 
-pub fn is_game_installed(appid: &str) -> bool {
-    get_installed_games().iter().any(|g| g.appid == appid)
-}
-
 pub fn find_local_library_image(appid: &str) -> Option<PathBuf> {
     let appid_dir = find_steam_dir()?
         .join("appcache")

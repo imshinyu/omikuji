@@ -84,14 +84,6 @@ impl super::qobject::GameModel {
         QString::from(&serde_json::Value::Object(map).to_string())
     }
 
-    pub fn gacha_resolve_poster(&self, manifest_id: &QString) -> QString {
-        let id = manifest_id.to_string();
-        let Some(m) = omikuji_core::gachas::manifest::find(&id) else {
-            return QString::default();
-        };
-        QString::from(&omikuji_core::gachas::strategies::resolve_poster(&m))
-    }
-
     pub fn fetch_gacha_install_size(
         self: Pin<&mut Self>,
         request_id: &QString,

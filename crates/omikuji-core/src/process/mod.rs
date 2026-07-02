@@ -294,25 +294,6 @@ impl ProcessManager {
         Ok(proc_id)
     }
 
-    pub fn get_state(&self, id: ProcessId) -> Option<ProcessState> {
-        let sessions = self.sessions.lock().unwrap();
-        sessions.get(&id).map(|s| s.state.clone())
-    }
-
-    pub fn get_session(&self, id: ProcessId) -> Option<GameSession> {
-        let sessions = self.sessions.lock().unwrap();
-        sessions.get(&id).cloned()
-    }
-
-    pub fn active_sessions(&self) -> Vec<GameSession> {
-        let sessions = self.sessions.lock().unwrap();
-        sessions
-            .values()
-            .filter(|s| matches!(s.state, ProcessState::Running { .. }))
-            .cloned()
-            .collect()
-    }
-
     pub fn find_by_game_id(&self, game_id: &str) -> Option<GameSession> {
         let sessions = self.sessions.lock().unwrap();
         sessions

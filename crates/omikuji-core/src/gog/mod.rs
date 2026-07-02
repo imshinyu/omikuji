@@ -266,10 +266,6 @@ impl GogStore {
         Ok(games)
     }
 
-    pub fn get_gogdl_path() -> Option<PathBuf> {
-        find_gogdl()
-    }
-
     pub fn logout(&mut self) {
         let auth = gog_auth_path();
         if auth.exists() {

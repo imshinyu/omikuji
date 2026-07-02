@@ -445,16 +445,6 @@ impl DownloadManager {
         self.inner.lock().unwrap().entries.iter().find(|e| e.id == id).cloned()
     }
 
-    pub fn active_count(&self) -> usize {
-        self.inner
-            .lock()
-            .unwrap()
-            .entries
-            .iter()
-            .filter(|e| e.status.is_active())
-            .count()
-    }
-
     pub fn take_events(&self) -> Vec<DownloadEvent> {
         let mut inner = self.inner.lock().unwrap();
         inner.events.drain(..).collect()

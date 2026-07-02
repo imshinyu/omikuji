@@ -8,10 +8,6 @@ use omikuji_core::library::{Game, Library};
 use omikuji_core::media;
 
 impl super::qobject::GameModel {
-    pub fn steam_is_installed(&self) -> bool {
-        omikuji_core::steam::is_steam_installed()
-    }
-
     pub fn steam_get_installed_games(&self) -> QString {
         let games = omikuji_core::steam::get_installed_games();
         let json_games: Vec<serde_json::Value> = games.iter().map(|g| {

@@ -326,9 +326,6 @@ pub mod qobject {
         fn duplicate_game(self: Pin<&mut GameModel>, index: i32) -> bool;
 
         #[qinvokable]
-        fn steam_is_installed(self: &GameModel) -> bool;
-
-        #[qinvokable]
         fn steam_get_installed_games(self: &GameModel) -> QString;
 
         #[qinvokable]
@@ -435,9 +432,6 @@ pub mod qobject {
 
         #[qinvokable]
         fn gacha_posters(self: &GameModel) -> QString;
-
-        #[qinvokable]
-        fn gacha_resolve_poster(self: &GameModel, manifest_id: &QString) -> QString;
 
         #[qinvokable]
         fn fetch_gacha_install_size(
