@@ -323,22 +323,12 @@ impl super::qobject::GameModel {
         let id_for_media = game.metadata.id.clone();
         let manifest_for_media = manifest.clone();
         let qt_thread = self.as_mut().qt_thread();
+        let on_asset = super::media_changed_notifier(qt_thread, id_for_media.clone());
         std::thread::spawn(move || {
-            let id_for_refresh = id_for_media.clone();
             omikuji_core::gachas::art::fetch_into_library_cache(
                 &manifest_for_media,
                 &id_for_media,
-                |_| {
-                    let id_inner = id_for_refresh.clone();
-                    let _ = qt_thread.queue(move |mut obj: Pin<&mut super::qobject::GameModel>| {
-                        let Some(row) = obj.library.game.iter().position(|g| g.metadata.id == id_inner) else {
-                            return;
-                        };
-                        let idx = obj.as_ref().model_index(row as i32, 0, &QModelIndex::default());
-                        let roles = cxx_qt_lib::QList::<i32>::default();
-                        obj.as_mut().data_changed(&idx, &idx, &roles);
-                    });
-                },
+                on_asset,
             );
         });
 

@@ -95,20 +95,12 @@ impl super::qobject::GameModel {
         }
 
         let appid_for_media = appid_str.clone();
+        let qt_thread = self.as_mut().qt_thread();
+        let on_asset = super::media_changed_notifier(qt_thread, appid_str.clone());
         std::thread::spawn(move || {
-            let result = media::fetch_steam_media_blocking(&appid_for_media);
-            let fetched: Vec<&str> = [
-                result.banner.as_ref().map(|_| "banner"),
-                result.coverart.as_ref().map(|_| "coverart"),
-            ]
-            .into_iter()
-            .flatten()
-            .collect();
-
-            if fetched.is_empty() {
+            let result = media::fetch_steam_media_blocking_with(&appid_for_media, on_asset);
+            if result.banner.is_none() && result.coverart.is_none() {
                 tracing::warn!("no steam media found for appid {}", appid_for_media);
-            } else {
-                tracing::info!("fetched steam {} for appid {}", fetched.join(", "), appid_for_media);
             }
         });
 

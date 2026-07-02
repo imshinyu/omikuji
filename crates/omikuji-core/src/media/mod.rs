@@ -292,6 +292,13 @@ pub struct FetchResult {
 }
 
 pub fn fetch_steam_media_blocking(appid: &str) -> FetchResult {
+    fetch_steam_media_blocking_with(appid, |_| {})
+}
+
+pub fn fetch_steam_media_blocking_with<F>(appid: &str, mut on_asset: F) -> FetchResult
+where
+    F: FnMut(&MediaType),
+{
     let mut result = FetchResult::default();
     
     let dir = cache_dir();
@@ -309,11 +316,14 @@ pub fn fetch_steam_media_blocking(appid: &str) -> FetchResult {
         let dest = media_path(appid, &media_type);
         
         match download_blocking(&url, &dest) {
-            Ok(_) => match media_type {
-                MediaType::Banner => result.banner = Some(dest),
-                MediaType::Coverart => result.coverart = Some(dest),
-                MediaType::Icon => result.icon = Some(dest),
-            },
+            Ok(_) => {
+                match media_type {
+                    MediaType::Banner => result.banner = Some(dest),
+                    MediaType::Coverart => result.coverart = Some(dest),
+                    MediaType::Icon => result.icon = Some(dest),
+                }
+                on_asset(&media_type);
+            }
             Err(e) => tracing::error!("steam {} download failed: {}", media_type.suffix(), e),
         }
     }
