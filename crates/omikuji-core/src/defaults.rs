@@ -97,6 +97,8 @@ pub struct GamescopeDefaults {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fps: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub refresh_rate: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fullscreen: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub borderless: Option<bool>,
@@ -206,6 +208,7 @@ impl Defaults {
             if let Some(v) = dgs.game_width { gs.game_width = v; }
             if let Some(v) = dgs.game_height { gs.game_height = v; }
             if let Some(v) = dgs.fps { gs.fps = v; }
+            if let Some(v) = dgs.refresh_rate { gs.refresh_rate = v; }
             if let Some(v) = dgs.fullscreen { gs.fullscreen = v; }
             if let Some(v) = dgs.borderless { gs.borderless = v; }
             if let Some(v) = dgs.integer_scaling { gs.integer_scaling = v; }
@@ -261,7 +264,7 @@ impl Defaults {
         }
         let gs = &self.graphics.gamescope;
         if gs.enabled.is_some() || gs.width.is_some() || gs.height.is_some()
-            || gs.game_width.is_some() || gs.game_height.is_some() || gs.fps.is_some()
+            || gs.game_width.is_some() || gs.game_height.is_some() || gs.fps.is_some() || gs.refresh_rate.is_some()
             || gs.fullscreen.is_some() || gs.borderless.is_some()
             || gs.integer_scaling.is_some() || gs.hdr.is_some()
             || gs.filter.is_some() || gs.fsr_sharpness.is_some()
@@ -287,19 +290,11 @@ impl Defaults {
         }
         match std::fs::read_to_string(&path) {
             Ok(body) => toml::from_str::<Defaults>(&body).unwrap_or_else(|e| {
-                eprintln!(
-                    "[defaults] couldn't parse {}: {} — using empty defaults",
-                    path.display(),
-                    e
-                );
+                tracing::warn!("couldn't parse {}: {} - using empty defaults", path.display(), e);
                 Self::default()
             }),
             Err(e) => {
-                eprintln!(
-                    "[defaults] couldn't read {}: {} — using empty defaults",
-                    path.display(),
-                    e
-                );
+                tracing::warn!("couldn't read {}: {} - using empty defaults", path.display(), e);
                 Self::default()
             }
         }

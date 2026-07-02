@@ -216,11 +216,7 @@ fn load_or_default() -> Settings {
     if !path.exists() {
         let defaults = Settings::default();
         if let Err(e) = write_defaults(&path, &defaults) {
-            eprintln!(
-                "[settings] couldn't write defaults to {}: {} — running in-memory only",
-                path.display(),
-                e
-            );
+            tracing::warn!("couldn't write defaults to {}: {} - running in-memory only", path.display(), e);
         }
         return defaults;
     }
@@ -229,20 +225,12 @@ fn load_or_default() -> Settings {
         Ok(contents) => match toml::from_str::<Settings>(&contents) {
             Ok(s) => s,
             Err(e) => {
-                eprintln!(
-                    "[settings] couldn't parse {}: {} — using defaults",
-                    path.display(),
-                    e
-                );
+                tracing::warn!("couldn't parse {}: {} - using defaults", path.display(), e);
                 Settings::default()
             }
         },
         Err(e) => {
-            eprintln!(
-                "[settings] couldn't read {}: {} — using defaults",
-                path.display(),
-                e
-            );
+            tracing::warn!("couldn't read {}: {} - using defaults", path.display(), e);
             Settings::default()
         }
     }

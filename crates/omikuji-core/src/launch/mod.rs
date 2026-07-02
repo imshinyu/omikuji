@@ -78,12 +78,19 @@ pub fn build_launch(game: &Game) -> Result<LaunchConfig> {
     match game.runner.runner_type.as_str() {
         "steam" => return build_steam_launch(game, working_dir),
         "flatpak" => return build_flatpak_launch(game, working_dir),
+        "native" => return build_native_launch(game, working_dir),
         _ => {}
     }
 
     let variant = WineVariant::from_version(&game.wine.version);
     let wine_exe = resolve_wine_exe(variant, &game.wine.version)?;
     let mut env = build_env(game, variant, &wine_exe);
+
+    if variant == WineVariant::Proton {
+        if let Err(e) = crate::desktop::ensure_steam_icon(game) {
+            tracing::warn!("dock icon link failed for {}: {}", game.metadata.name, e);
+        }
+    }
 
     let mut command = if game.is_epic() {
         let legendary = crate::downloads::legendary::find_legendary()
@@ -152,6 +159,12 @@ fn apply_wrapping(
         env.insert("MANGOHUD_DLSYM".to_string(), "1".to_string());
     }
 
+    if wrap_mangohud {
+        for (k, v) in crate::system_info::gpu_launch_env(&game.graphics.gpu) {
+            env.insert(k, v);
+        }
+    }
+
     if !game.launch.command_prefix.is_empty() {
         for (i, part) in game.launch.command_prefix.split_whitespace().enumerate() {
             command.insert(i, part.to_string());
@@ -204,12 +217,7 @@ fn build_steam_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfig>
     let mut command = build_steam_command(&appid, &game.launch.args);
 
     let mut env: HashMap<String, String> = std::env::vars().collect();
-    for (k, v) in &game.launch.env {
-        env.insert(k.clone(), v.clone());
-    }
-    if game.system.pulse_latency {
-        env.insert("PULSE_LATENCY_MSEC".to_string(), "60".to_string());
-    }
+    env.extend(game_env_pairs(game));
 
     apply_wrapping(&mut command, &mut env, game, true);
 
@@ -227,16 +235,16 @@ fn build_flatpak_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfi
 
     let mut command = vec!["flatpak".to_string(), "run".to_string()];
 
-    // env table + mangohud + pulse_latency get translated to --env= flags so they reach inside the sandbox
-    for (k, v) in &game.launch.env {
+    // game env + mangohud get translated to --env= flags so they reach inside the sandbox
+    for (k, v) in game_env_pairs(game) {
         command.push(format!("--env={}={}", k, v));
     }
     if game.graphics.mangohud && !game.graphics.gamescope.enabled {
         command.push("--env=MANGOHUD=1".to_string());
         command.push("--env=MANGOHUD_DLSYM=1".to_string());
     }
-    if game.system.pulse_latency {
-        command.push("--env=PULSE_LATENCY_MSEC=60".to_string());
+    for (k, v) in crate::system_info::gpu_launch_env(&game.graphics.gpu) {
+        command.push(format!("--env={}={}", k, v));
     }
 
     command.push(appid);
@@ -250,6 +258,39 @@ fn build_flatpak_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfi
     apply_wrapping(&mut command, &mut env, game, false);
 
     Ok(LaunchConfig::from_game(game, command, env, working_dir))
+}
+
+fn build_native_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfig> {
+    let exe = &game.metadata.exe;
+    if exe.as_os_str().is_empty() {
+        anyhow::bail!("Native runner requires an executable");
+    }
+    if !exe.exists() {
+        anyhow::bail!("Game executable not found at `{}`", exe.display());
+    }
+    if !is_executable(exe) {
+        anyhow::bail!("`{}` is not executable. Mark it executable (chmod +x) and try again.", exe.display());
+    }
+
+    let mut command = vec![relative_exe(exe, &working_dir)];
+    for arg in &game.launch.args {
+        command.push(arg.clone());
+    }
+
+    let mut env: HashMap<String, String> = std::env::vars().collect();
+    env.extend(game_env_pairs(game));
+
+    apply_wrapping(&mut command, &mut env, game, true);
+
+    Ok(LaunchConfig::from_game(game, command, env, working_dir))
+}
+
+// we trust lutris with this one guys
+fn relative_exe(exe: &Path, working_dir: &Path) -> String {
+    match exe.strip_prefix(working_dir) {
+        Ok(rel) => format!("./{}", rel.display()),
+        Err(_) => exe.to_string_lossy().to_string(),
+    }
 }
 
 fn build_gamescope_args(game: &Game) -> Vec<String> {
@@ -274,9 +315,12 @@ fn build_gamescope_args(game: &Game) -> Vec<String> {
         args.push(gs.game_height.to_string());
     }
 
-    if gs.fps > 0 {
+    if gs.refresh_rate > 0 {
         args.push("-r".to_string());
-        args.push(gs.fps.to_string());
+        args.push(gs.refresh_rate.to_string());
+    }
+
+    if gs.fps > 0 {
         args.push("--framerate-limit".to_string());
         args.push(gs.fps.to_string());
     }
@@ -330,6 +374,34 @@ pub fn spawn(config: &LaunchConfig) -> Result<std::process::Child> {
     Ok(child)
 }
 
+fn apply_kv_sets(sets: &[crate::ui_settings::KvSet], ids: &[String], mut apply: impl FnMut(&str, &str)) {
+    for id in ids {
+        let Some(set) = sets.iter().find(|s| &s.id == id) else { continue };
+        for pair in &set.vars {
+            if !pair.key.trim().is_empty() {
+                apply(&pair.key, &pair.value);
+            }
+        }
+    }
+}
+
+fn game_env_pairs(game: &Game) -> Vec<(String, String)> {
+    let mut pairs = Vec::new();
+    if game.system.pulse_latency {
+        pairs.push(("PULSE_LATENCY_MSEC".to_string(), "60".to_string()));
+    }
+    for (k, v) in &game.launch.env {
+        pairs.push((k.clone(), v.clone()));
+    }
+    if !game.launch.env_sets.is_empty() {
+        let ui = crate::ui_settings::UiSettings::load();
+        apply_kv_sets(&ui.env_sets, &game.launch.env_sets, |key, value| {
+            pairs.push((key.to_string(), value.to_string()));
+        });
+    }
+    pairs
+}
+
 fn append_dll_override(env: &mut HashMap<String, String>, entry: &str) {
     let existing = env.get("WINEDLLOVERRIDES").map(|s| s.as_str()).unwrap_or("");
     let new_value = if existing.is_empty() {
@@ -364,7 +436,7 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path) -> HashMap<
         };
         env.insert("PROTONPATH".to_string(), proton_path.to_string_lossy().to_string());
         env.insert("PROTON_VERB".to_string(), "run".to_string());
-        env.insert("GAMEID".to_string(), game.metadata.id.clone());
+        env.insert("GAMEID".to_string(), format!("umu-{}", crate::steam::synthetic_appid(&game.metadata.id)));
     }
 
     env.insert("WINEESYNC".to_string(), if game.wine.esync { "1" } else { "0" }.to_string());
@@ -384,7 +456,7 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path) -> HashMap<
     }
 
     if game.wine.vkd3d {
-        append_dll_override(&mut env, "d3d12=n,b");
+        append_dll_override(&mut env, "d3d12,d3d12core=n,b");
     }
 
     if game.wine.dxvk_nvapi {
@@ -425,45 +497,50 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path) -> HashMap<
         }
     }
 
-    if game.system.pulse_latency {
-        env.insert("PULSE_LATENCY_MSEC".to_string(), "60".to_string());
+    if !game.wine.dll_override_sets.is_empty() {
+        let ui = crate::ui_settings::UiSettings::load();
+        apply_kv_sets(&ui.dll_sets, &game.wine.dll_override_sets, |key, value| {
+            append_dll_override(&mut env, &format!("{key}={value}"));
+        });
     }
 
     if game.is_epic() {
         env.insert("LEGENDARY_WRAPPER_EXE".to_string(), "C:\\windows\\command\\EpicGamesLauncher.exe".to_string());
     }
 
-    for (k, v) in &game.launch.env {
-        env.insert(k.clone(), v.clone());
-    }
+    env.extend(game_env_pairs(game));
 
     env
 }
 
-pub fn prepare_epic_prefix(game: &Game, wine_exe: &Path) -> Result<()> {
+pub fn prepare_epic_prefix(game: &Game, wine_exe: &Path, env: &HashMap<String, String>) -> Result<()> {
     let prefix = resolve_prefix(game);
 
     // spoof the epic launcher registry key so games that check for it dont bail early
-    let mut cmd = std::process::Command::new(wine_exe);
-    cmd.env("WINEPREFIX", prefix.to_string_lossy().to_string());
+    let mut cmd = Command::new(wine_exe);
+    cmd.env_clear();
+    cmd.envs(env);
+    if WineVariant::from_version(&game.wine.version) == WineVariant::Proton {
+        cmd.env("PROTON_VERB", "waitforexitandrun");
+    }
     cmd.args(["reg", "add", "HKEY_CLASSES_ROOT\\com.epicgames.launcher", "/f"]);
-    cmd.stdout(std::process::Stdio::null());
-    cmd.stderr(std::process::Stdio::null());
+    cmd.stdout(Stdio::null());
+    cmd.stderr(Stdio::null());
 
     if let Err(e) = cmd.status() {
-        eprintln!("[launch] epic registry spoof failed: {}", e);
+        tracing::error!("epic registry spoof failed: {}", e);
     }
 
     let dummy_src = runtime_dir().join("EpicGamesLauncher.exe");
     if dummy_src.exists() {
         let dest_dir = prefix.join("drive_c").join("windows").join("command");
         if let Err(e) = std::fs::create_dir_all(&dest_dir) {
-            eprintln!("[launch] failed to create command dir in prefix: {}", e);
+            tracing::error!("failed to create command dir in prefix: {}", e);
         } else {
             let dest_file = dest_dir.join("EpicGamesLauncher.exe");
             if !dest_file.exists()
                 && let Err(e) = std::fs::copy(&dummy_src, &dest_file) {
-                    eprintln!("[launch] failed to copy dummy EpicGamesLauncher.exe: {}", e);
+                    tracing::error!("failed to copy dummy EpicGamesLauncher.exe: {}", e);
                 }
         }
     }
@@ -619,7 +696,7 @@ fn is_executable(_path: &Path) -> bool {
     true
 }
 
-pub fn resolve_prefix(game: &Game) -> PathBuf {
+pub fn prefix_path_for(game: &Game) -> PathBuf {
     if !game.wine.prefix.is_empty() {
         return PathBuf::from(&game.wine.prefix);
     }
@@ -637,10 +714,15 @@ pub fn resolve_prefix(game: &Game) -> PathBuf {
     } else {
         format!("{}-{}", slug, game.metadata.id)
     };
-    let prefix = dir.join(folder);
-    if !prefix.exists()
+    dir.join(folder)
+}
+
+pub fn resolve_prefix(game: &Game) -> PathBuf {
+    let prefix = prefix_path_for(game);
+    if game.wine.prefix.is_empty()
+        && !prefix.exists()
         && let Err(e) = std::fs::create_dir_all(&prefix) {
-            eprintln!("failed to create prefix dir: {}", e);
+            tracing::error!("failed to create prefix dir: {}", e);
         }
     prefix
 }

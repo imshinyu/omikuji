@@ -133,18 +133,18 @@ where
     let sgdb_id = match sgdb_search(game_name) {
         Ok(Some(id)) => id,
         Ok(None) => {
-            eprintln!("sgdb: no match for '{}'", game_name);
+            tracing::warn!("sgdb: no match for '{}'", game_name);
             return result;
         }
         Err(e) => {
-            eprintln!("sgdb search failed for '{}': {}", game_name, e);
+            tracing::error!("sgdb search failed for '{}': {}", game_name, e);
             return result;
         }
     };
 
     let dir = cache_dir();
     if let Err(e) = fs::create_dir_all(&dir) {
-        eprintln!("failed to create cache dir: {}", e);
+        tracing::error!("failed to create cache dir: {}", e);
         return result;
     }
 
@@ -159,19 +159,19 @@ where
         let url = match sgdb_first_asset(endpoint, sgdb_id, &query) {
             Ok(Some(u)) => u,
             Ok(None) => {
-                eprintln!("sgdb {} no data for game {}", endpoint, sgdb_id);
+                tracing::debug!("sgdb {} no data for game {}", endpoint, sgdb_id);
                 continue;
             }
             Err(e) => {
-                eprintln!("sgdb {} lookup failed: {}", endpoint, e);
+                tracing::error!("sgdb {} lookup failed: {}", endpoint, e);
                 continue;
             }
         };
-        eprintln!("sgdb {} -> {}", endpoint, url);
+        tracing::debug!("sgdb {} -> {}", endpoint, url);
         let dest = media_path(game_id, &media_type);
         match download_blocking(&url, &dest) {
             Ok(n) => {
-                eprintln!("sgdb {} wrote {} bytes -> {}", endpoint, n, dest.display());
+                tracing::debug!("sgdb {} wrote {} bytes -> {}", endpoint, n, dest.display());
                 match media_type {
                     MediaType::Banner => result.banner = Some(dest.clone()),
                     MediaType::Coverart => result.coverart = Some(dest.clone()),
@@ -179,7 +179,7 @@ where
                 }
                 on_asset(&media_type);
             }
-            Err(e) => eprintln!("sgdb {} download failed: {}", endpoint, e),
+            Err(e) => tracing::error!("sgdb {} download failed: {}", endpoint, e),
         }
     }
 
@@ -248,7 +248,7 @@ fn sgdb_search(name: &str) -> Result<Option<u64>> {
         .or_else(|| games.iter().find(|g| g.verified))
         .unwrap_or(&games[0]);
 
-    eprintln!("sgdb match for '{}' -> '{}' (id {}, verified {})", name, pick.name, pick.id, pick.verified);
+    tracing::debug!("sgdb match for '{}' -> '{}' (id {}, verified {})", name, pick.name, pick.id, pick.verified);
     Ok(Some(pick.id))
 }
 
@@ -292,14 +292,21 @@ pub struct FetchResult {
 }
 
 pub fn fetch_steam_media_blocking(appid: &str) -> FetchResult {
+    fetch_steam_media_blocking_with(appid, |_| {})
+}
+
+pub fn fetch_steam_media_blocking_with<F>(appid: &str, mut on_asset: F) -> FetchResult
+where
+    F: FnMut(&MediaType),
+{
     let mut result = FetchResult::default();
     
     let dir = cache_dir();
     if let Err(e) = fs::create_dir_all(&dir) {
-        eprintln!("failed to create cache dir: {}", e);
+        tracing::error!("failed to create cache dir: {}", e);
         return result;
     }
-    
+
     let tasks = vec![
         (MediaType::Coverart, format!("https://cdn.akamai.steamstatic.com/steam/apps/{}/library_600x900.jpg", appid)),
         (MediaType::Banner, format!("https://cdn.akamai.steamstatic.com/steam/apps/{}/header.jpg", appid)),
@@ -309,12 +316,15 @@ pub fn fetch_steam_media_blocking(appid: &str) -> FetchResult {
         let dest = media_path(appid, &media_type);
         
         match download_blocking(&url, &dest) {
-            Ok(_) => match media_type {
-                MediaType::Banner => result.banner = Some(dest),
-                MediaType::Coverart => result.coverart = Some(dest),
-                MediaType::Icon => result.icon = Some(dest),
-            },
-            Err(e) => eprintln!("steam {} download failed: {}", media_type.suffix(), e),
+            Ok(_) => {
+                match media_type {
+                    MediaType::Banner => result.banner = Some(dest),
+                    MediaType::Coverart => result.coverart = Some(dest),
+                    MediaType::Icon => result.icon = Some(dest),
+                }
+                on_asset(&media_type);
+            }
+            Err(e) => tracing::error!("steam {} download failed: {}", media_type.suffix(), e),
         }
     }
     
@@ -326,9 +336,9 @@ pub fn remove_cached_media(game_id: &str) {
         let path = media_path(game_id, &media_type);
         if path.exists() {
             if let Err(e) = fs::remove_file(&path) {
-                eprintln!("failed to remove cached {}: {}", media_type.suffix(), e);
+                tracing::warn!("failed to remove cached {}: {}", media_type.suffix(), e);
             } else {
-                eprintln!("removed cached {} for game {}", media_type.suffix(), game_id);
+                tracing::debug!("removed cached {} for game {}", media_type.suffix(), game_id);
             }
         }
     }

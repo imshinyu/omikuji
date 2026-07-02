@@ -196,74 +196,138 @@ impl super::qobject::GameModel {
         let from = from_version.to_string();
 
         let Some(game) = self.library.game.iter().find(|g| g.metadata.id == gid) else {
-            eprintln!("[update] enqueue_game_update: game '{}' not found", gid);
+            tracing::error!("enqueue_game_update: game '{}' not found", gid);
             return QString::from("");
         };
-
-        let app_id = game.source.app_id.clone();
-        let display_name = game.metadata.name.clone();
 
         let (source_key, banner_url) = if game.source.kind == "gacha" {
-            match omikuji_core::gachas::strategies::find_for_app_id(&app_id) {
-                Some((manifest, _edition_id, _voices)) => {
-                    let src = match omikuji_core::gachas::strategies::source_key(&manifest) {
-                        Ok(s) => s.to_string(),
-                        Err(e) => {
-                            eprintln!("[update] unknown strategy for '{}': {}", manifest.id, e);
-                            return QString::from("");
-                        }
-                    };
-                    let poster = omikuji_core::gachas::strategies::resolve_poster(&manifest);
-                    (src, if poster.is_empty() { None } else { Some(poster) })
-                }
-                None => {
-                    eprintln!("[update] no gacha manifest for app_id '{}'", app_id);
-                    return QString::from("");
-                }
-            }
+            let Some(resolved) = resolve_gacha_source(&game.source.app_id) else {
+                return QString::from("");
+            };
+            resolved
         } else if game.source.kind == "epic" {
             let resolved = media::resolve_image(&game.metadata.id, &game.metadata.banner, &MediaType::Banner);
-            let banner = if resolved.is_empty() { None } else { Some(resolved) };
-            ("epic".to_string(), banner)
+            ("epic".to_string(), if resolved.is_empty() { None } else { Some(resolved) })
         } else if game.source.kind == "gog" {
             let resolved = media::resolve_image(&game.metadata.id, &game.metadata.banner, &MediaType::Banner);
-            let banner = if resolved.is_empty() { None } else { Some(resolved) };
-            ("gog".to_string(), banner)
+            ("gog".to_string(), if resolved.is_empty() { None } else { Some(resolved) })
         } else {
-            eprintln!("[update] unsupported source.kind '{}' for game '{}'", game.source.kind, gid);
+            tracing::error!("unsupported source.kind '{}' for game '{}'", game.source.kind, gid);
             return QString::from("");
         };
 
-        // exe's parent dir is the game-data root; sophon patcher and resource probes need that, not th exe itself
-        let install_path = std::path::PathBuf::from(&game.metadata.exe)
-            .parent()
-            .map(|p| p.to_path_buf())
-            .unwrap_or_else(|| std::path::PathBuf::from(&game.metadata.exe));
-
-        let prefix = if game.wine.prefix.is_empty() {
-            None
-        } else {
-            Some(std::path::PathBuf::from(&game.wine.prefix))
-        };
-        let runner_version = game.wine.version.clone();
-
-        let req = omikuji_core::downloads::DownloadRequest {
-            source: source_key,
-            app_id,
-            display_name: format!("{} · update", display_name),
+        let req = build_download_request(
+            game,
+            source_key,
             banner_url,
-            install_path,
-            prefix_path: prefix,
-            runner_version,
-            temp_dir: None,
-            kind: omikuji_core::downloads::DownloadKind::Update { from_version: from },
-            // updates patch an existing install, never wipe on cancel
-            destructive_cleanup: false,
-            start_paused: false,
-        };
+            omikuji_core::downloads::DownloadKind::Update { from_version: from },
+            "update",
+        );
 
         let id = omikuji_core::downloads::manager().enqueue(req);
         let _ = self.as_mut();
         QString::from(&id)
+    }
+
+    pub fn game_supports_repair(&self, game_id: &QString) -> bool {
+        let gid = game_id.to_string();
+        let Some(game) = self.library.game.iter().find(|g| g.metadata.id == gid) else {
+            return false;
+        };
+        if game.source.kind != "gacha" {
+            return false;
+        }
+        let Some((manifest, _, _)) =
+            omikuji_core::gachas::strategies::find_for_app_id(&game.source.app_id)
+        else {
+            return false;
+        };
+        match omikuji_core::gachas::strategies::source_key(&manifest) {
+            Ok(key) => omikuji_core::downloads::manager().source_supports_repair(&key.to_string()),
+            Err(_) => false,
+        }
+    }
+
+    pub fn enqueue_game_repair(mut self: Pin<&mut Self>, game_id: &QString) -> QString {
+        let gid = game_id.to_string();
+
+        let Some(game) = self.library.game.iter().find(|g| g.metadata.id == gid) else {
+            tracing::error!("enqueue_game_repair: game '{}' not found", gid);
+            return QString::from("");
+        };
+
+        if game.source.kind != "gacha" {
+            tracing::error!("enqueue_game_repair: '{}' is not a gacha game", gid);
+            return QString::from("");
+        }
+
+        let Some((source_key, banner_url)) = resolve_gacha_source(&game.source.app_id) else {
+            return QString::from("");
+        };
+
+        let req = build_download_request(
+            game,
+            source_key,
+            banner_url,
+            omikuji_core::downloads::DownloadKind::Repair,
+            "repair",
+        );
+
+        let id = omikuji_core::downloads::manager().enqueue(req);
+        let _ = self.as_mut();
+        QString::from(&id)
+    }
+}
+
+fn resolve_gacha_source(app_id: &str) -> Option<(String, Option<String>)> {
+    let Some((manifest, _edition_id, _voices)) =
+        omikuji_core::gachas::strategies::find_for_app_id(app_id)
+    else {
+        tracing::error!("no gacha manifest for app_id '{}'", app_id);
+        return None;
+    };
+    let src = match omikuji_core::gachas::strategies::source_key(&manifest) {
+        Ok(s) => s.to_string(),
+        Err(e) => {
+            tracing::error!("unknown strategy for '{}': {}", manifest.id, e);
+            return None;
+        }
+    };
+    let poster = omikuji_core::gachas::strategies::resolve_poster(&manifest);
+    Some((src, if poster.is_empty() { None } else { Some(poster) }))
+}
+
+fn build_download_request(
+    game: &omikuji_core::library::Game,
+    source: String,
+    banner_url: Option<String>,
+    kind: omikuji_core::downloads::DownloadKind,
+    label: &str,
+) -> omikuji_core::downloads::DownloadRequest {
+    // exe's parent dir is the game-data root; sophon patcher and resource probes need that, not th exe itself
+    let install_path = std::path::PathBuf::from(&game.metadata.exe)
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| std::path::PathBuf::from(&game.metadata.exe));
+
+    let prefix = if game.wine.prefix.is_empty() {
+        None
+    } else {
+        Some(std::path::PathBuf::from(&game.wine.prefix))
+    };
+
+    omikuji_core::downloads::DownloadRequest {
+        source,
+        app_id: game.source.app_id.clone(),
+        display_name: format!("{} · {}", game.metadata.name, label),
+        banner_url,
+        install_path,
+        prefix_path: prefix,
+        runner_version: game.wine.version.clone(),
+        temp_dir: None,
+        kind,
+        // update/repair operate on an existing install, never wipe on cancel
+        destructive_cleanup: false,
+        start_paused: false,
     }
 }

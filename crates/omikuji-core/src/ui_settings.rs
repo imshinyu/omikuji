@@ -12,6 +12,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct UiSettings {
+    pub language: String,
     pub library: LibrarySettings,
     pub tabs: TabsSettings,
     pub nav: NavSettings,
@@ -22,11 +23,16 @@ pub struct UiSettings {
     pub console_mode: ConsoleModeSettings,
     #[serde(default = "default_categories")]
     pub categories: Vec<CategoryEntry>,
+    #[serde(default)]
+    pub env_sets: Vec<KvSet>,
+    #[serde(default)]
+    pub dll_sets: Vec<KvSet>,
 }
 
 impl Default for UiSettings {
     fn default() -> Self {
         Self {
+            language: "system".into(),
             library: LibrarySettings::default(),
             tabs: TabsSettings::default(),
             nav: NavSettings::default(),
@@ -35,6 +41,8 @@ impl Default for UiSettings {
             theme: ThemeSettings::default(),
             console_mode: ConsoleModeSettings::default(),
             categories: default_categories(),
+            env_sets: Vec::new(),
+            dll_sets: Vec::new(),
         }
     }
 }
@@ -59,8 +67,23 @@ fn default_categories() -> Vec<CategoryEntry> {
         CategoryEntry { enabled: true, name: "Favourites".into(), icon: "star".into(), kind: "favourite".into(), value: String::new() },
         CategoryEntry { enabled: true, name: "Recent".into(), icon: "schedule".into(), kind: "recent".into(), value: String::new() },
         CategoryEntry { enabled: true, name: "Wine".into(), icon: "wine_bar".into(), kind: "runner".into(), value: "wine".into() },
-        CategoryEntry { enabled: true, name: "Native".into(), icon: "monitor".into(), kind: "runner".into(), value: "native".into() },
+        CategoryEntry { enabled: true, name: "Native".into(), icon: "terminal".into(), kind: "runner".into(), value: "native".into() },
     ]
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct KvPair {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct KvSet {
+    #[serde(default)]
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub vars: Vec<KvPair>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -88,7 +111,6 @@ impl Default for LibrarySettings {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct TabsSettings {
-    // library/downloads/settings are always on; only store tabs are user-hideable
     pub show_gachas: bool,
     pub show_epic: bool,
     pub show_gog: bool,
@@ -153,6 +175,8 @@ pub struct ThemeSettings {
     pub follow_system_font: bool,
     pub font_family: String,
     pub colors: BTreeMap<String, String>,
+    pub fill_fields: bool,
+    pub radius_scale: f64,
 }
 
 impl Default for ThemeSettings {
@@ -162,6 +186,8 @@ impl Default for ThemeSettings {
             follow_system_font: true,
             font_family: String::new(),
             colors: BTreeMap::new(),
+            fill_fields: true,
+            radius_scale: 1.0,
         }
     }
 }
@@ -192,30 +218,18 @@ impl UiSettings {
         if !path.exists() {
             let defaults = Self::default();
             if let Err(e) = defaults.save() {
-                eprintln!(
-                    "[ui_settings] couldn't write defaults to {}: {} — running in-memory only",
-                    path.display(),
-                    e
-                );
+                tracing::warn!("couldn't write defaults to {}: {} - running in-memory only", path.display(), e);
             }
             return defaults;
         }
 
         match std::fs::read_to_string(&path) {
             Ok(body) => toml::from_str::<UiSettings>(&body).unwrap_or_else(|e| {
-                eprintln!(
-                    "[ui_settings] couldn't parse {}: {} — using defaults",
-                    path.display(),
-                    e
-                );
+                tracing::warn!("couldn't parse {}: {} - using defaults", path.display(), e);
                 Self::default()
             }),
             Err(e) => {
-                eprintln!(
-                    "[ui_settings] couldn't read {}: {} — using defaults",
-                    path.display(),
-                    e
-                );
+                tracing::warn!("couldn't read {}: {} - using defaults", path.display(), e);
                 Self::default()
             }
         }

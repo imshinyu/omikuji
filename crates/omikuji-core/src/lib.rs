@@ -21,10 +21,12 @@ pub mod launch;
 pub mod library;
 pub mod media;
 pub mod notifications;
+pub mod prefixes;
 pub mod process;
 pub mod runners;
 pub mod settings;
 pub mod steam;
+pub mod system_info;
 pub mod ui_settings;
 pub mod wine_tools;
 

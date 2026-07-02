@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 -960 960 960">
+  <path d="M 292 -840
+           L 668 -840
+           Q 700 -840 700 -808
+           L 700 -240
+           C 700 -185 665 -160 665 -152
+           Q 665 -120 633 -120
+           L 257 -120
+           Q 225 -120 225 -152
+           C 225 -160 260 -185 260 -240
+           L 260 -808
+           Q 260 -840 292 -840
+           Z"
+        fill="none" stroke="currentColor" stroke-width="96"
+        stroke-linejoin="round"/>
+  <text x="480" y="-480"
+        font-family="'Noto Serif', serif"
+        font-size="320" font-weight="700"
+        fill="currentColor"
+        text-anchor="middle" dominant-baseline="central">福</text>
+</svg>

@@ -1,6 +1,6 @@
 [package]
 name = "omikuji"
-version = "0.2.1"
+version = "0.5.1"
 description = "Qt/QML based wine apps launcher for Linux"
 license = "GPL-3.0-or-later"
 edition = "2024"
@@ -18,7 +18,7 @@ tokio = { version = "1", features = ["full"] }
 serde_json = "1"
 lazy_static = "1"
 tracing = "0.1"
-tracing-subscriber = "0.3"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 dirs = "6"
 libc = "0.2"
 clap = { version = "4", features = ["derive"] }
@@ -26,3 +26,20 @@ gilrs = "0.11"
 
 [build-dependencies]
 cxx-qt-build = { version = "0.8", features = ["link_qt_object_files"] }
+
+[package.metadata.generate-rpm]
+auto-req = "no"
+assets = [
+    { source = "../../target-fedora/release/omikuji", dest = "/usr/bin/omikuji", mode = "755" },
+    { source = "../../packaging/io.github.reakjra.omikuji.png", dest = "/usr/share/pixmaps/io.github.reakjra.omikuji.png", mode = "644" },
+    { source = "../../packaging/io.github.reakjra.omikuji.desktop.in", dest = "/usr/share/applications/io.github.reakjra.omikuji.desktop", mode = "644" },
+    { source = "../../packaging/io.github.reakjra.omikuji.metainfo.xml", dest = "/usr/share/metainfo/io.github.reakjra.omikuji.metainfo.xml", mode = "644" },
+    { source = "../../LICENSE", dest = "/usr/share/licenses/omikuji/LICENSE", mode = "644" },
+]
+
+[package.metadata.generate-rpm.requires]
+qt6-qtbase = "*"
+qt6-qtdeclarative = "*"
+qt6-qtsvg = "*"
+qt6-qt5compat = "*"
+qt6-qtwayland = "*"

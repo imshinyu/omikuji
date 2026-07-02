@@ -11,7 +11,7 @@ impl super::qobject::GameModel {
         match serde_json::to_string(&manifests) {
             Ok(s) => QString::from(&s),
             Err(e) => {
-                eprintln!("[list_gachas] serialize failed: {}", e);
+                tracing::error!("serialize failed: {}", e);
                 QString::from("[]")
             }
         }
@@ -26,14 +26,14 @@ impl super::qobject::GameModel {
             {
                 Ok(rt) => rt,
                 Err(e) => {
-                    eprintln!("[gachas] couldn't build runtime: {}", e);
+                    tracing::error!("couldn't build runtime: {}", e);
                     return;
                 }
             };
             let fetched = match rt.block_on(omikuji_core::gachas::remote::ensure_all_fetched()) {
                 Ok(n) => n,
                 Err(e) => {
-                    eprintln!("[gachas] fetch failed: {}", e);
+                    tracing::error!("gacha manifest fetch failed: {}", e);
                     omikuji_core::notifications::warning(
                         "Gachas",
                         "Couldn't fetch manifests. Existing cached games still work.",
@@ -53,7 +53,7 @@ impl super::qobject::GameModel {
             Some(m) => match serde_json::to_string(&m) {
                 Ok(s) => QString::from(&s),
                 Err(e) => {
-                    eprintln!("[get_gacha_manifest] serialize failed: {}", e);
+                    tracing::error!("serialize failed: {}", e);
                     QString::default()
                 }
             },
@@ -84,14 +84,6 @@ impl super::qobject::GameModel {
         QString::from(&serde_json::Value::Object(map).to_string())
     }
 
-    pub fn gacha_resolve_poster(&self, manifest_id: &QString) -> QString {
-        let id = manifest_id.to_string();
-        let Some(m) = omikuji_core::gachas::manifest::find(&id) else {
-            return QString::default();
-        };
-        QString::from(&omikuji_core::gachas::strategies::resolve_poster(&m))
-    }
-
     pub fn fetch_gacha_install_size(
         self: Pin<&mut Self>,
         request_id: &QString,
@@ -104,57 +96,18 @@ impl super::qobject::GameModel {
         let eid = edition_id.to_string();
         let voices_str = voices_csv.to_string();
 
-        std::thread::spawn(move || {
-            let rt = match tokio::runtime::Runtime::new() {
-                Ok(r) => r,
-                Err(e) => {
-                    eprintln!("[gacha_size] tokio: {}", e);
-                    omikuji_core::install_sizes::push(
-                        omikuji_core::install_sizes::InstallSizeResult {
-                            request_id: rid,
-                            download_bytes: 0,
-                            install_bytes: 0,
-                            error: format!("runtime: {}", e),
-                        },
-                    );
-                    return;
-                }
-            };
-
-            let pushed = rt.block_on(async move {
-                let Some(manifest) = omikuji_core::gachas::manifest::find(&mid) else {
-                    return omikuji_core::install_sizes::InstallSizeResult {
-                        request_id: rid.clone(),
-                        download_bytes: 0,
-                        install_bytes: 0,
-                        error: format!("unknown manifest: {}", mid),
-                    };
-                };
-                let voices: Vec<String> = voices_str
-                    .split(',')
-                    .map(|s| s.trim().to_string())
-                    .filter(|s| !s.is_empty())
-                    .collect();
-                match omikuji_core::gachas::strategies::fetch_install_size(&manifest, &eid, &voices).await {
-                    Ok(sz) => omikuji_core::install_sizes::InstallSizeResult {
-                        request_id: rid,
-                        download_bytes: sz.download_bytes,
-                        install_bytes: sz.install_bytes,
-                        error: String::new(),
-                    },
-                    Err(e) => {
-                        eprintln!("[gacha_size] {}: {}", mid, e);
-                        omikuji_core::install_sizes::InstallSizeResult {
-                            request_id: rid,
-                            download_bytes: 0,
-                            install_bytes: 0,
-                            error: e.to_string(),
-                        }
-                    }
-                }
-            });
-
-            omikuji_core::install_sizes::push(pushed);
+        omikuji_core::install_sizes::spawn_fetch(rid, move || async move {
+            let manifest = omikuji_core::gachas::manifest::find(&mid)
+                .ok_or_else(|| format!("unknown manifest: {}", mid))?;
+            let voices: Vec<String> = voices_str
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+            omikuji_core::gachas::strategies::fetch_install_size(&manifest, &eid, &voices)
+                .await
+                .map(|s| (s.download_bytes, s.install_bytes))
+                .map_err(|e| e.to_string())
         });
     }
 
@@ -219,11 +172,11 @@ impl super::qobject::GameModel {
         let runner_s = runner_version.to_string();
 
         let Some(manifest) = omikuji_core::gachas::manifest::find(&mid) else {
-            eprintln!("[gacha_import] unknown manifest: {}", mid);
+            tracing::warn!("unknown manifest: {}", mid);
             return QString::default();
         };
         let Some(edition) = manifest.editions.iter().find(|e| e.id == eid) else {
-            eprintln!("[gacha_import] unknown edition '{}' for '{}'", eid, mid);
+            tracing::warn!("unknown edition '{}' for '{}'", eid, mid);
             return QString::default();
         };
         let app_id = omikuji_core::gachas::strategies::build_app_id(&manifest, &eid, &[]);
@@ -231,7 +184,7 @@ impl super::qobject::GameModel {
         if self.library.game.iter().any(|g| {
             g.source.kind == "gacha" && g.source.app_id == app_id
         }) {
-            eprintln!("[gacha_import] already in library: {}", app_id);
+            tracing::info!("already in library: {}", app_id);
             return QString::default();
         }
 
@@ -282,8 +235,15 @@ impl super::qobject::GameModel {
         let row = self.library.game.len() as i32;
 
         if let Err(e) = Library::save_game_static(&game) {
-            eprintln!("[gacha_import] failed to save: {}", e);
+            tracing::error!("failed to save: {}", e);
             return QString::default();
+        }
+
+        let tools = omikuji_core::components::gacha_tools(&manifest.publisher_slug, &manifest.launch_patch);
+        if !tools.is_empty() {
+            tokio::spawn(async move {
+                let _ = omikuji_core::components::ensure(&tools).await;
+            });
         }
 
         let install_path_buf = std::path::PathBuf::from(&install_s);
@@ -302,13 +262,13 @@ impl super::qobject::GameModel {
             if !dotversion.exists() {
                 let _ = std::fs::write(&dotversion, &version);
             }
-            eprintln!(
-                "[gacha_import] detected version {} for {}/{} {}",
+            tracing::info!(
+                "detected version {} for {}/{} {}",
                 version, manifest.publisher_slug, manifest.game_slug, edition.id
             );
         } else {
-            eprintln!(
-                "[gacha_import] coulndt detect version on disk for {}/{} {}, update check skipped until next install",
+            tracing::warn!(
+                "couldn't detect version on disk for {}/{} {}, update check skipped until next install",
                 manifest.publisher_slug, manifest.game_slug, edition.id
             );
         }
@@ -316,22 +276,12 @@ impl super::qobject::GameModel {
         let id_for_media = game.metadata.id.clone();
         let manifest_for_media = manifest.clone();
         let qt_thread = self.as_mut().qt_thread();
+        let on_asset = super::media_changed_notifier(qt_thread, id_for_media.clone());
         std::thread::spawn(move || {
-            let id_for_refresh = id_for_media.clone();
             omikuji_core::gachas::art::fetch_into_library_cache(
                 &manifest_for_media,
                 &id_for_media,
-                |_| {
-                    let id_inner = id_for_refresh.clone();
-                    let _ = qt_thread.queue(move |mut obj: Pin<&mut super::qobject::GameModel>| {
-                        let Some(row) = obj.library.game.iter().position(|g| g.metadata.id == id_inner) else {
-                            return;
-                        };
-                        let idx = obj.as_ref().model_index(row as i32, 0, &QModelIndex::default());
-                        let roles = cxx_qt_lib::QList::<i32>::default();
-                        obj.as_mut().data_changed(&idx, &idx, &roles);
-                    });
-                },
+                on_asset,
             );
         });
 
@@ -341,8 +291,8 @@ impl super::qobject::GameModel {
         self.as_mut().set_count(count);
         self.as_mut().end_insert_rows();
 
-        eprintln!(
-            "[gacha_import] imported '{}' ({}) as id '{}'",
+        tracing::info!(
+            "imported '{}' ({}) as id '{}'",
             display_s, app_id, game_id
         );
         QString::from(&game_id)

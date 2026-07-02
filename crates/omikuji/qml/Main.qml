@@ -37,6 +37,8 @@ ApplicationWindow {
         followSystemColors: uiSettings.followSystemColors
         followSystemFont: uiSettings.followSystemFont
         fontFamily: uiSettings.fontFamily
+        fillFields: uiSettings.fillFields
+        radiusScale: uiSettings.radiusScale
     }
 
     Connections {
@@ -137,6 +139,8 @@ ApplicationWindow {
 
     ArchiveManagerBridge { id: archiveManager }
 
+    OfudaBridge { id: ofudaBridge }
+
     property var archiveActiveInstalls: ({})
 
     // bumped on runner changes so consumers re-query witout restart
@@ -190,7 +194,7 @@ ApplicationWindow {
     Timer {
         interval: 500
         repeat: true
-        running: componentsBridge.pendingCount > 0 || componentsBridge.inProgress
+        running: true
         onTriggered: componentsBridge.drainEvents()
     }
 
@@ -211,10 +215,10 @@ ApplicationWindow {
             if (componentsBridge.pendingCount > 0 && !componentsBridge.inProgress) {
                 toastManager.show(
                     "info",
-                    "Setting up omikuji",
-                    "Fetching runtime components — see Downloads for progress."
+                    qsTr("Setting up omikuji"),
+                    qsTr("Fetching runtime components — see Downloads for progress.")
                 )
-                componentsBridge.installAll()
+                componentsBridge.installEager()
             }
         }
     }
@@ -222,11 +226,11 @@ ApplicationWindow {
     Connections {
         target: componentsBridge
         function onComponentFailed(name, error) {
-            toastManager.show("error", name + " failed", "Retry it from the Downloads tab.")
+            toastManager.show("error", qsTr("%1 failed").arg(name), qsTr("Retry it from the Downloads tab."))
         }
         function onAllDoneChanged() {
             if (componentsBridge.allDone && componentsBridge.totalCount > 0) {
-                toastManager.show("success", "omikuji is ready", "Runtime components installed.")
+                toastManager.show("success", qsTr("omikuji is ready"), qsTr("Runtime components installed."))
             }
         }
     }
@@ -236,6 +240,12 @@ ApplicationWindow {
     readonly property var themeRef: theme
     readonly property var epicModelRef: epicModel
     readonly property var gogModelRef: gogModel
+    readonly property var uiSettingsRef: uiSettings
+    readonly property var envSetsDialogRef: envSetsDialog
+    readonly property var dllSetsDialogRef: dllSetsDialog
+    readonly property var componentsBridgeRef: componentsBridge
+    readonly property var archiveManagerRef: archiveManager
+    readonly property var ofudaBridgeRef: ofudaBridge
 
     GameModel {
         id: gameModel
@@ -258,7 +268,7 @@ ApplicationWindow {
             let bits = []
             if (epicCount > 0) bits.push(epicCount + " Epic")
             if (gogCount > 0) bits.push(gogCount + " GOG")
-            toastManager.show("info", "Updates available", bits.join(" + ") + " queued in Downloads")
+            toastManager.show("info", qsTr("Updates available"), qsTr("%1 queued in Downloads").arg(bits.join(" + ")))
         }
 
         Component.onCompleted: {
@@ -319,6 +329,14 @@ ApplicationWindow {
     property bool isSelectedGameRunning: false
 
     property string currentView: "library"
+    property string activeModal: ""
+
+    readonly property string currentViewLabel: currentView === "steam" ? "Steam"
+        : currentView === "epic" ? "Epic Games"
+        : currentView === "gog" ? "GOG"
+        : currentView === "hoyo" ? "Gachas"
+        : currentView === "downloads" ? "Downloads"
+        : navTabs.tabs[navTabs.currentIndex]?.label || ""
 
     // clear search on view switch, but not on library filter tab flips (those dont change currentView, i think)
     onCurrentViewChanged: {
@@ -350,6 +368,7 @@ ApplicationWindow {
             playtime: game["playtime"] || 0,
             lastPlayed: game["lastPlayed"] || "",
             runner: game["runner"] || "",
+            runnerType: game["runnerType"] || "",
             gameId: game["gameId"] || "",
             sourceAppId: game["sourceAppId"] || ""
         }
@@ -387,6 +406,14 @@ ApplicationWindow {
                 return false
             }
         }
+        if (gameModel.needs_prefix_prep(idx)) {
+            prefixPrepDialog.start(idx, forceSkipUpdateCheck)
+            return true
+        }
+        return doLaunch(idx, forceSkipUpdateCheck)
+    }
+
+    function doLaunch(idx, forceSkipUpdateCheck) {
         let launched = forceSkipUpdateCheck
             ? gameModel.launch_game_force(idx)
             : gameModel.launch_game(idx)
@@ -501,6 +528,7 @@ property real cardZoom: uiSettings.cardZoom
         }
 
         downloadCount: downloadModel.activeCount
+        headerLabel: root.currentViewLabel
 
         uiSettings: uiSettings
 
@@ -537,11 +565,7 @@ property real cardZoom: uiSettings.cardZoom
             root.currentView = "downloads"
         }
 
-        onSettingsClicked: {
-            navTabs.currentStore = ""
-            navTabs.currentBottom = "settings"
-            root.currentView = "globalSettings"
-        }
+        onSettingsClicked: root.activeModal = "globalSettings"
     }
 
     MouseArea {
@@ -596,28 +620,9 @@ property real cardZoom: uiSettings.cardZoom
         anchors.right: parent.right
         z: 100
 
-        currentTabLabel: root.currentView === "settings" && root.selectedGame // this is so cursed omfg what the FUCK am i doing
-            ? root.selectedGame.name
-            : root.currentView === "add"
-                ? "New Game"
-                : root.currentView === "steam"
-                    ? "Steam"
-                    : root.currentView === "epic"
-                        ? "Epic Games"
-                        : root.currentView === "gog"
-                            ? "GOG"
-                            : root.currentView === "hoyo"
-                                ? "Gachas"
-                                : root.currentView === "downloads"
-                                    ? "Downloads"
-                                    : root.currentView === "globalSettings"
-                                        ? "Settings"
-                                        : navTabs.tabs[navTabs.currentIndex]?.label || ""
-        subText: root.currentView === "settings" && root.selectedGame
-            ? root.selectedGame.gameId
-            : ""
-
-        pillCenterX: scaledRoot.width / 2 - navTabs.width
+        currentTabLabel: root.currentViewLabel
+        showTitle: uiSettings.navCollapsed
+        leftInset: navTabs.width
 
         showAddButton: root.currentView === "library"
         showSearch: root.currentView === "library"
@@ -633,24 +638,10 @@ property real cardZoom: uiSettings.cardZoom
         zoomValue: uiSettings.cardZoom
         spacingValue: uiSettings.cardSpacing
 
-        tabs: (root.currentView === "settings" && settingsPageLoader.item) ? settingsPageLoader.item.tabs
-            : (root.currentView === "add" && addGamePageLoader.item) ? addGamePageLoader.item.tabs
-            : root.currentView === "globalSettings" ? globalSettingsPage.tabs
-            : []
-        currentTabIndex: (root.currentView === "settings" && settingsPageLoader.item) ? settingsPageLoader.item.currentTabIndex
-            : (root.currentView === "add" && addGamePageLoader.item) ? addGamePageLoader.item.currentTabIndex
-            : root.currentView === "globalSettings" ? globalSettingsPage.currentTabIndex
-            : 0
-
-        onAddClicked: root.currentView = "add"
+        onAddClicked: root.activeModal = "addGame"
         onConsoleModeClicked: gameModel.launch_console_mode()
         onZoomMoved: (v) => uiSettings.applyCardZoom(v)
         onSpacingMoved: (v) => uiSettings.applyCardSpacing(v)
-        onTabSelected: (i) => {
-            if (root.currentView === "settings" && settingsPageLoader.item) settingsPageLoader.item.currentTabIndex = i
-            else if (root.currentView === "add" && addGamePageLoader.item) addGamePageLoader.item.currentTabIndex = i
-            else if (root.currentView === "globalSettings") globalSettingsPage.currentTabIndex = i
-        }
     }
 
     Item {
@@ -664,7 +655,7 @@ property real cardZoom: uiSettings.cardZoom
             property bool isDropdownHost: true
             anchors.fill: parent
             color: theme.surface
-            radius: 12
+            radius: theme.radius.md
             visible: opacity > 0
             opacity: root.currentView === "library" ? 1 : 0
 
@@ -721,7 +712,7 @@ property real cardZoom: uiSettings.cardZoom
                 downloadActivity: root.selectedDownloadActivity
                 onSettingsClicked: {
                     root.settingsGameIndex = root.selectedGameIndex
-                    root.currentView = "settings"
+                    root.activeModal = "gameSettings"
                 }
                 onDownloadActivityClicked: {
                     root.currentView = "downloads"
@@ -736,105 +727,6 @@ property real cardZoom: uiSettings.cardZoom
                     if (!root.selectedGame || !root.selectedGame.gameId) return
                     if (Date.now() - wineToolsMenu.lastClosedAt < 150) return
                     wineToolsMenu.openAbove(floatingBar.wineToolsAnchor)
-                }
-            }
-        }
-
-        Rectangle {
-            id: settingsPanel
-            property bool isDropdownHost: true
-            anchors.fill: parent
-            color: theme.surface
-            radius: 12
-            visible: opacity > 0
-            opacity: root.currentView === "settings" ? 1 : 0
-
-            Behavior on opacity {
-                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-            }
-
-            Rectangle {
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                width: parent.radius
-                height: parent.radius
-                color: parent.color
-                visible: parent.visible
-            }
-
-            Loader {
-                id: settingsPageLoader
-                anchors.fill: parent
-                active: root.currentView === "settings" || settingsPanel.opacity > 0.01
-
-                sourceComponent: GameSettingsPage {
-                    gameModel: root.gameModelRef
-                    runnersVersion: root.runnersVersion
-                    gameIndex: root.settingsGameIndex
-
-                    onCancelRequested: root.currentView = "library"
-                    onSaveRequested: (idx) => root.currentView = "library"
-                    onSaveAndPlayRequested: (idx) => {
-                        root.currentView = "library"
-                        root.tryPlay(idx)
-                    }
-                    onRefetchMediaRequested: (gameId) => refetchMediaConfirm.show(gameId)
-                }
-            }
-        }
-
-        Rectangle {
-            id: addPanel
-            anchors.fill: parent
-            color: theme.surface
-            radius: 12
-            visible: opacity > 0
-            opacity: root.currentView === "add" ? 1 : 0
-
-            Behavior on opacity {
-                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-            }
-
-            Rectangle {
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                width: parent.radius
-                height: parent.radius
-                color: parent.color
-                visible: parent.visible
-            }
-
-            Loader {
-                id: addGamePageLoader
-                anchors.fill: parent
-                active: root.currentView === "add" || addPanel.opacity > 0.01
-
-                sourceComponent: AddGamePage {
-                    gameModel: root.gameModelRef
-                    runnersVersion: root.runnersVersion
-
-                    onCancelRequested: root.currentView = "library"
-                    onGameCreated: (gameId) => {
-                        root.currentView = "library"
-                        for (let i = 0; i < gameModel.count; i++) {
-                            let g = gameModel.get_game(i)
-                            if (g && g["gameId"] === gameId) {
-                                root.selectedGameIndex = i
-                                break
-                            }
-                        }
-                    }
-                    onGameCreatedAndPlay: (gameId) => {
-                        root.currentView = "library"
-                        for (let i = 0; i < gameModel.count; i++) {
-                            let g = gameModel.get_game(i)
-                            if (g && g["gameId"] === gameId) {
-                                root.selectedGameIndex = i
-                                root.tryPlay(i)
-                                break
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -942,7 +834,7 @@ property real cardZoom: uiSettings.cardZoom
             property bool isDropdownHost: true
             anchors.fill: parent
             color: theme.surface
-            radius: 12
+            radius: theme.radius.md
             visible: opacity > 0
             opacity: root.currentView === "downloads" ? 1 : 0
 
@@ -966,52 +858,12 @@ property real cardZoom: uiSettings.cardZoom
                 pageVisible: root.currentView === "downloads"
                 onCancelRequested: (id, displayName) => {
                     cancelDownloadConfirm.message =
-                        "This will stop \"" + displayName + "\" and delete the partially downloaded files."
+                        qsTr("This will stop \"%1\" and delete the partially downloaded files.").arg(displayName)
                     cancelDownloadConfirm.show(id)
                 }
             }
         }
 
-        Rectangle {
-            id: globalSettingsPanel
-            property bool isDropdownHost: true
-            anchors.fill: parent
-            color: theme.surface
-            radius: 12
-            visible: opacity > 0
-            opacity: root.currentView === "globalSettings" ? 1 : 0
-
-            Behavior on opacity {
-                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-            }
-
-            Rectangle {
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                width: parent.radius
-                height: parent.radius
-                color: parent.color
-                visible: parent.visible
-            }
-
-            GlobalSettingsPage {
-                id: globalSettingsPage
-                anchors.fill: parent
-                uiSettings: uiSettings
-                componentsBridge: componentsBridge
-                archiveManager: archiveManager
-                defaults: defaultsBridge
-                gameModel: root.gameModelRef
-                activeInstalls: root.archiveActiveInstalls
-                onManageRequested: (category, source, kind) => {
-                    archiveManageDialog.show(category, source, kind)
-                }
-                onCategoryAddRequested: categoriesController.showAdd()
-                onCategoryEditRequested: (idx, entry) => categoriesController.showEdit(idx, entry)
-                onCategoryDeleteRequested: (idx, entry) => categoriesController.showDelete(idx, entry)
-                onDefaultsApplyToExistingRequested: defaultsApplyDialog.show()
-            }
-        }
     }
 
     EpicController {
@@ -1063,7 +915,7 @@ property real cardZoom: uiSettings.cardZoom
         onConfigureRequested: (idx) => {
             root.selectedGameIndex = idx
             root.settingsGameIndex = idx
-            root.currentView = "settings"
+            root.activeModal = "gameSettings"
         }
         onCategoriesRequested: (idx) => categoriesController.showForGame(idx)
         onRemoveRequested: (idx) => {
@@ -1075,9 +927,9 @@ property real cardZoom: uiSettings.cardZoom
     ConfirmDialog {
         id: cancelDownloadConfirm
         anchors.fill: parent
-        title: "Cancel download?"
-        confirmText: "Cancel & delete"
-        cancelText: "Keep"
+        title: qsTr("Cancel download?")
+        confirmText: qsTr("Cancel & delete")
+        cancelText: qsTr("Keep")
         destructive: true
         onConfirmed: (id) => { if (downloadModel) downloadModel.cancel(id) }
     }
@@ -1085,10 +937,10 @@ property real cardZoom: uiSettings.cardZoom
     ConfirmDialog {
         id: refetchMediaConfirm
         anchors.fill: parent
-        title: "Refetch art from SGDB"
-        message: "Replaces the cached banner, cover art, and icon with a fresh pull from SteamGridDB. Manual overrides you've set won't be touched."
-        confirmText: "Refetch"
-        cancelText: "Cancel"
+        title: qsTr("Refetch art from SGDB")
+        message: qsTr("Replaces the cached banner, cover art, and icon with a fresh pull from SteamGridDB. Manual overrides you've set won't be touched.")
+        confirmText: qsTr("Refetch")
+        cancelText: qsTr("Cancel")
         onConfirmed: (id) => { if (id && gameModel) gameModel.refetch_media(id) }
     }
 
@@ -1097,6 +949,30 @@ property real cardZoom: uiSettings.cardZoom
         anchors.fill: parent
         defaults: defaultsBridge
         gameModel: root.gameModelRef
+    }
+
+    SetsDialog {
+        id: envSetsDialog
+        libRead: () => uiSettings.envSetsJson()
+        libWrite: (j) => uiSettings.applyEnvSetsJson(j)
+        copyKey: "launch.env"
+        syncKey: "launch.env_sets"
+        keyPlaceholder: "VAR_NAME"
+        valuePlaceholder: "value"
+        titleText: qsTr("Environment sets")
+        manageTitle: qsTr("Manage env sets")
+    }
+
+    SetsDialog {
+        id: dllSetsDialog
+        libRead: () => uiSettings.dllSetsJson()
+        libWrite: (j) => uiSettings.applyDllSetsJson(j)
+        copyKey: "wine.dll_overrides"
+        syncKey: "wine.dll_override_sets"
+        keyPlaceholder: "dll_name"
+        valuePlaceholder: "n,b"
+        titleText: qsTr("DLL override sets")
+        manageTitle: qsTr("Manage DLL sets")
     }
 
     CategoriesController {
@@ -1135,9 +1011,9 @@ property real cardZoom: uiSettings.cardZoom
         onUpdateRequested: (gid, aid, fromV) => {
             let newId = gameModel.enqueue_game_update(gid, fromV)
             if (newId && newId.length > 0) {
-                toastManager.show("info", "Update queued", root.selectedGame ? root.selectedGame.name : "")
+                toastManager.show("info", qsTr("Update queued"), root.selectedGame ? root.selectedGame.name : "")
             } else {
-                toastManager.show("error", "Update failed", "Could not enqueue update")
+                toastManager.show("error", qsTr("Update failed"), qsTr("Could not enqueue update"))
             }
         }
         onRunAnywayRequested: (gid) => {
@@ -1154,12 +1030,57 @@ property real cardZoom: uiSettings.cardZoom
                 let idx = gameModel.index_of_id(gid)
                 if (idx >= 0) {
                     root.settingsGameIndex = idx
-                    root.currentView = "settings"
+                    root.activeModal = "gameSettings"
                 }
             } else if (act === "open_global_settings") {
-                root.currentView = "globalSettings"
+                root.activeModal = "globalSettings"
             }
         }
+    }
+
+    PrefixCreateDialog {
+        id: prefixCreateDialog
+        anchors.fill: parent
+        gameModel: root.gameModelRef
+        ofudaBridge: root.ofudaBridgeRef
+    }
+
+    PrefixPrepDialog {
+        id: prefixPrepDialog
+        anchors.fill: parent
+        gameModel: root.gameModelRef
+        onLaunchReady: (idx, skip) => root.doLaunch(idx, skip)
+    }
+
+    PrefixDetailDialog {
+        id: prefixDetailDialog
+        anchors.fill: parent
+        ofudaBridge: root.ofudaBridgeRef
+        onDeleteRequested: (p) => {
+            const n = (p.games || []).length
+            deletePrefixConfirm.message = n > 0
+                ? (n === 1
+                    ? qsTr("This deletes the prefix and everything in it. 1 game uses it, and it won't be recoverable.")
+                    : qsTr("This deletes the prefix and everything in it. %1 games use it, and it won't be recoverable.").arg(n))
+                : qsTr("This deletes the prefix and everything in it. It won't be recoverable.")
+            prefixDetailDialog.escEnabled = false
+            deletePrefixConfirm.show(p)
+        }
+    }
+
+    ConfirmDialog {
+        id: deletePrefixConfirm
+        anchors.fill: parent
+        title: qsTr("Delete prefix?")
+        confirmText: qsTr("Delete")
+        cancelText: qsTr("Cancel")
+        destructive: true
+        onConfirmed: (p) => {
+            if (ofudaBridge && p) ofudaBridge.deletePrefix(p.path)
+            prefixDetailDialog.escEnabled = true
+            prefixDetailDialog.close()
+        }
+        onCancelled: prefixDetailDialog.escEnabled = true
     }
 
     ContextMenu {
@@ -1167,14 +1088,14 @@ property real cardZoom: uiSettings.cardZoom
         property string pendingRunExeRequestId: ""
 
         items: [
-            { text: "Configure (winecfg)", action: "winecfg" },
-            { text: "Winetricks", action: "winetricks" },
-            { text: "Registry (regedit)", action: "regedit" },
-            { text: "Command Prompt (cmd)", action: "cmd" },
-            { text: "File Explorer (explorer)", action: "explorer" },
-            { text: "Run EXE in prefix…", action: "run_exe" },
-            { text: "Kill wineserver", action: "killwineserver", danger: true }
-        ]
+            { text: qsTr("Configure (winecfg)"),    action: "winecfg" },
+            { text: "Winetricks",                    action: "winetricks" },
+            { text: qsTr("Registry (regedit)"),      action: "regedit" },
+            { text: qsTr("Command Prompt (cmd)"),    action: "cmd" },
+            { text: qsTr("File Explorer (explorer)"), action: "explorer" },
+            { text: qsTr("Run EXE in prefix…"),      action: "run_exe" },
+            { text: qsTr("Kill wineserver"),         action: "killwineserver", danger: true }
+        ] // TODO: dry up the dispatcher mighjt aswell kill it
 
         onItemClicked: (action) => {
             if (!root.selectedGame || !root.selectedGame.gameId) return
@@ -1182,7 +1103,7 @@ property real cardZoom: uiSettings.cardZoom
             if (action === "run_exe") {
                 let rid = "wine_run_exe_" + Date.now().toString(36)
                 pendingRunExeRequestId = rid
-                gameModel.open_file_dialog(rid, false, "Select EXE to run in prefix", "/home")
+                gameModel.open_file_dialog(rid, false, qsTr("Select EXE to run in prefix"), "/home")
             } else {
                 gameModel.run_wine_tool(gid, action)
             }
@@ -1201,6 +1122,89 @@ property real cardZoom: uiSettings.cardZoom
         }
     }
 
+    SettingsModal {
+        id: gameSettingsModal
+        shown: root.activeModal === "gameSettings"
+        onCloseRequested: { if (pageItem) pageItem.closeAction(); root.activeModal = "" }
+        pageComponent: Component {
+            GameSettingsPage {
+                gameModel: root.gameModelRef
+                runnersVersion: root.runnersVersion
+                gameIndex: root.settingsGameIndex
+                envSetsDialog: root.envSetsDialogRef
+                dllSetsDialog: root.dllSetsDialogRef
+                onSaveRequested: (idx) => root.activeModal = ""
+                onSaveAndPlayRequested: (idx) => {
+                    root.activeModal = ""
+                    root.tryPlay(idx)
+                }
+                onRefetchMediaRequested: (gid) => refetchMediaConfirm.show(gid)
+            }
+        }
+    }
+
+    SettingsModal {
+        id: addGameModal
+        shown: root.activeModal === "addGame"
+        onCloseRequested: { if (pageItem) pageItem.closeAction(); root.activeModal = "" }
+        pageComponent: Component {
+            AddGamePage {
+                gameModel: root.gameModelRef
+                runnersVersion: root.runnersVersion
+                envSetsDialog: root.envSetsDialogRef
+                dllSetsDialog: root.dllSetsDialogRef
+                onGameCreated: (gameId) => {
+                    root.activeModal = ""
+                    for (let i = 0; i < gameModel.count; i++) {
+                        let g = gameModel.get_game(i)
+                        if (g && g["gameId"] === gameId) {
+                            root.selectedGameIndex = i
+                            break
+                        }
+                    }
+                }
+                onGameCreatedAndPlay: (gameId) => {
+                    root.activeModal = ""
+                    for (let i = 0; i < gameModel.count; i++) {
+                        let g = gameModel.get_game(i)
+                        if (g && g["gameId"] === gameId) {
+                            root.selectedGameIndex = i
+                            root.tryPlay(i)
+                            break
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    SettingsModal {
+        id: globalSettingsModal
+        shown: root.activeModal === "globalSettings"
+        onCloseRequested: root.activeModal = ""
+        pageComponent: Component {
+            GlobalSettingsPage {
+                uiSettings: root.uiSettingsRef
+                componentsBridge: root.componentsBridgeRef
+                archiveManager: root.archiveManagerRef
+                ofudaBridge: root.ofudaBridgeRef
+                defaults: defaultsBridge
+                gameModel: root.gameModelRef
+                activeInstalls: root.archiveActiveInstalls
+                onManageRequested: (category, source, kind) => {
+                    archiveManageDialog.show(category, source, kind)
+                }
+                onManageSetsRequested: (kind) => (kind === "dll" ? dllSetsDialog : envSetsDialog).openManage()
+                onCategoryAddRequested: categoriesController.showAdd()
+                onCategoryEditRequested: (idx, entry) => categoriesController.showEdit(idx, entry)
+                onCategoryDeleteRequested: (idx, entry) => categoriesController.showDelete(idx, entry)
+                onDefaultsApplyToExistingRequested: defaultsApplyDialog.show()
+                onPrefixOpenRequested: (p) => prefixDetailDialog.show(p)
+                onPrefixCreateRequested: prefixCreateDialog.show()
+            }
+        }
+    }
+
     // z:1000 so it overlays all panels, dropdowns, and dialogs
     ToastManager {
         id: toastManager
@@ -1212,3 +1216,6 @@ property real cardZoom: uiSettings.cardZoom
 }
 
 // TODO might just really need to spend a week just on un-spaghettifying the whole qml. just sayin
+// TODO refractor game cards (need proper indexes for sorting)
+// TODO restyle toast
+// TODO kill dropshadow so we can drop qt6-5compat

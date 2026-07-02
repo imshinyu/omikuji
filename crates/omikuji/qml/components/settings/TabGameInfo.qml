@@ -21,48 +21,42 @@ Item {
         spacing: 24
 
         SettingsSection {
-            label: "Metadata"
+            label: qsTr("Metadata")
             icon: "sports_esports"
             width: parent.width
 
             M3TextField {
-                label: "Name"
+                label: qsTr("Name")
                 text: config["meta.name"] || ""
                 width: parent.width
-                onTextEdited: updateField("meta.name", text)
+                onTextEdited: (t) => updateField("meta.name", t)
             }
 
             M3TextField {
-                label: "Sort Name"
-                placeholder: "optional, for custom sort order"
+                label: qsTr("Sort Name")
+                placeholder: qsTr("optional, for custom sort order")
                 text: config["meta.sort_name"] || ""
                 width: parent.width
-                onTextEdited: updateField("meta.sort_name", text)
+                onTextEdited: (t) => updateField("meta.sort_name", t)
             }
 
             M3TextField {
-                label: "Slug"
-                placeholder: "for API lookups (auto-derived from name)"
+                label: qsTr("Slug")
+                placeholder: qsTr("for API lookups (auto-derived from name)")
                 text: config["meta.slug"] || ""
                 width: parent.width
-                onTextEdited: updateField("meta.slug", text)
+                onTextEdited: (t) => updateField("meta.slug", t)
             }
 
             M3Dropdown {
-                label: "Runner"
+                label: qsTr("Runner")
                 width: parent.width
-                options: {
-                    let opts = [
-                        { label: "Wine", value: "wine" },
-                        { label: "Steam", value: "steam" }
-                    ]
-                    let isFlatpakLauncher = gameModel ? gameModel.is_flatpak() : false
-                    let currentIsFlatpak = config["runner.type"] === "flatpak"
-                    if (!isFlatpakLauncher || currentIsFlatpak) {
-                        opts.push({ label: "Flatpak", value: "flatpak" })
-                    }
-                    return opts
-                }
+                options: [
+                    { label: "Wine", value: "wine" },
+                    { label: "Steam", value: "steam" },
+                    { label: "Native", value: "native" },
+                    { label: "Flatpak", value: "flatpak" }
+                ]
                 currentIndex: {
                     let t = config["runner.type"] || "wine"
                     for (let i = 0; i < options.length; i++) {
@@ -72,16 +66,26 @@ Item {
                 }
                 onSelected: (val) => updateField("runner.type", val)
             }
+
+            Text {
+                width: parent.width
+                visible: gameModel ? gameModel.is_flatpak() : false
+                text: qsTr("It seems you're using a flatpak build, cutie. Make sure omikuji has the proper extra permissions set to run native or flatpak applications.")
+                color: theme.warning
+                font.pixelSize: 12
+                font.weight: Font.Medium
+                wrapMode: Text.WordWrap
+            }
         }
 
         SettingsSection {
-            label: "Images"
+            label: qsTr("Images")
             icon: "image"
             width: parent.width
 
             M3FileField {
-                label: "Banner Override"
-                placeholder: "empty = auto-fetch from SGDB"
+                label: qsTr("Banner Override")
+                placeholder: qsTr("empty = auto-fetch from SGDB")
                 text: config["meta.banner"] || ""
                 width: parent.width
                 gameModel: root.gameModel
@@ -89,8 +93,8 @@ Item {
             }
 
             M3FileField {
-                label: "Cover Art Override"
-                placeholder: "empty = auto-fetch from SGDB"
+                label: qsTr("Cover Art Override")
+                placeholder: qsTr("empty = auto-fetch from SGDB")
                 text: config["meta.coverart"] || ""
                 width: parent.width
                 gameModel: root.gameModel
@@ -98,8 +102,8 @@ Item {
             }
 
             M3FileField {
-                label: "Icon Override"
-                placeholder: "empty = auto-fetch from SGDB"
+                label: qsTr("Icon Override")
+                placeholder: qsTr("empty = auto-fetch from SGDB")
                 text: config["meta.icon"] || ""
                 width: parent.width
                 gameModel: root.gameModel
@@ -113,14 +117,14 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    radius: 8
+                    radius: theme.radius.sm
                     color: refetchMouse.containsPress
-                        ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.14)
+                        ? theme.alpha(theme.text, 0.14)
                         : (refetchMouse.containsMouse
-                            ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+                            ? theme.alpha(theme.text, 0.08)
                             : "transparent")
                     border.width: 1
-                    border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.18)
+                    border.color: theme.alpha(theme.text, 0.18)
 
                     Behavior on color { ColorAnimation { duration: 100 } }
                 }
@@ -138,7 +142,7 @@ Item {
                     }
 
                     Text {
-                        text: "Refetch art"
+                        text: qsTr("Refetch art")
                         color: theme.text
                         font.pixelSize: 12
                         font.weight: Font.Medium
@@ -156,11 +160,11 @@ Item {
             }
 
             M3TextField {
-                label: "Color"
+                label: qsTr("Color")
                 placeholder: "#1a1a2e"
                 text: config["meta.color"] || ""
                 width: parent.width
-                onTextEdited: updateField("meta.color", text)
+                onTextEdited: (t) => updateField("meta.color", t)
             }
         }
     }

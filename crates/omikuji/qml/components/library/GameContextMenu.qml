@@ -36,11 +36,16 @@ Item {
     ContextMenu {
         id: menu
         property int currentGameIndex: -1
+        property var currentPrefixInfo: ({})
 
         function setPosition(index, mouseX, mouseY) {
             if (!ctrl.gameModel) return
             let game = ctrl.gameModel.get_game(index)
             if (!game) return
+
+            let pinfo = {}
+            try { pinfo = JSON.parse(ctrl.gameModel.game_prefix_info(index) || "{}") } catch (e) { pinfo = {} }
+            currentPrefixInfo = pinfo
 
             let isFav = game.favourite || false
             let isEpic = game.sourceKind === "epic" && game.sourceAppId && game.sourceAppId.length > 0
@@ -48,24 +53,42 @@ Item {
             let hasDesktopShortcut = ctrl.gameModel.has_desktop_shortcut(index)
             let hasMenuShortcut = ctrl.gameModel.has_menu_shortcut(index)
 
+            let shortcuts = [
+                { text: hasDesktopShortcut ? qsTr("Remove desktop shortcut") : qsTr("Create desktop shortcut"), action: "desktop_shortcut" },
+                { text: hasMenuShortcut ? qsTr("Remove application menu shortcut") : qsTr("Create application menu shortcut"), action: "menu_shortcut" }
+            ]
+            if (ctrl.gameModel.steam_shortcut_available(index)) {
+                let hasSteamShortcut = ctrl.gameModel.has_steam_shortcut(index)
+                shortcuts.push({ text: hasSteamShortcut ? qsTr("Remove Steam shortcut") : qsTr("Create Steam shortcut"), action: "steam_shortcut" })
+            }
+
             let built = [
-                { text: "Play", action: "play" },
-                { text: "Show logs", action: "logs" },
-                { text: "Configure", action: "configure" },
-                { text: "Categories", action: "categories" },
-                { text: "Browse files", action: "browse" },
-                { text: isFav ? "Remove from favorites" : "Add to favorites", action: "favorite" },
-                { text: hasDesktopShortcut ? "Remove desktop shortcut" : "Create desktop shortcut", action: "desktop_shortcut" },
-                { text: hasMenuShortcut ? "Remove application menu shortcut" : "Create application menu shortcut", action: "menu_shortcut" },
-                { text: "Duplicate", action: "duplicate" }
+                { text: qsTr("Play"), action: "play" },
+                { text: qsTr("Show logs"), action: "logs" },
+                { text: qsTr("Configure"), action: "configure" },
+                { text: qsTr("Categories"), action: "categories" },
+                { text: qsTr("Browse files"), action: "browse" },
+                { text: isFav ? qsTr("Remove from favorites") : qsTr("Add to favorites"), action: "favorite" },
+                { text: qsTr("Shortcuts"), submenu: shortcuts },
+                { text: qsTr("Duplicate"), action: "duplicate" }
             ]
             if (isEpic || isGog) {
-                built.push({ text: "Check for updates", action: "check_update", accent: true })
+                built.push({ text: qsTr("Check for updates"), action: "check_update", accent: true })
+            }
+            if (ctrl.gameModel.game_supports_repair(game.gameId)) {
+                built.push({ text: qsTr("Repair"), action: "repair", accent: true })
             }
             if (isEpic) {
-                built.push({ text: "Uninstall (Epic Games)", action: "uninstall_epic", danger: true })
+                built.push({ text: qsTr("Uninstall (Epic Games)"), action: "uninstall_store", danger: true })
+            } else if (isGog) {
+                built.push({ text: qsTr("Uninstall (GOG)"), action: "uninstall_store", danger: true })
             }
-            built.push({ text: "Remove", action: "remove", danger: true })
+            let removeItem = { text: qsTr("Remove"), action: "remove", danger: true }
+            if (pinfo.hasPrefix) {
+                removeItem.shiftText = qsTr("Remove + prefix")
+                removeItem.shiftAction = "remove_prefix"
+            }
+            built.push(removeItem)
             items = built
 
             currentGameIndex = index
@@ -109,6 +132,10 @@ Item {
                     if (ctrl.gameModel.has_menu_shortcut(idx)) ctrl.gameModel.remove_menu_shortcut(idx)
                     else ctrl.gameModel.create_menu_shortcut(idx)
                     break
+                case "steam_shortcut":
+                    if (ctrl.gameModel.has_steam_shortcut(idx)) ctrl.gameModel.remove_steam_shortcut(idx)
+                    else ctrl.gameModel.create_steam_shortcut(idx)
+                    break
                 case "duplicate":
                     ctrl.gameModel.duplicate_game(idx)
                     break
@@ -116,12 +143,26 @@ Item {
                     ctrl.gameModel.remove_game(idx)
                     ctrl.removeRequested(idx)
                     break
-                case "uninstall_epic": {
+                case "remove_prefix": {
+                    let g = ctrl.gameModel.get_game(idx)
+                    let info = menu.currentPrefixInfo || {}
+                    let nm = (g && g.name) ? g.name : qsTr("this game")
+                    let others = (info.gameCount || 1) - 1
+                    removeWithPrefixConfirm.title = qsTr("Remove %1 + prefix?").arg(nm)
+                    removeWithPrefixConfirm.message = others > 0
+                        ? qsTr("This removes %1 and deletes its prefix. %n other game(s) use this prefix and will lose it too. It won't be recoverable.", "", others).arg(nm)
+                        : qsTr("This removes %1 and deletes its prefix. It won't be recoverable.").arg(nm)
+                    removeWithPrefixConfirm.show({ idx: idx })
+                    break
+                }
+                case "uninstall_store": {
                     let g = ctrl.gameModel.get_game(idx)
                     if (g && g.gameId) {
-                        epicUninstallConfirm.title = "Uninstall " + (g.name || "this game") + "?"
-                        epicUninstallConfirm.message = "Legendary will delete the game files from disk. This cannot be undone."
-                        epicUninstallConfirm.show({ id: g.gameId })
+                        uninstallConfirm.title = qsTr("Uninstall %1?").arg(g.name || qsTr("this game"))
+                        uninstallConfirm.message = g.sourceKind === "gog"
+                            ? qsTr("The game files will be deleted from disk. This cannot be undone.")
+                            : qsTr("Legendary will delete the game files from disk. This cannot be undone.")
+                        uninstallConfirm.show({ id: g.gameId, kind: g.sourceKind })
                     }
                     break
                 }
@@ -133,18 +174,39 @@ Item {
                     }
                     break
                 }
+                case "repair": {
+                    let g = ctrl.gameModel.get_game(idx)
+                    if (g && g.gameId) ctrl.gameModel.enqueue_game_repair(g.gameId)
+                    break
+                }
             }
         }
     }
 
     ConfirmDialog {
-        id: epicUninstallConfirm
+        id: uninstallConfirm
         anchors.fill: parent
-        confirmText: "Uninstall"
-        cancelText: "Keep"
+        confirmText: qsTr("Uninstall")
+        cancelText: qsTr("Keep")
         destructive: true
         onConfirmed: (payload) => {
-            if (payload && payload.id && ctrl.gameModel) ctrl.gameModel.epic_uninstall(payload.id)
+            if (!payload || !payload.id || !ctrl.gameModel) return
+            if (payload.kind === "gog") ctrl.gameModel.gog_uninstall(payload.id)
+            else ctrl.gameModel.epic_uninstall(payload.id)
+        }
+    }
+
+    ConfirmDialog {
+        id: removeWithPrefixConfirm
+        anchors.fill: parent
+        confirmText: qsTr("Remove + delete")
+        cancelText: qsTr("Cancel")
+        destructive: true
+        onConfirmed: (payload) => {
+            if (payload && ctrl.gameModel) {
+                ctrl.gameModel.remove_game_with_prefix(payload.idx)
+                ctrl.removeRequested(payload.idx)
+            }
         }
     }
 }

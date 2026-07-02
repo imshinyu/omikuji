@@ -46,7 +46,7 @@ Item {
             transparentBorder: true
             horizontalOffset: 0
             verticalOffset: 2
-            radius: 12
+            radius: theme.radius.md
             samples: 25
             color: Qt.rgba(0, 0, 0, 0.28)
         }
@@ -60,7 +60,7 @@ Item {
                 Layout.preferredWidth: 184
                 Layout.preferredHeight: 84
                 radius: 10
-                color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.05)
+                color: theme.alpha(theme.text, 0.05)
                 clip: true
 
                 Image {
@@ -134,10 +134,10 @@ Item {
                     wavy: row.isActive
                     animate: row.isActive && row.pageVisible
                     fillColor: row.status === "Failed" ? "#e06060"
-                        : row.isPaused ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.3)
+                        : row.isPaused ? theme.alpha(theme.text, 0.3)
                         : theme.accent
                     handleColor: fillColor
-                    trackColor: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.18)
+                    trackColor: theme.alpha(theme.text, 0.18)
                 }
             }
 
@@ -158,7 +158,7 @@ Item {
                     }
 
                     Tooltip {
-                        text: "don't you dare."
+                        text: qsTr("don't you dare.")
                         tipVisible: pauseBtn.hovered && row.isUninterruptible
                     }
                 }
@@ -194,7 +194,7 @@ Item {
         let parts = []
 
         if (status === "Failed" && error) {
-            return "Failed: " + error
+            return qsTr("Failed: %1").arg(error)
         }
 
         if (status !== "Queued" && bytesTotal > 0) {
@@ -204,18 +204,18 @@ Item {
         }
 
         if (status === "Extracting") {
-            return "Extracting · " + progress.toFixed(0) + "%"
+            return qsTr("Extracting · %1%").arg(progress.toFixed(0))
         }
 
         if (status === "Patching") {
-            return "Patching · " + progress.toFixed(0) + "%"
+            return qsTr("Patching · %1%").arg(progress.toFixed(0))
         }
 
         if (status === "Downloading" && speed > 0) {
             parts.push(formatBytes(speed) + "/s")
             if (bytesTotal > bytesDownloaded) {
                 let etaSecs = (bytesTotal - bytesDownloaded) / speed
-                parts.push(formatEta(etaSecs) + " left")
+                parts.push(qsTr("%1 left").arg(formatEta(etaSecs)))
             }
         }
 

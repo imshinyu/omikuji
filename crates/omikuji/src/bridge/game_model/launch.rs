@@ -8,7 +8,7 @@ impl super::qobject::GameModel {
     pub fn launch_game(&self, index: i32) -> bool {
         let idx = index as usize;
         let Some(game) = self.library.game.get(idx) else {
-            eprintln!("launch_game: invalid index {}", index);
+            tracing::warn!("launch_game: invalid index {}", index);
             return false;
         };
 
@@ -69,15 +69,73 @@ impl super::qobject::GameModel {
     pub fn launch_game_force(&self, index: i32) -> bool {
         let idx = index as usize;
         let Some(game) = self.library.game.get(idx) else {
-            eprintln!("launch_game_force: invalid index {}", index);
+            tracing::warn!("launch_game_force: invalid index {}", index);
             return false;
         };
         self.try_spawn_launch(game)
     }
 
+    pub fn launch_exe(&self, exe: &QString, runner: &QString, prefix: &QString) -> bool {
+        let exe_path = std::path::PathBuf::from(exe.to_string());
+        let name = exe_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("Program")
+            .to_string();
+        let runner_v = runner.to_string();
+        let prefix_v = prefix.to_string();
+        let game = Game::with_options(
+            name,
+            exe_path,
+            (!prefix_v.is_empty()).then_some(prefix_v),
+            Some("wine".to_string()),
+            (!runner_v.is_empty()).then_some(runner_v),
+        );
+        let config = match omikuji_core::launch::build_launch(&game) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!("run-exe build_launch failed: {}", e);
+                return false;
+            }
+        };
+        if config.command.is_empty() {
+            return false;
+        }
+        let mut cmd = std::process::Command::new(&config.command[0]);
+        cmd.args(&config.command[1..]);
+        cmd.current_dir(&config.working_dir);
+        cmd.env_clear();
+        cmd.envs(&config.env);
+        cmd.stdin(std::process::Stdio::null());
+        use std::os::unix::process::CommandExt;
+        unsafe {
+            cmd.pre_exec(|| {
+                if libc::setsid() == -1 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                Ok(())
+            });
+        }
+        match cmd.spawn() {
+            Ok(_) => true,
+            Err(e) => {
+                tracing::error!("run-exe spawn failed: {}", e);
+                false
+            }
+        }
+    }
+
+    pub fn run_exe_path(&self) -> QString {
+        QString::from(&std::env::var("OMIKUJI_RUN_EXE").unwrap_or_default())
+    }
+
+    pub fn quit_now(&self) {
+        unsafe { libc::_exit(0) }
+    }
+
     fn try_spawn_launch(&self, game: &Game) -> bool {
         if omikuji_core::process::is_game_running(&game.metadata.id) {
-            eprintln!("game '{}' is already running", game.metadata.name);
+            tracing::warn!("game '{}' is already running", game.metadata.name);
             return false;
         }
 
@@ -90,7 +148,7 @@ impl super::qobject::GameModel {
 
         match omikuji_core::launch::build_launch(game) {
             Ok(config) => {
-                eprintln!("launching '{}': {:?}", game.metadata.name, config.command);
+                tracing::info!("launching '{}': {:?}", game.metadata.name, config.command);
 
                 // spawn os thread + build fresh runtime: we're already inside the #[tokio::main] runtime, cant block_on from here directly
                 let game_name = game.metadata.name.clone();
@@ -101,11 +159,11 @@ impl super::qobject::GameModel {
                     rt.block_on(async {
                         match omikuji_core::process::launch_game(&config).await {
                             Ok(proc_id) => {
-                                eprintln!("game '{}' launched, process id: {:?}", game_name, proc_id);
-                                eprintln!("logs: {}", logs_dir.display());
+                                tracing::info!("game '{}' launched, process id: {:?}", game_name, proc_id);
+                                tracing::debug!("logs: {}", logs_dir.display());
                             }
                             Err(e) => {
-                                eprintln!("failed to launch '{}': {}", game_name, e);
+                                tracing::error!("failed to launch '{}': {}", game_name, e);
                                 omikuji_core::process::notify_error(
                                     omikuji_core::process::ErrorNotification {
                                         game_id,
@@ -122,7 +180,7 @@ impl super::qobject::GameModel {
                 true
             }
             Err(e) => {
-                eprintln!("failed to build launch config: {}", e);
+                tracing::error!("failed to build launch config: {}", e);
                 let action = if e.downcast_ref::<omikuji_core::launch::ComponentMissing>().is_some() {
                     omikuji_core::process::ErrorAction::OpenGlobalSettings
                 } else {
@@ -143,7 +201,7 @@ impl super::qobject::GameModel {
 
     pub fn stop_game(&self, game_id: &QString) {
         let id = game_id.to_string();
-        eprintln!("[stop_game] requesting stop for game '{}'", id);
+        tracing::info!("requesting stop for game '{}'", id);
         omikuji_core::process::stop_game(&id);
     }
 
@@ -158,7 +216,7 @@ impl super::qobject::GameModel {
             .find(|g| g.metadata.id == id)
             .cloned()
         else {
-            eprintln!("[run_wine_tool] game '{}' not found", id);
+            tracing::warn!("game '{}' not found", id);
             return;
         };
         let t = match tool_name.as_str() {
@@ -169,7 +227,7 @@ impl super::qobject::GameModel {
             "explorer" => omikuji_core::wine_tools::WineTool::Explorer,
             "killwineserver" => omikuji_core::wine_tools::WineTool::KillWineserver,
             other => {
-                eprintln!("[run_wine_tool] unknown tool '{}'", other);
+                tracing::warn!("unknown tool '{}'", other);
                 return;
             }
         };
@@ -207,7 +265,7 @@ impl super::qobject::GameModel {
             .find(|g| g.metadata.id == id)
             .cloned()
         else {
-            eprintln!("[run_wine_exe] game '{}' not found", id);
+            tracing::warn!("game '{}' not found", id);
             return;
         };
         let display_name = game.metadata.name.clone();
@@ -267,7 +325,7 @@ impl super::qobject::GameModel {
         }
         let dir = omikuji_core::logs_dir();
         if let Err(e) = std::fs::create_dir_all(&dir) {
-            eprintln!("[game_log] couldn't create {}: {}", dir.display(), e);
+            tracing::error!("couldn't create {}: {}", dir.display(), e);
             return QString::from("");
         }
         let ts = std::time::SystemTime::now()
@@ -278,7 +336,7 @@ impl super::qobject::GameModel {
         match std::fs::write(&file, body) {
             Ok(_) => QString::from(file.to_string_lossy().as_ref()),
             Err(e) => {
-                eprintln!("[game_log] write {} failed: {}", file.display(), e);
+                tracing::error!("write {} failed: {}", file.display(), e);
                 QString::from("")
             }
         }
@@ -327,7 +385,7 @@ fn blocking_check_gacha_update(app_id: &str) -> Option<GachaUpdateInfo> {
         {
             Ok(rt) => rt,
             Err(e) => {
-                eprintln!("[launch] update check: runtime build failed: {}", e);
+                tracing::error!("update check: runtime build failed: {}", e);
                 return None;
             }
         };

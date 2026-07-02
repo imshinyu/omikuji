@@ -28,7 +28,7 @@ Popup {
 
     background: Rectangle {
         color: theme.popup
-        radius: 12
+        radius: theme.radius.md
         border.width: 1
         border.color: theme.surfaceBorder
     }
@@ -53,7 +53,7 @@ Popup {
                 spacing: 8
 
                 Text {
-                    text: "Card size"
+                    text: qsTr("Card size")
                     color: theme.textMuted
                     font.pixelSize: 12
                     font.weight: Font.Medium
@@ -65,7 +65,6 @@ Popup {
                     text: Math.round(root.zoomValue * 100) + "%"
                     color: theme.text
                     font.pixelSize: 12
-                    font.family: "monospace"
                     anchors.verticalCenter: parent.verticalCenter
                 }
             }
@@ -91,7 +90,7 @@ Popup {
                 spacing: 8
 
                 Text {
-                    text: "Card spacing"
+                    text: qsTr("Card spacing")
                     color: theme.textMuted
                     font.pixelSize: 12
                     font.weight: Font.Medium
@@ -103,7 +102,6 @@ Popup {
                     text: Math.round(root.spacingValue) + "px"
                     color: theme.text
                     font.pixelSize: 12
-                    font.family: "monospace"
                     anchors.verticalCenter: parent.verticalCenter
                 }
             }

@@ -22,6 +22,88 @@
     </p>
   </description>
   <releases>
+    <release version="0.5.1" date="2026-07-02">
+      <description>
+        <ul>
+          <li>Env sets for flatpak/native/steam games.</li>
+          <li>GOG uninstall button</li>
+          <li>Various minor fixes</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.5.0" date="2026-06-27">
+      <description>
+        <ul>
+          <li>Ofuda system (prefix manager)</li>
+          <li>Prefix prep modal</li>
+          <li>Shared scroll between fixed in modals</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.4.4" date="2026-06-25">
+      <description>
+        <ul>
+          <li>Lazy runtime tools fetch (Only umu will be fetched on boot)</li>
+          <li>Added env/dll sets.</li>
+          <li>VKD3D toggle now overrides d3d12core too.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.4.3" date="2026-06-25">
+      <description>
+        <ul>
+          <li>Fix GOG and Epic Games login page (+ DRY)</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.4.2" date="2026-06-23">
+      <description>
+        <ul>
+          <li>"Open with Omikuji" picker for .exe files.</li>
+          <li>Theme falls back to its own palette when the system color scheme is unknown.</li>
+          <li>RPM packaging CI.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.4.1" date="2026-06-22">
+      <description>
+        <p>Minor UI fixes.</p>
+      </description>
+    </release>
+    <release version="0.4.0" date="2026-06-22">
+      <description>
+        <ul>
+          <li>Added a System Info section in About with a one-click copyable hardware/OS dump for bug reports.</li>
+          <li>The per-game GPU selector is now op.</li>
+          <li>Reworked the Components settings tab and version manager onto the new UI.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.3.0" date="2026-06-21">
+      <description>
+        <p>Major UI overhaul.</p>
+      </description>
+    </release>
+    <release version="0.2.3" date="2026-06-17">
+      <description>
+        <ul>
+          <li>Now games symlink on run their icon in ~/.local/share/icons/hicolor/256x256/apps/</li>
+          <li>Added a create steam shortcut button.</li>
+          <li>Fixed cli target resolution.</li>
+          <li>Flatpak build now doesn't hide various options from permissions lock, just warn about it.</li>
+          <li>Discord's RPC now shows the game name as the activity title.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.2.2" date="2026-06-05">
+      <description>
+        <ul>
+          <li>HoYoverse updates no longer fail when a patch's source file is missing (e.g. game-managed cutscenes); the file is skipped instead.</li>
+          <li>Added a Repair action (right-click) for HoYoverse games to refetch missing or incomplete files.</li>
+          <li>Parallelized the update patch phase for noticeably faster updates.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.1" date="2026-05-17">
       <description>
         <ul>

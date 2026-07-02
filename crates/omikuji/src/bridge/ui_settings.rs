@@ -4,7 +4,7 @@
 use cxx_qt::{CxxQtType, Threading};
 use omikuji_core::fs_watcher::FileWatcher;
 use omikuji_core::ui_settings::{
-    BehaviorSettings, CategoryEntry, ConsoleModeSettings, DisplaySettings, LibrarySettings,
+    BehaviorSettings, CategoryEntry, ConsoleModeSettings, DisplaySettings, KvSet, LibrarySettings,
     NavSettings, TabsSettings, ThemeSettings, UiSettings, ui_settings_path,
 };
 use std::collections::BTreeMap;
@@ -13,6 +13,7 @@ use std::time::{Duration, Instant};
 
 unsafe extern "C" {
     fn omikuji_set_app_font(family: *const std::os::raw::c_char);
+    fn omikuji_available_languages_json() -> *const std::os::raw::c_char;
 }
 
 #[cxx_qt::bridge]
@@ -50,6 +51,9 @@ pub mod qobject {
         #[qproperty(bool, follow_system_colors, cxx_name = "followSystemColors")]
         #[qproperty(bool, follow_system_font, cxx_name = "followSystemFont")]
         #[qproperty(QString, font_family, cxx_name = "fontFamily")]
+        #[qproperty(bool, fill_fields, cxx_name = "fillFields")]
+        #[qproperty(f64, radius_scale, cxx_name = "radiusScale")]
+        #[qproperty(QString, language)]
         type UiSettingsBridge = super::UiSettingsRust;
     }
 
@@ -57,6 +61,14 @@ pub mod qobject {
         #[qsignal]
         #[cxx_name = "categoriesChanged"]
         fn categories_changed(self: Pin<&mut UiSettingsBridge>);
+
+        #[qsignal]
+        #[cxx_name = "envSetsChanged"]
+        fn env_sets_changed(self: Pin<&mut UiSettingsBridge>);
+
+        #[qsignal]
+        #[cxx_name = "dllSetsChanged"]
+        fn dll_sets_changed(self: Pin<&mut UiSettingsBridge>);
 
         #[qsignal]
         #[cxx_name = "themeChanged"]
@@ -168,6 +180,22 @@ pub mod qobject {
         fn apply_categories_json(self: Pin<&mut UiSettingsBridge>, json: &QString);
 
         #[qinvokable]
+        #[cxx_name = "envSetsJson"]
+        fn env_sets_json(self: &UiSettingsBridge) -> QString;
+
+        #[qinvokable]
+        #[cxx_name = "applyEnvSetsJson"]
+        fn apply_env_sets_json(self: Pin<&mut UiSettingsBridge>, json: &QString);
+
+        #[qinvokable]
+        #[cxx_name = "dllSetsJson"]
+        fn dll_sets_json(self: &UiSettingsBridge) -> QString;
+
+        #[qinvokable]
+        #[cxx_name = "applyDllSetsJson"]
+        fn apply_dll_sets_json(self: Pin<&mut UiSettingsBridge>, json: &QString);
+
+        #[qinvokable]
         #[cxx_name = "initWatcher"]
         fn init_watcher(self: Pin<&mut UiSettingsBridge>);
 
@@ -202,6 +230,14 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "availableFontsJson"]
         fn available_fonts_json(self: &UiSettingsBridge) -> QString;
+
+        #[qinvokable]
+        #[cxx_name = "applyLanguage"]
+        fn apply_language(self: Pin<&mut UiSettingsBridge>, value: &QString);
+
+        #[qinvokable]
+        #[cxx_name = "availableLanguagesJson"]
+        fn available_languages_json(self: &UiSettingsBridge) -> QString;
     }
 }
 
@@ -233,8 +269,13 @@ pub struct UiSettingsRust {
     pub follow_system_colors: bool,
     pub follow_system_font: bool,
     pub font_family: cxx_qt_lib::QString,
+    pub fill_fields: bool,
+    pub radius_scale: f64,
+    pub language: cxx_qt_lib::QString,
     pub color_overrides: BTreeMap<String, String>,
     pub categories: Vec<CategoryEntry>,
+    pub env_sets: Vec<KvSet>,
+    pub dll_sets: Vec<KvSet>,
     pub watcher: Option<FileWatcher>,
     pub suppress_reload_until: Option<Instant>,
 }
@@ -275,17 +316,58 @@ impl UiSettingsRust {
             follow_system_colors: s.theme.follow_system_colors,
             follow_system_font: s.theme.follow_system_font,
             font_family: cxx_qt_lib::QString::from(&s.theme.font_family),
+            fill_fields: s.theme.fill_fields,
+            radius_scale: s.theme.radius_scale,
+            language: cxx_qt_lib::QString::from(&s.language),
             color_overrides: s.theme.colors.clone(),
             categories: s.categories.clone(),
+            env_sets: s.env_sets.clone(),
+            dll_sets: s.dll_sets.clone(),
             watcher: None,
             suppress_reload_until: None,
         }
     }
 }
 
+macro_rules! kv_json_accessor {
+    ($get:ident, $set:ident, $field:ident, $ty:ty, $changed:ident, $label:literal) => {
+        fn $get(&self) -> cxx_qt_lib::QString {
+            let json = serde_json::to_string(&self.$field).unwrap_or_else(|_| "[]".to_string());
+            cxx_qt_lib::QString::from(&json)
+        }
+
+        fn $set(mut self: Pin<&mut Self>, json: &cxx_qt_lib::QString) {
+            match serde_json::from_str::<$ty>(&json.to_string()) {
+                Ok(entries) => {
+                    self.as_mut().rust_mut().get_mut().$field = entries;
+                    self.as_mut().persist();
+                    self.as_mut().$changed();
+                }
+                Err(e) => tracing::error!("bad {} json: {}", $label, e),
+            }
+        }
+    };
+}
+
+macro_rules! apply_setting {
+    ($apply:ident, $set:ident, $ty:ty) => {
+        fn $apply(mut self: Pin<&mut Self>, value: $ty) {
+            self.as_mut().$set(value);
+            self.persist();
+        }
+    };
+    (qstr $apply:ident, $set:ident) => {
+        fn $apply(mut self: Pin<&mut Self>, value: &cxx_qt_lib::QString) {
+            self.as_mut().$set(value.clone());
+            self.persist();
+        }
+    };
+}
+
 impl qobject::UiSettingsBridge {
     fn snapshot(&self) -> UiSettings {
         UiSettings {
+            language: self.language.to_string(),
             library: LibrarySettings {
                 card_zoom: self.card_zoom,
                 card_spacing: self.card_spacing,
@@ -322,12 +404,16 @@ impl qobject::UiSettingsBridge {
                 follow_system_font: self.follow_system_font,
                 font_family: self.font_family.to_string(),
                 colors: self.color_overrides.clone(),
+                fill_fields: self.fill_fields,
+                radius_scale: self.radius_scale,
             },
             console_mode: ConsoleModeSettings {
                 background: self.console_background.to_string(),
                 active: UiSettings::load().console_mode.active,
             },
             categories: self.categories.clone(),
+            env_sets: self.env_sets.clone(),
+            dll_sets: self.dll_sets.clone(),
         }
     }
 
@@ -336,94 +422,27 @@ impl qobject::UiSettingsBridge {
         self.as_mut().rust_mut().get_mut().suppress_reload_until =
             Some(Instant::now() + Duration::from_millis(600));
         if let Err(e) = self.snapshot().save() {
-            eprintln!("[ui_settings] save failed: {}", e);
+            tracing::error!("save failed: {}", e);
         }
     }
 
-    fn apply_card_zoom(mut self: Pin<&mut Self>, value: f64) {
-        self.as_mut().set_card_zoom(value);
-        self.persist();
-    }
-
-    fn apply_card_spacing(mut self: Pin<&mut Self>, value: i32) {
-        self.as_mut().set_card_spacing(value);
-        self.persist();
-    }
-
-    fn apply_card_elevation(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_card_elevation(value);
-        self.persist();
-    }
-
-    fn apply_unload_store_pages(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_unload_store_pages(value);
-        self.persist();
-    }
-
-    fn apply_show_gachas(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_show_gachas(value);
-        self.persist();
-    }
-
-    fn apply_show_epic(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_show_epic(value);
-        self.persist();
-    }
-
-    fn apply_show_gog(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_show_gog(value);
-        self.persist();
-    }
-
-    fn apply_show_steam(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_show_steam(value);
-        self.persist();
-    }
-
-    fn apply_nav_width(mut self: Pin<&mut Self>, value: i32) {
-        self.as_mut().set_nav_width(value);
-        self.persist();
-    }
-
-    fn apply_nav_collapsed(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_nav_collapsed(value);
-        self.persist();
-    }
-
-    fn apply_minimize_on_launch(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_minimize_on_launch(value);
-        self.persist();
-    }
-
-    fn apply_save_game_logs(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_save_game_logs(value);
-        self.persist();
-    }
-
-    fn apply_double_click_launches(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_double_click_launches(value);
-        self.persist();
-    }
-
-    fn apply_auto_check_epic_updates_on_launch(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_auto_check_epic_updates_on_launch(value);
-        self.persist();
-    }
-
-    fn apply_auto_check_gog_updates_on_launch(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_auto_check_gog_updates_on_launch(value);
-        self.persist();
-    }
-
-    fn apply_auto_check_updates_on_boot(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_auto_check_updates_on_boot(value);
-        self.persist();
-    }
-
-    fn apply_show_tray_icon(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_show_tray_icon(value);
-        self.persist();
-    }
+    apply_setting!(apply_card_zoom, set_card_zoom, f64);
+    apply_setting!(apply_card_spacing, set_card_spacing, i32);
+    apply_setting!(apply_card_elevation, set_card_elevation, bool);
+    apply_setting!(apply_unload_store_pages, set_unload_store_pages, bool);
+    apply_setting!(apply_show_gachas, set_show_gachas, bool);
+    apply_setting!(apply_show_epic, set_show_epic, bool);
+    apply_setting!(apply_show_gog, set_show_gog, bool);
+    apply_setting!(apply_show_steam, set_show_steam, bool);
+    apply_setting!(apply_nav_width, set_nav_width, i32);
+    apply_setting!(apply_nav_collapsed, set_nav_collapsed, bool);
+    apply_setting!(apply_minimize_on_launch, set_minimize_on_launch, bool);
+    apply_setting!(apply_save_game_logs, set_save_game_logs, bool);
+    apply_setting!(apply_double_click_launches, set_double_click_launches, bool);
+    apply_setting!(apply_auto_check_epic_updates_on_launch, set_auto_check_epic_updates_on_launch, bool);
+    apply_setting!(apply_auto_check_gog_updates_on_launch, set_auto_check_gog_updates_on_launch, bool);
+    apply_setting!(apply_auto_check_updates_on_boot, set_auto_check_updates_on_boot, bool);
+    apply_setting!(apply_show_tray_icon, set_show_tray_icon, bool);
 
     fn apply_discord_rpc(mut self: Pin<&mut Self>, value: bool) {
         self.as_mut().set_discord_rpc(value);
@@ -437,10 +456,7 @@ impl qobject::UiSettingsBridge {
         self.persist();
     }
 
-    fn apply_muted_icons(mut self: Pin<&mut Self>, value: bool) {
-        self.as_mut().set_muted_icons(value);
-        self.persist();
-    }
+    apply_setting!(apply_muted_icons, set_muted_icons, bool);
 
     fn apply_card_flow(mut self: Pin<&mut Self>, value: &cxx_qt_lib::QString) {
         let v = value.to_string();
@@ -450,10 +466,8 @@ impl qobject::UiSettingsBridge {
         self.persist();
     }
 
-    fn apply_console_background(mut self: Pin<&mut Self>, value: &cxx_qt_lib::QString) {
-        self.as_mut().set_console_background(value.clone());
-        self.persist();
-    }
+    apply_setting!(qstr apply_console_background, set_console_background);
+    apply_setting!(qstr apply_language, set_language);
 
     fn reload_from_disk(mut self: Pin<&mut Self>) {
         let s = UiSettings::load();
@@ -483,28 +497,22 @@ impl qobject::UiSettingsBridge {
         self.as_mut().set_follow_system_colors(s.theme.follow_system_colors);
         self.as_mut().set_follow_system_font(s.theme.follow_system_font);
         self.as_mut().set_font_family(cxx_qt_lib::QString::from(&s.theme.font_family));
+        self.as_mut().set_fill_fields(s.theme.fill_fields);
+        self.as_mut().set_radius_scale(s.theme.radius_scale);
+        self.as_mut().set_language(cxx_qt_lib::QString::from(&s.language));
         self.as_mut().rust_mut().get_mut().color_overrides = s.theme.colors;
         self.as_mut().rust_mut().get_mut().categories = s.categories;
         self.as_mut().categories_changed();
+        self.as_mut().rust_mut().get_mut().env_sets = s.env_sets;
+        self.as_mut().env_sets_changed();
+        self.as_mut().rust_mut().get_mut().dll_sets = s.dll_sets;
+        self.as_mut().dll_sets_changed();
         self.as_mut().theme_changed();
     }
 
-    fn categories_json(&self) -> cxx_qt_lib::QString {
-        let json = serde_json::to_string(&self.categories).unwrap_or_else(|_| "[]".to_string());
-        cxx_qt_lib::QString::from(&json)
-    }
-
-    fn apply_categories_json(mut self: Pin<&mut Self>, json: &cxx_qt_lib::QString) {
-        let s = json.to_string();
-        match serde_json::from_str::<Vec<CategoryEntry>>(&s) {
-            Ok(entries) => {
-                self.as_mut().rust_mut().get_mut().categories = entries;
-                self.as_mut().persist();
-                self.as_mut().categories_changed();
-            }
-            Err(e) => eprintln!("[ui_settings] bad categories json: {e}"),
-        }
-    }
+    kv_json_accessor!(categories_json, apply_categories_json, categories, Vec<CategoryEntry>, categories_changed, "categories");
+    kv_json_accessor!(env_sets_json, apply_env_sets_json, env_sets, Vec<KvSet>, env_sets_changed, "env sets");
+    kv_json_accessor!(dll_sets_json, apply_dll_sets_json, dll_sets, Vec<KvSet>, dll_sets_changed, "dll sets");
 
     fn available_icons_json(&self) -> cxx_qt_lib::QString {
         let json = serde_json::to_string(ICON_NAMES).unwrap_or_else(|_| "[]".to_string());
@@ -572,6 +580,17 @@ impl qobject::UiSettingsBridge {
         cxx_qt_lib::QString::from(&json)
     }
 
+    fn available_languages_json(&self) -> cxx_qt_lib::QString {
+        let ptr = unsafe { omikuji_available_languages_json() };
+        if ptr.is_null() {
+            return cxx_qt_lib::QString::from("[]");
+        }
+        let json = unsafe { std::ffi::CStr::from_ptr(ptr) }
+            .to_string_lossy()
+            .into_owned();
+        cxx_qt_lib::QString::from(&json)
+    }
+
     fn init_watcher(mut self: Pin<&mut Self>) {
         if self.as_ref().rust().watcher.is_some() {
             return;
@@ -595,9 +614,9 @@ impl qobject::UiSettingsBridge {
         match watcher {
             Ok(w) => {
                 self.as_mut().rust_mut().get_mut().watcher = Some(w);
-                eprintln!("[ui_settings] watching {} via notify", ui_settings_path().display());
+                tracing::debug!("watching {} via notify", ui_settings_path().display());
             }
-            Err(e) => eprintln!("[ui_settings] failed to start watcher: {e}"),
+            Err(e) => tracing::error!("failed to start watcher: {e}"),
         }
     }
 }

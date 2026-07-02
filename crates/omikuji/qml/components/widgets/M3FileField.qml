@@ -16,6 +16,8 @@ Item {
     signal textEdited(string text)
     signal accepted(string path)
 
+    onTextChanged: if (inputArea.text !== text) inputArea.text = text
+
     implicitWidth: 200
     implicitHeight: label ? labelText.height + 4 + fieldRow.height : fieldRow.height
 
@@ -40,22 +42,11 @@ Item {
         height: 44
         spacing: 8
 
-        Rectangle {
+        FieldSurface {
             id: inputBg
             width: parent.width - folderBtn.width - parent.spacing
             height: parent.height
-            radius: 8
-            color: "transparent"
-            border.width: inputArea.activeFocus ? 2 : 1
-            border.color: inputArea.activeFocus ? theme.accent
-                         : Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.15)
-
-            Behavior on border.width {
-                NumberAnimation { duration: 100 }
-            }
-            Behavior on border.color {
-                ColorAnimation { duration: 100 }
-            }
+            focused: inputArea.activeFocus
 
             TextInput {
                 id: inputArea
@@ -66,7 +57,6 @@ Item {
                 anchors.right: parent.right
                 anchors.rightMargin: 12
                 verticalAlignment: TextInput.AlignVCenter
-                text: root.text
                 color: root.readOnly ? theme.textMuted : theme.text
                 font.pixelSize: 14
                 clip: true
@@ -94,7 +84,7 @@ Item {
                     parent.width - 12 - x
                 ))
                 text: root.trailingHint
-                color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.4)
+                color: theme.alpha(theme.text, 0.4)
                 font.pixelSize: 14
                 elide: Text.ElideRight
                 visible: root.trailingHint !== "" && inputArea.text !== ""
@@ -111,18 +101,23 @@ Item {
             }
         }
 
-        Rectangle {
+        FieldSurface {
             id: folderBtn
             width: 44
             height: 44
-            radius: 8
             opacity: root.readOnly ? 0.4 : 1.0
-            color: root.readOnly ? "transparent"
-                  : folderMouse.containsPress ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.1)
-                  : folderMouse.containsMouse ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
-                  : "transparent"
-            border.width: 1
-            border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.15)
+
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: folderMouse.containsPress ? theme.statePressed
+                      : folderMouse.containsMouse ? theme.stateHover
+                      : "transparent"
+
+                Behavior on color {
+                    ColorAnimation { duration: theme.dur.fast }
+                }
+            }
 
             SvgIcon {
                 anchors.centerIn: parent
@@ -151,7 +146,6 @@ Item {
             if (requestId !== root._dialogRequestId) return
             root._dialogRequestId = ""
             if (path && path !== "") {
-                root.text = path
                 root.textEdited(path)
                 root.accepted(path)
             }
@@ -163,7 +157,7 @@ Item {
             return
         }
 
-        let title = root.selectFolder ? "Select Folder" : "Select File"
+        let title = root.selectFolder ? qsTr("Select Folder") : qsTr("Select File")
         let defaultPath = root.text || "/home"
 
         let id = Date.now().toString(36) + Math.random().toString(36).substring(2, 8)

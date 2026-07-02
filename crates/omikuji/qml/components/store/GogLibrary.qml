@@ -22,7 +22,9 @@ Item {
     signal importRequested(int index)
 
     function _maybeRefresh() {
-        if (gogModel && gogModel.isLoggedIn) {
+        if (!gogModel) return
+        gogModel.refresh_tools()
+        if (gogModel.isLoggedIn) {
             gogModel.refresh()
         }
     }
@@ -50,7 +52,7 @@ Item {
                 spacing: 8
 
                 Text {
-                    text: "Logged in as: " + (gogModel ? gogModel.displayName : "")
+                    text: qsTr("Logged in as: %1").arg(gogModel ? gogModel.displayName : "")
                     color: theme.textMuted
                     font.pixelSize: 13
                 }
@@ -124,7 +126,7 @@ Item {
                         anchors.margins: 4
                         height: 24
                         radius: 10
-                        color: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.9)
+                        color: theme.alpha(theme.accent, 0.9)
                         visible: gogCard.isDownloading
 
                         Text {
@@ -153,7 +155,7 @@ Item {
 
         LoadingDots {
             anchors.centerIn: parent
-            text: "Loading library"
+            text: qsTr("Loading library")
             running: loadingOverlay.visible
         }
     }
@@ -177,7 +179,7 @@ Item {
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "No games in this store"
+                text: qsTr("No games in this store")
                 color: theme.textMuted
                 font.pixelSize: 16
                 font.weight: Font.Medium
@@ -185,102 +187,16 @@ Item {
         }
     }
 
-    Item {
-        id: loginOverlay
-        anchors.fill: parent
+    StoreLoginOverlay {
         visible: gogModel && !gogModel.isLoggedIn
-        z: 100
-
-        Column {
-            anchors.centerIn: parent
-            width: 400
-            spacing: 24
-
-            SvgIcon {
-                anchors.horizontalCenter: parent.horizontalCenter
-                name: "gog"
-                size: 64
-                color: theme.text
-            }
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "Login to GOG"
-                color: theme.text
-                font.pixelSize: 20
-                font.weight: Font.Bold
-            }
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: parent.width
-                text: "To sync your GOG library, sign in on gog.com and paste the authorization code from the redirect URL."
-                color: theme.textMuted
-                font.pixelSize: 14
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-            }
-
-            Text {
-                id: gogLoginLink
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "Open Login Page"
-                color: linkMouseArea.containsMouse ? Qt.lighter(theme.accent, 1.1) : theme.accent
-                font.pixelSize: 14
-                font.weight: Font.DemiBold
-                Behavior on color { ColorAnimation { duration: 100 } }
-
-                MouseArea {
-                    id: linkMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Qt.openUrlExternally(gogModel.get_login_url())
-                }
-            }
-
-            M3TextField {
-                id: loginCodeField
-                width: parent.width
-                placeholder: "Paste authorization code here..."
-            }
-
-            Item {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: 140
-                height: 42
-                enabled: loginCodeField.text.length > 0
-                opacity: enabled ? 1.0 : 0.5
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 21
-                    color: theme.accent
-                    opacity: loginMouseArea.containsPress ? 0.8 : (loginMouseArea.containsMouse ? 0.95 : 0.9)
-                    scale: loginMouseArea.containsPress ? 0.97 : 1.0
-                    Behavior on opacity { NumberAnimation { duration: 100 } }
-                    Behavior on scale { NumberAnimation { duration: 100 } }
-                }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "Login"
-                    color: theme.accentOn
-                    font.pixelSize: 14
-                    font.weight: Font.DemiBold
-                }
-
-                MouseArea {
-                    id: loginMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        gogModel.login(loginCodeField.text)
-                        loginCodeField.text = ""
-                    }
-                }
-            }
-        }
+        iconName: "gog"
+        title: qsTr("Login to GOG")
+        description: qsTr("To sync your GOG library, sign in on gog.com and paste the authorization code from the redirect URL.")
+        loginUrl: gogModel ? gogModel.get_login_url() : ""
+        toolName: "gogdl"
+        toolReady: gogModel && gogModel.toolReady
+        toolInstalling: gogModel && gogModel.toolInstalling
+        onLoginRequested: (code) => gogModel.login(code)
+        onInstallToolRequested: gogModel.install_tools()
     }
 }

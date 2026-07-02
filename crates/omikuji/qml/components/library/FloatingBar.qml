@@ -28,13 +28,13 @@ Item {
     function activityLabel() {
         if (!hasActivity) return ""
         let s = downloadActivity.status || ""
-        let kindWord = downloadActivity.kind === "update" ? "Updating" : "Installing"
-        if (s === "Paused") return "Paused"
-        if (s === "Queued") return kindWord + " · Queued"
-        if (s === "Extracting") return "Extracting"
-        if (s === "Patching") return "Patching"
+        let kindWord = downloadActivity.kind === "update" ? qsTr("Updating") : qsTr("Installing")
+        if (s === "Paused") return qsTr("Paused")
+        if (s === "Queued") return qsTr("%1 · Queued").arg(kindWord)
+        if (s === "Extracting") return qsTr("Extracting")
+        if (s === "Patching") return qsTr("Patching")
         let pct = Math.round(downloadActivity.progress || 0)
-        return kindWord + " · " + pct + "%"
+        return qsTr("%1 · %2%").arg(kindWord).arg(pct)
     }
 
     property var displayedGame: null
@@ -91,17 +91,15 @@ Item {
 
     height: 56
 
-    Rectangle {
+    Squircle {
         id: bar
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 14
         width: parent.width - 32
         height: 56
-        radius: 16
-        color: theme.barBg
-        border.width: 1
-        border.color: theme.barBorder
+        radius: theme.radius.lg
+        fillColor: theme.barBg
         opacity: root.hasSelection ? 1 : 0
         visible: opacity > 0
 
@@ -215,8 +213,7 @@ Item {
                     Text {
                         text: root.displayedGame ? root.displayedGame.runner : ""
                         color: theme.textFaint
-                        font.pixelSize: 11
-                        font.family: "monospace"
+                        font.pixelSize: 12
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -235,6 +232,7 @@ Item {
                 icon: "wine_bar"
                 size: 40
                 rounded: true
+                visible: !root.displayedGame || (root.displayedGame.runnerType !== "native" && root.displayedGame.runnerType !== "flatpak")
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: root.wineToolsClicked()
             }
@@ -270,46 +268,20 @@ Item {
                         NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
                     }
 
-                    Rectangle {
-                        id: stopBtn
+                    M3Button {
                         anchors.fill: parent
-                        radius: 12
-                        color: Qt.rgba(0.9, 0.25, 0.25, 1.0)
-                        opacity: stopMouse.containsPress ? 0.8 : (stopMouse.containsHover ? 0.95 : 0.9)
-                        scale: stopMouse.containsPress ? 0.97 : 1.0
-
-                        Behavior on opacity {
-                            NumberAnimation { duration: 100 }
-                        }
-                        Behavior on scale {
-                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-                        }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "Stop"
-                            color: "white"
-                            font.pixelSize: 14
-                            font.weight: Font.DemiBold
-                        }
-
-                        MouseArea {
-                            id: stopMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.stopClicked()
-                        }
+                        variant: "filled"
+                        danger: true
+                        text: qsTr("Stop")
+                        onClicked: root.stopClicked()
                     }
                 }
 
-                Rectangle {
+                Squircle {
                     id: activityBtn
                     anchors.fill: parent
-                    radius: 12
-                    color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
-                    border.width: 1
-                    border.color: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.6)
+                    radius: theme.radius.lg
+                    fillColor: theme.alpha(theme.text, 0.08)
                     opacity: (!root.displayedIsRunning && root.displayedHasActivity) ? 1 : 0
                     visible: opacity > 0
 
@@ -331,7 +303,7 @@ Item {
                             let pct = (root.displayedActivity.progress || 0) / 100
                             return Math.max(0, Math.min((parent.width - 2) * pct, parent.width - 2))
                         }
-                        color: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.15)
+                        color: theme.alpha(theme.accent, 0.15)
                     }
 
                     Row {
@@ -377,36 +349,11 @@ Item {
                         NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
                     }
 
-                    Rectangle {
-                        id: playBtnBg
+                    M3Button {
                         anchors.fill: parent
-                        radius: 12
-                        color: theme.accent
-                        opacity: playMouse.containsPress ? 0.8 : (playMouse.containsHover ? 0.95 : 0.9)
-                        scale: playMouse.containsPress ? 0.97 : 1.0
-
-                        Behavior on opacity {
-                            NumberAnimation { duration: 100 }
-                        }
-                        Behavior on scale {
-                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-                        }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "Play"
-                            color: theme.accentOn
-                            font.pixelSize: 14
-                            font.weight: Font.DemiBold
-                        }
-
-                        MouseArea {
-                            id: playMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.playClicked()
-                        }
+                        variant: "filled"
+                        text: qsTr("Play")
+                        onClicked: root.playClicked()
                     }
                 }
             }

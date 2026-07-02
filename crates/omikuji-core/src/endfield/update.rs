@@ -49,7 +49,7 @@ pub async fn check_by_app_id(app_id: &str) -> Option<UpdateInfo> {
     match check_for_update(&manifest, &edition_id).await {
         Ok(info) => info,
         Err(e) => {
-            eprintln!("[endfield] update check for {} failed: {}", app_id, e);
+            tracing::error!("update check for {} failed: {}", app_id, e);
             None
         }
     }

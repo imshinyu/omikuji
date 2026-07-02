@@ -13,6 +13,7 @@ Item {
     property int currentIndex: 0
     property string currentStore: ""
     property string currentBottom: ""
+    property string headerLabel: ""
 
     property int downloadCount: 0
 
@@ -64,11 +65,13 @@ Item {
         anchors.topMargin: 20
         anchors.left: parent.left
         anchors.leftMargin: 20
-        text: "omikuji"
-        color: theme.textMuted
-        font.pixelSize: 18
-        font.weight: Font.Bold
-        font.letterSpacing: 0.5
+        anchors.right: parent.right
+        anchors.rightMargin: 20
+        text: root.headerLabel
+        color: theme.text
+        font.pixelSize: 20
+        font.weight: Font.DemiBold
+        elide: Text.ElideRight
     }
 
     Rectangle {
@@ -77,7 +80,7 @@ Item {
         width: root.width - 20
         height: 36
         radius: 18
-        color: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.15)
+        color: theme.alpha(theme.accent, 0.15)
         z: 0
 
         property real baseY: {
@@ -129,7 +132,7 @@ Item {
         anchors.topMargin: visible ? 12 : 0
         anchors.left: parent.left
         anchors.leftMargin: 20
-        text: "Library"
+        text: qsTr("Library")
         color: theme.textMuted
         font.pixelSize: 12
         font.weight: Font.Medium
@@ -162,7 +165,7 @@ Item {
                     height: 36
                     radius: 18
                     color: tabHover.containsMouse && !(index === root.currentIndex && root.currentStore === "" && root.currentBottom === "")
-                        ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                        ? theme.alpha(theme.text, 0.06)
                         : "transparent"
                     visible: !(index === root.currentIndex && root.currentStore === "" && root.currentBottom === "")
 
@@ -220,7 +223,7 @@ Item {
         anchors.topMargin: visible ? 24 : 0
         anchors.left: parent.left
         anchors.leftMargin: 20
-        text: "Stores"
+        text: qsTr("Stores")
         color: theme.textMuted
         font.pixelSize: 12
         font.weight: Font.Medium
@@ -249,7 +252,7 @@ Item {
                 height: 36
                 radius: 18
                 color: steamHover.containsMouse && (root.currentStore !== "Steam" || root.currentBottom !== "")
-                    ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                    ? theme.alpha(theme.text, 0.06)
                     : "transparent"
                 visible: (root.currentStore !== "Steam" || root.currentBottom !== "")
 
@@ -308,7 +311,7 @@ Item {
                 height: 36
                 radius: 18
                 color: epicHover.containsMouse && (root.currentStore !== "Epic" || root.currentBottom !== "")
-                    ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                    ? theme.alpha(theme.text, 0.06)
                     : "transparent"
                 visible: (root.currentStore !== "Epic" || root.currentBottom !== "")
 
@@ -367,7 +370,7 @@ Item {
                 height: 36
                 radius: 18
                 color: gogHover.containsMouse && (root.currentStore !== "GOG" || root.currentBottom !== "")
-                    ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                    ? theme.alpha(theme.text, 0.06)
                     : "transparent"
                 visible: (root.currentStore !== "GOG" || root.currentBottom !== "")
 
@@ -426,7 +429,7 @@ Item {
                 height: 36
                 radius: 18
                 color: hoyoHover.containsMouse && (root.currentStore !== "HoYo" || root.currentBottom !== "")
-                    ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                    ? theme.alpha(theme.text, 0.06)
                     : "transparent"
                 visible: (root.currentStore !== "HoYo" || root.currentBottom !== "")
 
@@ -453,7 +456,7 @@ Item {
                 }
 
                 Text {
-                    text: "Gachas"
+                    text: qsTr("Gachas")
                     color: theme.text
                     font.pixelSize: 13
                     font.weight: root.currentStore === "HoYo" && root.currentBottom === "" ? Font.DemiBold : Font.Normal
@@ -490,7 +493,7 @@ Item {
             height: 36
             radius: 18
             color: downloadsHover.containsMouse && root.currentBottom !== "downloads"
-                ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                ? theme.alpha(theme.text, 0.06)
                 : "transparent"
             visible: root.currentBottom !== "downloads"
             Behavior on color { ColorAnimation { duration: 100 } }
@@ -534,7 +537,7 @@ Item {
             }
 
             Text {
-                text: root.downloadCount > 0 ? "Downloads (" + root.downloadCount + ")" : "Downloads"
+                text: root.downloadCount > 0 ? qsTr("Downloads (%1)").arg(root.downloadCount) : qsTr("Downloads")
                 color: theme.text
                 font.pixelSize: 13
                 font.weight: root.currentBottom === "downloads" ? Font.DemiBold : Font.Normal
@@ -565,7 +568,7 @@ Item {
             height: 36
             radius: 18
             color: settingsHover.containsMouse && root.currentBottom !== "settings"
-                ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                ? theme.alpha(theme.text, 0.06)
                 : "transparent"
             visible: root.currentBottom !== "settings"
             Behavior on color { ColorAnimation { duration: 100 } }
@@ -587,7 +590,7 @@ Item {
             }
 
             Text {
-                text: "Settings"
+                text: qsTr("Settings")
                 color: theme.text
                 font.pixelSize: 13
                 font.weight: root.currentBottom === "settings" ? Font.DemiBold : Font.Normal

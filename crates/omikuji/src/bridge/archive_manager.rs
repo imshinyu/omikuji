@@ -353,7 +353,7 @@ impl qobject::ArchiveManagerBridge {
         let name = source.to_string();
         let tag_s = tag.to_string();
         if let Err(e) = component_state::set_active_version(&name, &tag_s) {
-            eprintln!("[component_state] save failed for {}: {}", name, e);
+            tracing::error!("save failed for {}: {}", name, e);
         }
     }
 

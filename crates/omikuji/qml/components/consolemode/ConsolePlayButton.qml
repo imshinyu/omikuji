@@ -30,7 +30,7 @@ Item {
     Text {
         id: label
         anchors.centerIn: parent
-        text: btn.isRunning ? "Stop" : "Play"
+        text: btn.isRunning ? qsTr("Stop") : qsTr("Play")
         color: btn.textColor
         font.pixelSize: 22 * btn.uiScale
         font.weight: Font.Bold

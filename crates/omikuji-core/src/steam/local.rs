@@ -81,7 +81,7 @@ pub fn parse_vdf(content: &str) -> HashMap<String, VdfValue> {
                 let key = after_first_quote[..key_end_rel].to_string();
                 let after_key = &after_first_quote[key_end_rel + 1..].trim();
 
-                if after_key.is_empty() {
+                if after_key.is_empty() || after_key.starts_with("//") {
                     i += 1;
                     while i < lines.len() {
                         let next_trimmed = lines[i].trim();
@@ -259,6 +259,15 @@ pub fn get_active_steamid64() -> Option<String> {
     users.first().map(|u| u.steamid64.clone())
 }
 
+const STEAMID64_BASE: u64 = 76561197960265728;
+
+pub fn steamid64_to_steamid32(steamid64: &str) -> Option<String> {
+    steamid64
+        .parse::<u64>()
+        .ok()
+        .map(|id| (id - STEAMID64_BASE).to_string())
+}
+
 #[derive(Debug, Clone)]
 pub struct AppManifest {
     pub appid: String,
@@ -354,10 +363,6 @@ pub fn get_installed_games() -> Vec<AppManifest> {
     }
 
     games
-}
-
-pub fn is_game_installed(appid: &str) -> bool {
-    get_installed_games().iter().any(|g| g.appid == appid)
 }
 
 pub fn find_local_library_image(appid: &str) -> Option<PathBuf> {
@@ -456,6 +461,21 @@ fn push_protons_from(parent: &Path, out: &mut Vec<(String, PathBuf)>) {
     }
 }
 
+pub fn proton_display_name(dir: &Path) -> Option<String> {
+    let content = fs::read_to_string(dir.join("compatibilitytool.vdf")).ok()?;
+    let vdf = parse_vdf(&content);
+    let tools = vdf
+        .get("compatibilitytools")?
+        .as_object()?
+        .get("compat_tools")?
+        .as_object()?;
+    let (_, tool) = tools.iter().next()?;
+    tool.as_object()?
+        .get("display_name")?
+        .as_str()
+        .map(str::to_string)
+}
+
 pub fn find_proton_install(name: &str) -> Option<PathBuf> {
     let all = iter_steam_protons();
     if let Some((_, p)) = all.iter().find(|(n, _)| n == name) {
@@ -538,8 +558,7 @@ mod tests {
 
     #[test]
     fn test_steamid_conversion() {
-        let steamid64: u64 = 76561197960287930; // example
-        let steamid32 = steamid64 - 76561197960265728;
-        assert_eq!(steamid32, 22202);
+        assert_eq!(steamid64_to_steamid32("76561197960287930").as_deref(), Some("22202"));
+        assert_eq!(steamid64_to_steamid32("not a number"), None);
     }
 }

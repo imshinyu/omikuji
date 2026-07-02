@@ -20,6 +20,23 @@ Item {
     // swallow our own eho so the ListModel doesnt tear down mid-toggle / mid-drag
     property bool _selfApplying: false
 
+    property var _languageOptions: [{ label: qsTr("System default"), value: "system" }, { label: "English", value: "en" }]
+
+    function _buildLanguageOptions() {
+        let opts = [
+            { label: qsTr("System default"), value: "system" },
+            { label: "English", value: "en" }
+        ]
+        if (!uiSettings) return opts
+        let extra = []
+        try { extra = JSON.parse(uiSettings.availableLanguagesJson()) } catch (e) { extra = [] }
+        for (let i = 0; i < extra.length; i++)
+            opts.push({ label: extra[i].name, value: extra[i].code })
+        return opts
+    }
+
+    function _refreshLanguageOptions() { _languageOptions = _buildLanguageOptions() }
+
     ListModel { id: categoriesModel }
 
     function _loadCategories() {
@@ -56,8 +73,8 @@ Item {
         _persistFromModel()
     }
 
-    onUiSettingsChanged: _loadCategories()
-    Component.onCompleted: _loadCategories()
+    onUiSettingsChanged: { _loadCategories(); _refreshLanguageOptions() }
+    Component.onCompleted: { _loadCategories(); _refreshLanguageOptions() }
 
     Connections {
         target: uiSettings
@@ -73,11 +90,36 @@ Item {
         spacing: 20
 
         SettingsSection {
-            label: "Display"
+            label: qsTr("Language")
             width: parent.width
 
             SettingsRow {
-                label: "UI zoom"
+                label: qsTr("Language")
+                description: qsTr("Restart to apply")
+                labelWidth: root.rowLabelWidth
+                width: parent.width
+
+                M3Dropdown {
+                    width: 220
+                    options: root._languageOptions
+                    currentIndex: {
+                        let cur = uiSettings ? uiSettings.language : "system"
+                        let opts = root._languageOptions
+                        for (let i = 0; i < opts.length; i++)
+                            if (opts[i].value === cur) return i
+                        return 0
+                    }
+                    onSelected: (value) => uiSettings.applyLanguage(value)
+                }
+            }
+        }
+
+        SettingsSection {
+            label: qsTr("Display")
+            width: parent.width
+
+            SettingsRow {
+                label: qsTr("UI zoom")
                 description: "Ctrl +, Ctrl −"
                 labelWidth: root.rowLabelWidth
                 width: parent.width
@@ -100,7 +142,6 @@ Item {
                         text: uiSettings ? Math.round(uiSettings.uiScale * 100) + "%" : "100%"
                         color: theme.text
                         font.pixelSize: 13
-                        font.family: "monospace"
                         width: 50
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -108,7 +149,7 @@ Item {
             }
 
             SettingsRow {
-                label: "Card size"
+                label: qsTr("Card size")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
 
@@ -130,7 +171,6 @@ Item {
                         text: uiSettings ? Math.round(uiSettings.cardZoom * 100) + "%" : "100%"
                         color: theme.text
                         font.pixelSize: 13
-                        font.family: "monospace"
                         width: 50
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -138,7 +178,7 @@ Item {
             }
 
             SettingsRow {
-                label: "Card spacing"
+                label: qsTr("Card spacing")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
 
@@ -160,7 +200,6 @@ Item {
                         text: uiSettings ? uiSettings.cardSpacing + "px" : "16px"
                         color: theme.text
                         font.pixelSize: 13
-                        font.family: "monospace"
                         width: 50
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -168,7 +207,7 @@ Item {
             }
 
             SettingsRow {
-                label: "Card shadow"
+                label: qsTr("Card shadow")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
                 M3Switch {
@@ -178,16 +217,16 @@ Item {
             }
 
             SettingsRow {
-                label: "Card flow"
+                label: qsTr("Card flow")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
 
                 M3Dropdown {
                     width: 200
                     options: [
-                        { label: "Left",   value: "left" },
-                        { label: "Center", value: "center" },
-                        { label: "Right",  value: "right" }
+                        { label: qsTr("Left"),   value: "left" },
+                        { label: qsTr("Center"), value: "center" },
+                        { label: qsTr("Right"),  value: "right" }
                     ]
                     currentIndex: {
                         let v = uiSettings ? uiSettings.cardFlow : "center"
@@ -200,8 +239,8 @@ Item {
             }
 
             SettingsRow {
-                label: "Muted icons"
-                description: "Dim icons to ~55% instead of full contrast"
+                label: qsTr("Muted icons")
+                description: qsTr("Dim icons to ~55% instead of full contrast")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
                 M3Switch {
@@ -212,11 +251,11 @@ Item {
         }
 
         SettingsSection {
-            label: "Behavior"
+            label: qsTr("Behavior")
             width: parent.width
 
             SettingsRow {
-                label: "Hide while playing"
+                label: qsTr("Hide while playing")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
                 M3Switch {
@@ -226,7 +265,7 @@ Item {
             }
 
             SettingsRow {
-                label: "Double-click card to launch"
+                label: qsTr("Double-click card to launch")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
                 M3Switch {
@@ -236,7 +275,7 @@ Item {
             }
 
             SettingsRow {
-                label: "Show tray icon"
+                label: qsTr("Show tray icon")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
                 M3Switch {
@@ -256,8 +295,8 @@ Item {
             }
 
             SettingsRow {
-                label: "Unload store tabs"
-                description: "After 15s idle"
+                label: qsTr("Unload store tabs")
+                description: qsTr("After 15s idle")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
                 M3Switch {
@@ -267,8 +306,8 @@ Item {
             }
 
             SettingsRow {
-                label: "Save game logs to disk"
-                description: "Off: logs live in memory only until the game exits. On: also written to cache/logs/."
+                label: qsTr("Save game logs to disk")
+                description: qsTr("Off: logs live in memory only until the game exits. On: also written to cache/logs/.")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
                 M3Switch {
@@ -278,8 +317,8 @@ Item {
             }
 
             SettingsRow {
-                label: "Check EG games updates on run"
-                description: "Might slowdown start times for Epic games"
+                label: qsTr("Check EG games updates on run")
+                description: qsTr("Might slowdown start times for Epic games")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
                 M3Switch {
@@ -289,8 +328,8 @@ Item {
             }
 
             SettingsRow {
-                label: "Check GOG games updates on run"
-                description: "Might slowdown start times for GOG games"
+                label: qsTr("Check GOG games updates on run")
+                description: qsTr("Might slowdown start times for GOG games")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
                 M3Switch {
@@ -300,8 +339,8 @@ Item {
             }
 
             SettingsRow {
-                label: "Check for updates on app launch"
-                description: "Queues updates in the downloads page on startup"
+                label: qsTr("Check for updates on app launch")
+                description: qsTr("Queues updates in the downloads page on startup")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
                 M3Switch {
@@ -312,7 +351,7 @@ Item {
         }
 
         SettingsSection {
-            label: "Library categories"
+            label: qsTr("Library categories")
             width: parent.width
 
             ListView {
@@ -330,7 +369,7 @@ Item {
                 delegate: Item {
                     id: wrapper
                     required property int index
-                    required property bool enabled
+                    required property var model
                     required property string name
                     required property string icon
                     required property string kind
@@ -405,11 +444,11 @@ Item {
                                     text: {
                                         let k = wrapper.kind
                                         let v = wrapper.value || ""
-                                        if (k === "runner")    return "runner: " + v
-                                        if (k === "tag")       return "tag: " + v
-                                        if (k === "favourite") return "favourites"
-                                        if (k === "recent")    return "recent (top 10)"
-                                        if (k === "all")       return "all games"
+                                        if (k === "runner")    return qsTr("runner: %1").arg(v)
+                                        if (k === "tag")       return qsTr("tag: %1").arg(v)
+                                        if (k === "favourite") return qsTr("favourites")
+                                        if (k === "recent")    return qsTr("recent (top 10)")
+                                        if (k === "all")       return qsTr("all games")
                                         return k
                                     }
                                     color: theme.textSubtle
@@ -428,7 +467,7 @@ Item {
                                 icon: "tune"
                                 size: 32
                                 onClicked: root.categoryEditRequested(wrapper.index, {
-                                    enabled: wrapper.enabled, name: wrapper.name, icon: wrapper.icon,
+                                    enabled: wrapper.model.enabled, name: wrapper.name, icon: wrapper.icon,
                                     kind: wrapper.kind, value: wrapper.value
                                 })
                             }
@@ -436,7 +475,7 @@ Item {
                                 icon: "close"
                                 size: 32
                                 onClicked: root.categoryDeleteRequested(wrapper.index, {
-                                    enabled: wrapper.enabled, name: wrapper.name, icon: wrapper.icon,
+                                    enabled: wrapper.model.enabled, name: wrapper.name, icon: wrapper.icon,
                                     kind: wrapper.kind, value: wrapper.value
                                 })
                             }
@@ -445,7 +484,7 @@ Item {
                                 height: 32
                                 M3Switch {
                                     anchors.centerIn: parent
-                                    checked: wrapper.enabled
+                                    checked: wrapper.model.enabled
                                     onToggled: (v) => root._setCategoryEnabled(wrapper.index, v)
                                 }
                             }
@@ -493,9 +532,9 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    radius: 8
+                    radius: theme.radius.sm
                     color: addHover.containsMouse
-                        ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.06)
+                        ? theme.alpha(theme.text, 0.06)
                         : "transparent"
                     Behavior on color { ColorAnimation { duration: 100 } }
                 }
@@ -513,7 +552,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     Text {
-                        text: "Add category"
+                        text: qsTr("Add category")
                         color: theme.accent
                         font.pixelSize: 14
                         font.weight: Font.Medium
@@ -532,7 +571,7 @@ Item {
         }
 
         SettingsSection {
-            label: "Store tabs"
+            label: qsTr("Store tabs")
             width: parent.width
 
             SettingsRow {
@@ -566,7 +605,7 @@ Item {
             }
 
             SettingsRow {
-                label: "Gachas"
+                label: qsTr("Gachas")
                 labelWidth: root.rowLabelWidth
                 width: parent.width
                 M3Switch {

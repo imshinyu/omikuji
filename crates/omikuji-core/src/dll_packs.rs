@@ -70,10 +70,7 @@ pub fn inject_all(game: &Game, env: &HashMap<String, String>) -> Result<()> {
         ensure_prefix_bootstrapped(&prefix, &wine_exe, variant, env)?;
     }
     if !system32.exists() {
-        eprintln!(
-            "[dll_packs] prefix bootstrap left no system32, skipping injection for {}",
-            prefix.display()
-        );
+        tracing::warn!("prefix bootstrap left no system32, skipping injection for {}", prefix.display());
         return Ok(());
     }
     let syswow64 = prefix.join("drive_c").join("windows").join("syswow64");
@@ -101,10 +98,7 @@ pub fn inject_all(game: &Game, env: &HashMap<String, String>) -> Result<()> {
 
         let pack_root = crate::dll_packs_dir().join(name).join(tag);
         if !pack_root.exists() {
-            eprintln!(
-                "[dll_packs] active pack {}/{} not installed, skipping",
-                name, tag
-            );
+            tracing::warn!("active pack {}/{} not installed, skipping", name, tag);
             continue;
         }
 
@@ -131,12 +125,7 @@ pub fn inject_all(game: &Game, env: &HashMap<String, String>) -> Result<()> {
             copy_dll_dir(x32, &system32)?;
         }
 
-        eprintln!(
-            "[dll_packs] injected {} {} → {}",
-            name,
-            tag,
-            prefix.display()
-        );
+        tracing::info!("injected {} {} -> {}", name, tag, prefix.display());
         applied.dll_packs.insert(name.clone(), tag.clone());
         changed = true;
     }
@@ -156,24 +145,20 @@ pub fn inject_all(game: &Game, env: &HashMap<String, String>) -> Result<()> {
                 if src.exists() {
                     let dest = system32.join(name);
                     if let Err(e) = std::fs::copy(&src, &dest) {
-                        eprintln!("[dll_packs] failed to copy {}: {}", name, e);
+                        tracing::error!("failed to copy {}: {}", name, e);
                     } else {
                         copied = true;
                     }
                 }
             }
             if copied {
-                eprintln!(
-                    "[dll_packs] copied nvngx from {} → {}",
-                    nvidia_wine_dir.display(),
-                    system32.display()
-                );
+                tracing::info!("copied nvngx from {} -> {}", nvidia_wine_dir.display(), system32.display());
                 if let Err(e) = set_ngx_registry(&wine_exe, variant, env) {
-                    eprintln!("[dll_packs] ngx registry set failed: {}", e);
+                    tracing::error!("ngx registry set failed: {}", e);
                 }
             }
         } else {
-            eprintln!("[dll_packs] dxvk-nvapi active but nvidia wine dir not found — dlss disabled");
+            tracing::warn!("dxvk-nvapi active but nvidia wine dir not found - dlss disabled");
         }
     }
 
@@ -214,10 +199,7 @@ fn ensure_prefix_bootstrapped(
     variant: WineVariant,
     env: &HashMap<String, String>,
 ) -> Result<()> {
-    eprintln!(
-        "[dll_packs] bootstrapping prefix via wineboot: {}",
-        prefix.display()
-    );
+    tracing::info!("bootstrapping prefix via wineboot: {}", prefix.display());
     let mut cmd = Command::new(wine_exe);
     cmd.arg("wineboot").arg("-u");
     cmd.env_clear();

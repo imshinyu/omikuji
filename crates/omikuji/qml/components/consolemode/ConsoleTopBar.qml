@@ -68,7 +68,7 @@ Row {
         border.width: searchField.activeFocus ? Math.max(2, 2 * bar._scale) : 1
         border.color: searchField.activeFocus
             ? theme.accent
-            : Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.15)
+            : theme.alpha(theme.text, 0.15)
         clip: true
         visible: width > 1
         opacity: bar.searchExpanded ? 1 : 0
@@ -108,7 +108,7 @@ Row {
             anchors.leftMargin: 16 * bar._scale
             anchors.rightMargin: 16 * bar._scale
             verticalAlignment: Text.AlignVCenter
-            text: "Search"
+            text: qsTr("Search")
             color: theme.textMuted
             font.pixelSize: 16 * bar._scale
             font.weight: Font.Medium

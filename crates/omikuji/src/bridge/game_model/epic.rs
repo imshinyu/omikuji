@@ -33,43 +33,11 @@ impl super::qobject::GameModel {
         let rid = request_id.to_string();
         let app_name_str = app_name.to_string();
 
-        // os thread + fresh runtime: cant call block_on inside the existing tokio context
-        std::thread::spawn(move || {
-            let rt = match tokio::runtime::Runtime::new() {
-                Ok(r) => r,
-                Err(e) => {
-                    eprintln!("[epic_size] failed to create tokio runtime: {}", e);
-                    omikuji_core::install_sizes::push(omikuji_core::install_sizes::InstallSizeResult {
-                        request_id: rid,
-                        download_bytes: 0,
-                        install_bytes: 0,
-                        error: format!("tokio runtime: {}", e),
-                    });
-                    return;
-                }
-            };
-            let result = rt.block_on(async {
-                omikuji_core::epic::fetch_install_size(&app_name_str).await
-            });
-
-            let pushed = match result {
-                Ok(size) => omikuji_core::install_sizes::InstallSizeResult {
-                    request_id: rid,
-                    download_bytes: size.download_bytes,
-                    install_bytes: size.install_bytes,
-                    error: String::new(),
-                },
-                Err(e) => {
-                    eprintln!("[epic_size] error: {}", e);
-                    omikuji_core::install_sizes::InstallSizeResult {
-                        request_id: rid,
-                        download_bytes: 0,
-                        install_bytes: 0,
-                        error: format!("{}", e),
-                    }
-                }
-            };
-            omikuji_core::install_sizes::push(pushed);
+        omikuji_core::install_sizes::spawn_fetch(rid, move || async move {
+            omikuji_core::epic::fetch_install_size(&app_name_str)
+                .await
+                .map(|s| (s.download_bytes, s.install_bytes))
+                .map_err(|e| e.to_string())
         });
     }
 
@@ -87,12 +55,12 @@ impl super::qobject::GameModel {
         let app_name_s = app_name.to_string();
 
         if self.library.game.iter().any(|g| g.metadata.id == app_name_s) {
-            eprintln!("[epic_import] already in library: {}", app_name_s);
+            tracing::info!("already in library: {}", app_name_s);
             return QString::from(&app_name_s);
         }
 
         let Some(info) = omikuji_core::epic::find_installed_info(&app_name_s) else {
-            eprintln!("[epic_import] no install info for {} — leaving library alone", app_name_s);
+            tracing::warn!("no install info for {} - leaving library alone", app_name_s);
             return QString::default();
         };
 
@@ -142,26 +110,16 @@ impl super::qobject::GameModel {
         let row = self.library.game.len() as i32;
 
         if let Err(e) = Library::save_game_static(&game) {
-            eprintln!("[epic_import] failed to save: {}", e);
+            tracing::error!("failed to save: {}", e);
             return QString::default();
         }
 
         let id_for_media = game.metadata.id.clone();
         let name_for_media = game.metadata.name.clone();
         let qt_thread = self.as_mut().qt_thread();
+        let on_asset = super::media_changed_notifier(qt_thread, id_for_media.clone());
         std::thread::spawn(move || {
-            let id_for_refresh = id_for_media.clone();
-            media::fetch_media_blocking_with(&id_for_media, &name_for_media, |_| {
-                let id_inner = id_for_refresh.clone();
-                let _ = qt_thread.queue(move |mut obj: Pin<&mut super::qobject::GameModel>| {
-                    let Some(row) = obj.library.game.iter().position(|g| g.metadata.id == id_inner) else {
-                        return;
-                    };
-                    let idx = obj.as_ref().model_index(row as i32, 0, &QModelIndex::default());
-                    let roles = cxx_qt_lib::QList::<i32>::default();
-                    obj.as_mut().data_changed(&idx, &idx, &roles);
-                });
-            });
+            media::fetch_media_blocking_with(&id_for_media, &name_for_media, on_asset);
         });
 
         self.as_mut().begin_insert_rows(&QModelIndex::default(), row, row);
@@ -170,7 +128,7 @@ impl super::qobject::GameModel {
         self.as_mut().set_count(count);
         self.as_mut().end_insert_rows();
 
-        eprintln!("[epic_import] imported '{}' as id '{}'", title, app_name_s);
+        tracing::info!("imported '{}' as id '{}'", title, app_name_s);
         QString::from(&app_name_s)
     }
 
@@ -183,11 +141,11 @@ impl super::qobject::GameModel {
             .find(|g| g.metadata.id == id)
             .cloned()
         else {
-            eprintln!("[epic_uninstall] game '{}' not found", id);
+            tracing::warn!("game '{}' not found", id);
             return false;
         };
         if game.source.kind != "epic" || game.source.app_id.is_empty() {
-            eprintln!("[epic_uninstall] game '{}' is not an epic entry", id);
+            tracing::warn!("game '{}' is not an epic entry", id);
             return false;
         }
 
@@ -232,7 +190,7 @@ impl super::qobject::GameModel {
                 Ok(out) if out.status.success() => {
                     if let Some(path) = &install_path
                         && path.exists() {
-                            eprintln!("[epic_uninstall] legendary exited 0 but {} still exists, forcing cleanup", path.display());
+                            tracing::warn!("legendary exited 0 but {} still exists, forcing cleanup", path.display());
                             omikuji_core::downloads::cleanup_install_dir_blocking(path);
                         }
                     if let Ok(mut lib) = omikuji_core::library::Library::load() {
@@ -274,11 +232,11 @@ impl super::qobject::GameModel {
     ) -> bool {
         let id = game_id.to_string();
         let Some(idx) = self.library.game.iter().position(|g| g.metadata.id == id) else {
-            eprintln!("[epic_overlay] game '{}' not found", id);
+            tracing::warn!("game '{}' not found", id);
             return false;
         };
         if !self.library.game[idx].is_epic() {
-            eprintln!("[epic_overlay] game '{}' is not epic", id);
+            tracing::warn!("game '{}' is not epic", id);
             return false;
         }
 
@@ -336,11 +294,11 @@ impl super::qobject::GameModel {
     ) -> bool {
         let id = game_id.to_string();
         let Some(idx) = self.library.game.iter().position(|g| g.metadata.id == id) else {
-            eprintln!("[epic_cloud] game '{}' not found", id);
+            tracing::warn!("game '{}' not found", id);
             return false;
         };
         if !self.library.game[idx].is_epic() {
-            eprintln!("[epic_cloud] game '{}' is not epic", id);
+            tracing::warn!("game '{}' is not epic", id);
             return false;
         }
 

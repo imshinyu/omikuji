@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 
 import "."
@@ -7,12 +8,20 @@ import "../widgets"
 Item {
     id: root
 
-    // hand-maintained, bind from a build-info bridge invokable if a release pipeline ever lands (TODO: do ts)
-    readonly property string appVersion: "0.2.1"
+    property var gameModel: null
+
+    readonly property string appVersion: gameModel ? gameModel.app_version() : ""
     readonly property string repoUrl: "https://github.com/reakjra/omikuji"
     readonly property string assetsRepoUrl: "https://github.com/reakjra/omikuji-assets"
+    readonly property string docsUrl: "https://reakjra.github.io/omikuji"
 
     implicitHeight: content.height
+
+    function _loadSystemInfo() {
+        if (gameModel) sysText.text = gameModel.system_info()
+    }
+    onGameModelChanged: _loadSystemInfo()
+    Component.onCompleted: _loadSystemInfo()
 
     Column {
         id: content
@@ -28,12 +37,12 @@ Item {
                 spacing: 6
 
                 Text {
-                    text: "A Qt/QML based wine apps launcher for Linux."
+                    text: qsTr("A Qt/QML based wine apps launcher for Linux.")
                     color: theme.text
                     font.pixelSize: 15
                 }
                 Text {
-                    text: "Version " + root.appVersion
+                    text: qsTr("Version %1").arg(root.appVersion)
                     color: theme.textMuted
                     font.pixelSize: 13
                     font.family: "monospace"
@@ -42,11 +51,11 @@ Item {
         }
 
         SettingsSection {
-            label: "License"
+            label: qsTr("License")
             width: parent.width
 
             Text {
-                text: "GPL-3.0-or-later. omikuji is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version."
+                text: qsTr("GPL-3.0-or-later. omikuji is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.")
                 color: theme.textSubtle
                 font.pixelSize: 12
                 width: parent.width
@@ -56,54 +65,79 @@ Item {
         }
 
         SettingsSection {
-            label: "Links"
+            label: qsTr("Links")
             width: parent.width
 
             Column {
                 width: parent.width
                 spacing: 10
 
-                Row {
-                    width: parent.width
-                    spacing: 12
-                    Text {
-                        text: "Source"
-                        color: theme.textMuted
-                        font.pixelSize: 13
-                        width: 80
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    Text {
-                        text: "<a href='" + root.repoUrl + "' style='color:" + theme.accent + "'>" + root.repoUrl + "</a>"
-                        color: theme.accent
-                        font.pixelSize: 13
-                        font.family: "monospace"
-                        textFormat: Text.RichText
-                        onLinkActivated: (link) => Qt.openUrlExternally(link)
-                        anchors.verticalCenter: parent.verticalCenter
-                        HoverHandler { cursorShape: Qt.PointingHandCursor }
+                Repeater {
+                    model: [
+                        { label: qsTr("Source"), url: root.repoUrl },
+                        { label: qsTr("Assets"), url: root.assetsRepoUrl },
+                        { label: qsTr("Docs"), url: root.docsUrl }
+                    ]
+
+                    Row {
+                        required property var modelData
+                        width: parent.width
+                        spacing: 12
+                        Text {
+                            text: modelData.label
+                            color: theme.textMuted
+                            font.pixelSize: 13
+                            width: 80
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: "<a href='" + modelData.url + "' style='color:" + theme.accent + "'>" + modelData.url + "</a>"
+                            color: theme.accent
+                            font.pixelSize: 13
+                            font.family: "monospace"
+                            textFormat: Text.RichText
+                            onLinkActivated: (link) => Qt.openUrlExternally(link)
+                            anchors.verticalCenter: parent.verticalCenter
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+                        }
                     }
                 }
+            }
+        }
 
-                Row {
+        SettingsSection {
+            label: qsTr("System")
+            width: parent.width
+
+            Column {
+                width: parent.width
+                spacing: 10
+
+                TextArea {
+                    id: sysText
                     width: parent.width
-                    spacing: 12
-                    Text {
-                        text: "Assets"
-                        color: theme.textMuted
-                        font.pixelSize: 13
-                        width: 80
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    Text {
-                        text: "<a href='" + root.assetsRepoUrl + "' style='color:" + theme.accent + "'>" + root.assetsRepoUrl + "</a>"
-                        color: theme.accent
-                        font.pixelSize: 13
-                        font.family: "monospace"
-                        textFormat: Text.RichText
-                        onLinkActivated: (link) => Qt.openUrlExternally(link)
-                        anchors.verticalCenter: parent.verticalCenter
-                        HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    readOnly: true
+                    wrapMode: TextArea.Wrap
+                    selectByMouse: true
+                    color: theme.text
+                    font.family: "monospace"
+                    font.pixelSize: 13
+                    leftPadding: 12
+                    rightPadding: 12
+                    topPadding: 10
+                    bottomPadding: 10
+                    text: ""
+
+                    background: FieldSurface {}
+                }
+
+                M3Button {
+                    text: qsTr("Copy")
+                    variant: "tonal"
+                    onClicked: {
+                        sysText.selectAll()
+                        sysText.copy()
+                        sysText.deselect()
                     }
                 }
             }

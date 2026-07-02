@@ -12,14 +12,14 @@ Item {
     readonly property int rowLabelWidth: 200
 
     readonly property var tokens: [
-        { key: "bg",         label: "Window background" },
-        { key: "surface",    label: "Content surface" },
-        { key: "accent",     label: "Accent" },
-        { key: "accentText", label: "Accent text" },
-        { key: "text",       label: "Text" },
-        { key: "error",      label: "Error" },
-        { key: "success",    label: "Success" },
-        { key: "warning",    label: "Warning" }
+        { key: "bg",         label: qsTr("Window background") },
+        { key: "surface",    label: qsTr("Content surface") },
+        { key: "accent",     label: qsTr("Accent") },
+        { key: "accentText", label: qsTr("Accent text") },
+        { key: "text",       label: qsTr("Text") },
+        { key: "error",      label: qsTr("Error") },
+        { key: "success",    label: qsTr("Success") },
+        { key: "warning",    label: qsTr("Warning") }
     ]
 
     property var overrides: ({})
@@ -66,12 +66,12 @@ Item {
         spacing: 20
 
         SettingsSection {
-            label: "Colors"
+            label: qsTr("Colors")
             width: parent.width
 
             SettingsRow {
-                label: "Follow system"
-                description: "Use the desktop palette. Disable to apply per-token overrides below."
+                label: qsTr("Follow system")
+                description: qsTr("Use the desktop palette. Disable to apply per-token overrides below.")
                 labelWidth: root.rowLabelWidth
                 M3Switch {
                     checked: uiSettings ? uiSettings.followSystemColors : true
@@ -114,10 +114,9 @@ Item {
 
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: root._hasOverride(modelData.key) ? root.overrides[modelData.key] : "system"
+                            text: root._hasOverride(modelData.key) ? root.overrides[modelData.key] : qsTr("system")
                             color: root._hasOverride(modelData.key) ? theme.text : theme.textSubtle
                             font.pixelSize: 13
-                            font.family: "monospace"
                         }
 
                         IconButton {
@@ -133,12 +132,12 @@ Item {
         }
 
         SettingsSection {
-            label: "Font"
+            label: qsTr("Font")
             width: parent.width
 
             SettingsRow {
-                label: "Follow system"
-                description: "Use the desktop default font. Disable to pick a family below."
+                label: qsTr("Follow system")
+                description: qsTr("Use the desktop default font. Disable to pick a family below.")
                 labelWidth: root.rowLabelWidth
                 M3Switch {
                     checked: uiSettings ? uiSettings.followSystemFont : true
@@ -147,15 +146,15 @@ Item {
             }
 
             SettingsRow {
-                label: "Font family"
-                description: "Applied app-wide. Requires restart."
+                label: qsTr("Font family")
+                description: qsTr("Applied app-wide. Requires restart.")
                 labelWidth: root.rowLabelWidth
                 opacity: (uiSettings && !uiSettings.followSystemFont) ? 1.0 : 0.4
 
                 M3Dropdown {
                     width: 260
                     options: {
-                        let arr = [{ label: "Default", value: "" }]
+                        let arr = [{ label: qsTr("Default"), value: "" }]
                         for (let i = 0; i < root.fonts.length; i++) {
                             arr.push({ label: root.fonts[i], value: root.fonts[i] })
                         }

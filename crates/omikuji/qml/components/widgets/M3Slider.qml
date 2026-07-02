@@ -41,7 +41,6 @@ Item {
             text: Math.round(root.value)
             color: theme.text
             font.pixelSize: 13
-            font.family: "monospace"
             visible: root.showValue
         }
     }
@@ -58,7 +57,7 @@ Item {
             : 0
         readonly property real currentHandleWidth: dragArea.pressed ? root.handlePressedWidth : root.handleRestWidth
         readonly property real handleX: slider.normalizedValue * (slider.width - currentHandleWidth)
-        readonly property color trackBg: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.16)
+        readonly property color trackBg: theme.alpha(theme.text, 0.16)
 
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
@@ -92,7 +91,7 @@ Item {
                 width: root.stopDotSize
                 height: root.stopDotSize
                 radius: width / 2
-                color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.45)
+                color: theme.alpha(theme.text, 0.45)
             }
         }
 

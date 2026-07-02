@@ -1,7 +1,7 @@
 use anyhow::Result;
 use discord_rich_presence::{
     DiscordIpc, DiscordIpcClient,
-    activity::{Activity, Assets, Timestamps},
+    activity::{Activity, ActivityType, Assets, StatusDisplayType, Timestamps},
 };
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -48,9 +48,11 @@ pub fn set_playing(game: &Game) {
             .map(|d| d.as_secs() as i64)
             .unwrap_or(0);
 
-        let details = format!("Playing {}", game.metadata.name);
         let activity = Activity::new()
-            .details(&details)
+            .name(&game.metadata.name)
+            .activity_type(ActivityType::Playing)
+            .status_display_type(StatusDisplayType::Name)
+            .state("Playing on Omikuji")
             .timestamps(Timestamps::new().start(now))
             .assets(
                 Assets::new()
@@ -59,7 +61,7 @@ pub fn set_playing(game: &Game) {
             );
 
         if let Err(e) = send_activity(activity) {
-            eprintln!("[discord] set_playing failed: {}", e);
+            tracing::error!("set_playing failed: {}", e);
         }
     });
 }
@@ -67,7 +69,7 @@ pub fn set_playing(game: &Game) {
 pub fn clear() {
     std::thread::spawn(|| {
         if let Err(e) = clear_activity_inner() {
-            eprintln!("[discord] clear failed: {}", e);
+            tracing::error!("clear failed: {}", e);
         }
     });
 }

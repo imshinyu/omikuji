@@ -36,7 +36,7 @@ pub fn delete_version(source: &ArchiveSource, tag: &str) -> Result<()> {
     archive_source::delete_version(source, &runners_dir(), tag)
 }
 
-pub fn list_installed_runners() -> Vec<String> {
+pub fn list_installed_runners() -> Vec<(String, String)> {
     let mut runners = vec![];
     
     if let Ok(entries) = std::fs::read_dir(runners_dir()) {
@@ -52,22 +52,23 @@ pub fn list_installed_runners() -> Vec<String> {
                     || path.join("proton").exists();
                 
                 if has_wine || has_proton {
-                    runners.push(name.to_string());
+                    runners.push((name.to_string(), String::new()));
                 }
             }
         }
     }
     
-    for (name, _) in crate::steam::local::iter_steam_protons() {
-        runners.push(format!("steam:{name}"));
+    for (name, path) in crate::steam::local::iter_steam_protons() {
+        let label = crate::steam::local::proton_display_name(&path).unwrap_or_default();
+        runners.push((format!("steam:{name}"), label));
     }
 
     for name in system_wine_paths().keys() {
-        runners.push(format!("system:{name}"));
+        runners.push((format!("system:{name}"), String::new()));
     }
 
     if which::which("wine").is_ok() {
-        runners.push("system".to_string());
+        runners.push(("system".to_string(), String::new()));
     }
 
     runners.sort();
@@ -106,60 +107,37 @@ pub fn system_wine_paths() -> HashMap<String, PathBuf> {
     paths
 }
 
+fn clean_lspci(name: &str) -> String {
+    name.replace("Advanced Micro Devices, Inc.", "AMD")
+        .replace("NVIDIA Corporation", "NVIDIA")
+        .replace("Intel Corporation", "Intel")
+        .replace("Corp.", "")
+}
+
 pub fn list_gpus() -> Vec<(String, String)> {
     let mut gpus = vec![("Default".to_string(), "".to_string())];
-    
+
+    let vk = crate::system_info::gpu_select_list();
+    if !vk.is_empty() {
+        gpus.extend(vk);
+        return gpus;
+    }
+
     if let Ok(output) = Command::new("lspci").output() {
         let stdout = String::from_utf8_lossy(&output.stdout);
         for line in stdout.lines() {
             if line.contains("VGA") || line.contains("3D controller") || line.contains("Display controller") {
                 let parts: Vec<&str> = line.splitn(2, ':').collect();
                 if parts.len() >= 2 {
-                    let pci_slot = parts[0].trim();
                     let desc = parts[1].trim();
                     if let Some(idx) = desc.find(':') {
-                        let name = desc[idx+1..].trim();
-                        let clean_name = name
-                            .replace("Advanced Micro Devices, Inc.", "AMD")
-                            .replace("NVIDIA Corporation", "NVIDIA")
-                            .replace("Intel Corporation", "Intel")
-                            .replace("Corp.", "");
-                        gpus.push((clean_name.to_string(), pci_slot.to_string()));
+                        gpus.push((clean_lspci(desc[idx + 1..].trim()), String::new()));
                     }
                 }
             }
         }
     }
-    
-    if gpus.len() == 1
-        && let Ok(entries) = std::fs::read_dir("/sys/class/drm") {
-            for entry in entries.flatten() {
-                let name = entry.file_name();
-                let name_str = name.to_string_lossy();
-                
-                if name_str.starts_with("card") && !name_str.contains('-') {
-                    let device_path = entry.path().join("device");
-                    
-                    if let Ok(vendor) = std::fs::read_to_string(device_path.join("vendor")) {
-                        let vendor = vendor.trim();
-                        let label = match vendor {
-                            "0x1002" => "AMD GPU",
-                            "0x10de" => "NVIDIA GPU",
-                            "0x8086" => "Intel GPU",
-                            _ => "GPU",
-                        };
-                        gpus.push((format!("{} ({})", label, name_str), name_str.to_string()));
-                    } else {
-                        gpus.push((format!("GPU {}", name_str), name_str.to_string()));
-                    }
-                }
-            }
-        }
-    
-    if gpus.len() > 2 {
-        gpus.push(("PRIME Render Offload".to_string(), "DRI_PRIME=1".to_string()));
-    }
-    
+
     gpus
 }
 

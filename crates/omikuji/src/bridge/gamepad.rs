@@ -127,17 +127,13 @@ impl qobject::GamepadBridge {
             let mut gilrs = match Gilrs::new() {
                 Ok(g) => g,
                 Err(e) => {
-                    eprintln!("[gamepad] failed to init gilrs: {:?}", e);
+                    tracing::error!("failed to init gilrs: {:?}", e);
                     return;
                 }
             };
 
             for (id, gp) in gilrs.gamepads() {
-                eprintln!(
-                    "[gamepad] connected at start: id={:?} name='{}'",
-                    id,
-                    gp.name()
-                );
+                tracing::info!("connected at start: id={:?} name='{}'", id, gp.name());
             }
 
             let initial_kind = detect_kind(&gilrs);

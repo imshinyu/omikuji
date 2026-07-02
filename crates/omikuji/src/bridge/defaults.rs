@@ -77,82 +77,7 @@ impl Default for DefaultsRust {
 
 impl qobject::DefaultsBridge {
     fn get_config(&self) -> cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant> {
-        use cxx_qt_lib::{QMap, QMapPair_QString_QVariant, QString, QVariant};
-        use omikuji_core::library::WineConfig;
-
-        let mut m = QMap::<QMapPair_QString_QVariant>::default();
-        let d = &self.data;
-        let w = WineConfig::default();
-
-        macro_rules! put_str {
-            ($k:expr, $v:expr) => {
-                m.insert(QString::from($k), QVariant::from(&QString::from(&*$v)));
-            };
-        }
-        macro_rules! put_bool {
-            ($k:expr, $v:expr) => {
-                m.insert(QString::from($k), QVariant::from(&$v));
-            };
-        }
-        macro_rules! put_int {
-            ($k:expr, $v:expr) => {
-                m.insert(QString::from($k), QVariant::from(&($v as i32)));
-            };
-        }
-
-        put_str!("wine.version", d.wine.version.clone().unwrap_or(w.version));
-        put_str!("wine.prefix", d.wine.prefix.clone().unwrap_or(w.prefix));
-        put_str!("wine.prefix_arch", d.wine.prefix_arch.clone().unwrap_or(w.prefix_arch));
-        put_bool!("wine.esync", d.wine.esync.unwrap_or(w.esync));
-        put_bool!("wine.fsync", d.wine.fsync.unwrap_or(w.fsync));
-        put_bool!("wine.ntsync", d.wine.ntsync.unwrap_or(w.ntsync));
-        put_bool!("wine.dxvk", d.wine.dxvk.unwrap_or(w.dxvk));
-        put_str!("wine.dxvk_version", d.wine.dxvk_version.clone().unwrap_or(w.dxvk_version));
-        put_bool!("wine.vkd3d", d.wine.vkd3d.unwrap_or(w.vkd3d));
-        put_str!("wine.vkd3d_version", d.wine.vkd3d_version.clone().unwrap_or(w.vkd3d_version));
-        put_bool!("wine.d3d_extras", d.wine.d3d_extras.unwrap_or(w.d3d_extras));
-        put_str!("wine.d3d_extras_version", d.wine.d3d_extras_version.clone().unwrap_or(w.d3d_extras_version));
-        put_bool!("wine.dxvk_nvapi", d.wine.dxvk_nvapi.unwrap_or(w.dxvk_nvapi));
-        put_str!("wine.dxvk_nvapi_version", d.wine.dxvk_nvapi_version.clone().unwrap_or(w.dxvk_nvapi_version));
-        put_bool!("wine.fsr", d.wine.fsr.unwrap_or(w.fsr));
-        put_bool!("wine.battleye", d.wine.battleye.unwrap_or(w.battleye));
-        put_bool!("wine.easyanticheat", d.wine.easyanticheat.unwrap_or(w.easyanticheat));
-        put_bool!("wine.dpi_scaling", d.wine.dpi_scaling.unwrap_or(w.dpi_scaling));
-        put_int!("wine.dpi", d.wine.dpi.unwrap_or(w.dpi));
-        put_str!("wine.audio_driver", d.wine.audio_driver.clone().unwrap_or(w.audio_driver));
-        put_str!("wine.graphics_driver", d.wine.graphics_driver.clone().unwrap_or(w.graphics_driver));
-        if let Ok(json) = serde_json::to_string(&d.wine.dll_overrides) {
-            put_str!("wine.dll_overrides", json);
-        }
-
-        put_str!("launch.command_prefix", d.launch.command_prefix.clone().unwrap_or_default());
-        if let Ok(json) = serde_json::to_string(&d.launch.env) {
-            put_str!("launch.env", json);
-        }
-
-        put_bool!("graphics.mangohud", d.graphics.mangohud.unwrap_or(false));
-        put_str!("graphics.gpu", d.graphics.gpu.clone().unwrap_or_default());
-
-        let gs = &d.graphics.gamescope;
-        put_bool!("graphics.gamescope.enabled", gs.enabled.unwrap_or(false));
-        put_int!("graphics.gamescope.width", gs.width.unwrap_or(0));
-        put_int!("graphics.gamescope.height", gs.height.unwrap_or(0));
-        put_int!("graphics.gamescope.game_width", gs.game_width.unwrap_or(0));
-        put_int!("graphics.gamescope.game_height", gs.game_height.unwrap_or(0));
-        put_int!("graphics.gamescope.fps", gs.fps.unwrap_or(0));
-        put_bool!("graphics.gamescope.fullscreen", gs.fullscreen.unwrap_or(false));
-        put_bool!("graphics.gamescope.borderless", gs.borderless.unwrap_or(false));
-        put_bool!("graphics.gamescope.integer_scaling", gs.integer_scaling.unwrap_or(false));
-        put_bool!("graphics.gamescope.hdr", gs.hdr.unwrap_or(false));
-        put_str!("graphics.gamescope.filter", gs.filter.clone().unwrap_or_default());
-        put_int!("graphics.gamescope.fsr_sharpness", gs.fsr_sharpness.unwrap_or(0));
-
-        put_bool!("system.gamemode", d.system.gamemode.unwrap_or(false));
-        put_bool!("system.prevent_sleep", d.system.prevent_sleep.unwrap_or(false));
-        put_bool!("system.pulse_latency", d.system.pulse_latency.unwrap_or(false));
-        put_int!("system.cpu_limit", d.system.cpu_limit.unwrap_or(0));
-
-        m
+        build_defaults_map(&self.data)
     }
 
     fn set_keys_json(&self) -> cxx_qt_lib::QString {
@@ -194,7 +119,7 @@ impl qobject::DefaultsBridge {
         self.as_mut().rust_mut().get_mut().suppress_reload_until =
             Some(Instant::now() + Duration::from_millis(600));
         if let Err(e) = self.as_ref().rust().data.save() {
-            eprintln!("[defaults] save failed: {}", e);
+            tracing::error!("save failed: {}", e);
         }
     }
 
@@ -222,189 +147,185 @@ impl qobject::DefaultsBridge {
         match watcher {
             Ok(w) => {
                 self.as_mut().rust_mut().get_mut().watcher = Some(w);
-                eprintln!("[defaults] watching {} via notify", defaults_path().display());
+                tracing::debug!("watching {} via notify", defaults_path().display());
             }
-            Err(e) => eprintln!("[defaults] failed to start watcher: {e}"),
+            Err(e) => tracing::error!("failed to start watcher: {e}"),
         }
     }
 }
 
-fn parse_bool(s: &str) -> bool { s == "true" }
-fn parse_u32(s: &str) -> u32 { s.parse().unwrap_or(0) }
-
-fn apply_to_defaults(d: &mut Defaults, key: &str, value: &str) -> bool {
-    match key {
-        "wine.version" => d.wine.version = Some(value.to_string()),
-        "wine.prefix" => d.wine.prefix = Some(value.to_string()),
-        "wine.prefix_arch" => d.wine.prefix_arch = Some(value.to_string()),
-        "wine.esync" => d.wine.esync = Some(parse_bool(value)),
-        "wine.fsync" => d.wine.fsync = Some(parse_bool(value)),
-        "wine.ntsync" => d.wine.ntsync = Some(parse_bool(value)),
-        "wine.dxvk" => d.wine.dxvk = Some(parse_bool(value)),
-        "wine.dxvk_version" => d.wine.dxvk_version = Some(value.to_string()),
-        "wine.vkd3d" => d.wine.vkd3d = Some(parse_bool(value)),
-        "wine.vkd3d_version" => d.wine.vkd3d_version = Some(value.to_string()),
-        "wine.d3d_extras" => d.wine.d3d_extras = Some(parse_bool(value)),
-        "wine.d3d_extras_version" => d.wine.d3d_extras_version = Some(value.to_string()),
-        "wine.dxvk_nvapi" => d.wine.dxvk_nvapi = Some(parse_bool(value)),
-        "wine.dxvk_nvapi_version" => d.wine.dxvk_nvapi_version = Some(value.to_string()),
-        "wine.fsr" => d.wine.fsr = Some(parse_bool(value)),
-        "wine.battleye" => d.wine.battleye = Some(parse_bool(value)),
-        "wine.easyanticheat" => d.wine.easyanticheat = Some(parse_bool(value)),
-        "wine.dpi_scaling" => d.wine.dpi_scaling = Some(parse_bool(value)),
-        "wine.dpi" => d.wine.dpi = Some(parse_u32(value)),
-        "wine.audio_driver" => d.wine.audio_driver = Some(value.to_string()),
-        "wine.graphics_driver" => d.wine.graphics_driver = Some(value.to_string()),
-        "wine.dll_overrides" => {
-            if let Ok(map) = serde_json::from_str(value) {
-                d.wine.dll_overrides = map;
-            } else { return false; }
+macro_rules! defaults_get {
+    (str, $m:ident, $key:literal, $v:expr, $base:expr) => {
+        $m.insert(QString::from($key), QVariant::from(&QString::from(&*$v.clone().unwrap_or($base))));
+    };
+    (bool, $m:ident, $key:literal, $v:expr, $base:expr) => {
+        $m.insert(QString::from($key), QVariant::from(&$v.unwrap_or($base)));
+    };
+    (int, $m:ident, $key:literal, $v:expr, $base:expr) => {
+        $m.insert(QString::from($key), QVariant::from(&($v.unwrap_or($base) as i32)));
+    };
+    (json, $m:ident, $key:literal, $v:expr, $base:expr) => {
+        if let Ok(json) = serde_json::to_string(&$v) {
+            $m.insert(QString::from($key), QVariant::from(&QString::from(&*json)));
         }
+    };
+}
 
-        "launch.command_prefix" => d.launch.command_prefix = Some(value.to_string()),
-        "launch.env" => {
-            if let Ok(env) = serde_json::from_str(value) {
-                d.launch.env = env;
-            } else { return false; }
+macro_rules! defaults_set {
+    (str, $d:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $d.$($path).+ = Some($value.to_string());
+            return true;
         }
-
-        "graphics.mangohud" => d.graphics.mangohud = Some(parse_bool(value)),
-        "graphics.gpu" => d.graphics.gpu = Some(value.to_string()),
-
-        "graphics.gamescope.enabled" => d.graphics.gamescope.enabled = Some(parse_bool(value)),
-        "graphics.gamescope.width" => d.graphics.gamescope.width = Some(parse_u32(value)),
-        "graphics.gamescope.height" => d.graphics.gamescope.height = Some(parse_u32(value)),
-        "graphics.gamescope.game_width" => d.graphics.gamescope.game_width = Some(parse_u32(value)),
-        "graphics.gamescope.game_height" => d.graphics.gamescope.game_height = Some(parse_u32(value)),
-        "graphics.gamescope.fps" => d.graphics.gamescope.fps = Some(parse_u32(value)),
-        "graphics.gamescope.fullscreen" => d.graphics.gamescope.fullscreen = Some(parse_bool(value)),
-        "graphics.gamescope.borderless" => d.graphics.gamescope.borderless = Some(parse_bool(value)),
-        "graphics.gamescope.integer_scaling" => d.graphics.gamescope.integer_scaling = Some(parse_bool(value)),
-        "graphics.gamescope.hdr" => d.graphics.gamescope.hdr = Some(parse_bool(value)),
-        "graphics.gamescope.filter" => d.graphics.gamescope.filter = Some(value.to_string()),
-        "graphics.gamescope.fsr_sharpness" => d.graphics.gamescope.fsr_sharpness = Some(parse_u32(value)),
-
-        "system.gamemode" => d.system.gamemode = Some(parse_bool(value)),
-        "system.prevent_sleep" => d.system.prevent_sleep = Some(parse_bool(value)),
-        "system.pulse_latency" => d.system.pulse_latency = Some(parse_bool(value)),
-        "system.cpu_limit" => d.system.cpu_limit = Some(parse_u32(value)),
-
-        _ => {
-            eprintln!("[defaults] unknown key: {}", key);
+    };
+    (bool, $d:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $d.$($path).+ = Some($value == "true");
+            return true;
+        }
+    };
+    (int, $d:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $d.$($path).+ = Some($value.parse().unwrap_or(0));
+            return true;
+        }
+    };
+    (json, $d:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            if let Ok(parsed) = serde_json::from_str($value) {
+                $d.$($path).+ = parsed;
+                return true;
+            }
             return false;
         }
-    }
-    true
+    };
 }
 
-fn clear_in_defaults(d: &mut Defaults, key: &str) -> bool {
-    match key {
-        "wine.version" => d.wine.version = None,
-        "wine.prefix" => d.wine.prefix = None,
-        "wine.prefix_arch" => d.wine.prefix_arch = None,
-        "wine.esync" => d.wine.esync = None,
-        "wine.fsync" => d.wine.fsync = None,
-        "wine.ntsync" => d.wine.ntsync = None,
-        "wine.dxvk" => d.wine.dxvk = None,
-        "wine.dxvk_version" => d.wine.dxvk_version = None,
-        "wine.vkd3d" => d.wine.vkd3d = None,
-        "wine.vkd3d_version" => d.wine.vkd3d_version = None,
-        "wine.d3d_extras" => d.wine.d3d_extras = None,
-        "wine.d3d_extras_version" => d.wine.d3d_extras_version = None,
-        "wine.dxvk_nvapi" => d.wine.dxvk_nvapi = None,
-        "wine.dxvk_nvapi_version" => d.wine.dxvk_nvapi_version = None,
-        "wine.fsr" => d.wine.fsr = None,
-        "wine.battleye" => d.wine.battleye = None,
-        "wine.easyanticheat" => d.wine.easyanticheat = None,
-        "wine.dpi_scaling" => d.wine.dpi_scaling = None,
-        "wine.dpi" => d.wine.dpi = None,
-        "wine.audio_driver" => d.wine.audio_driver = None,
-        "wine.graphics_driver" => d.wine.graphics_driver = None,
-        "wine.dll_overrides" => d.wine.dll_overrides.clear(),
-        "launch.command_prefix" => d.launch.command_prefix = None,
-        "launch.env" => d.launch.env.clear(),
-        "graphics.mangohud" => d.graphics.mangohud = None,
-        "graphics.gpu" => d.graphics.gpu = None,
-        "graphics.gamescope.enabled" => d.graphics.gamescope.enabled = None,
-        "graphics.gamescope.width" => d.graphics.gamescope.width = None,
-        "graphics.gamescope.height" => d.graphics.gamescope.height = None,
-        "graphics.gamescope.game_width" => d.graphics.gamescope.game_width = None,
-        "graphics.gamescope.game_height" => d.graphics.gamescope.game_height = None,
-        "graphics.gamescope.fps" => d.graphics.gamescope.fps = None,
-        "graphics.gamescope.fullscreen" => d.graphics.gamescope.fullscreen = None,
-        "graphics.gamescope.borderless" => d.graphics.gamescope.borderless = None,
-        "graphics.gamescope.integer_scaling" => d.graphics.gamescope.integer_scaling = None,
-        "graphics.gamescope.hdr" => d.graphics.gamescope.hdr = None,
-        "graphics.gamescope.filter" => d.graphics.gamescope.filter = None,
-        "graphics.gamescope.fsr_sharpness" => d.graphics.gamescope.fsr_sharpness = None,
-        "system.gamemode" => d.system.gamemode = None,
-        "system.prevent_sleep" => d.system.prevent_sleep = None,
-        "system.pulse_latency" => d.system.pulse_latency = None,
-        "system.cpu_limit" => d.system.cpu_limit = None,
-        _ => {
-            eprintln!("[defaults] unknown key to reset: {}", key);
-            return false;
+macro_rules! defaults_clear {
+    (json, $d:ident, $key:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $d.$($path).+.clear();
+            return true;
         }
-    }
-    true
+    };
+    ($kind:ident, $d:ident, $key:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $d.$($path).+ = None;
+            return true;
+        }
+    };
 }
 
-// equality with the hardcoded default = nothing to undo, no reset badge
-fn collect_set_keys(d: &Defaults) -> Vec<String> {
-    let mut k = Vec::new();
-    let w = WineConfig::default();
-    let g = GraphicsConfig::default();
-    let gs_def = GamescopeConfig::default();
-    let s = SystemConfig::default();
-    let l = LaunchConfig::default();
+macro_rules! defaults_diff {
+    (str, $k:ident, $d:ident, $key:literal, $base:expr, $($path:ident).+) => {
+        if $d.$($path).+.as_ref().is_some_and(|v| v != &$base) {
+            $k.push($key.into());
+        }
+    };
+    (json, $k:ident, $d:ident, $key:literal, $base:expr, $($path:ident).+) => {
+        if !$d.$($path).+.is_empty() {
+            $k.push($key.into());
+        }
+    };
+    ($kind:ident, $k:ident, $d:ident, $key:literal, $base:expr, $($path:ident).+) => {
+        if $d.$($path).+.is_some_and(|v| v != $base) {
+            $k.push($key.into());
+        }
+    };
+}
 
-    if d.wine.version.as_ref().is_some_and(|v| v != &w.version) { k.push("wine.version".into()); }
-    if d.wine.prefix.as_ref().is_some_and(|v| v != &w.prefix) { k.push("wine.prefix".into()); }
-    if d.wine.prefix_arch.as_ref().is_some_and(|v| v != &w.prefix_arch) { k.push("wine.prefix_arch".into()); }
-    if d.wine.esync.is_some_and(|v| v != w.esync) { k.push("wine.esync".into()); }
-    if d.wine.fsync.is_some_and(|v| v != w.fsync) { k.push("wine.fsync".into()); }
-    if d.wine.ntsync.is_some_and(|v| v != w.ntsync) { k.push("wine.ntsync".into()); }
-    if d.wine.dxvk.is_some_and(|v| v != w.dxvk) { k.push("wine.dxvk".into()); }
-    if d.wine.dxvk_version.as_ref().is_some_and(|v| v != &w.dxvk_version) { k.push("wine.dxvk_version".into()); }
-    if d.wine.vkd3d.is_some_and(|v| v != w.vkd3d) { k.push("wine.vkd3d".into()); }
-    if d.wine.vkd3d_version.as_ref().is_some_and(|v| v != &w.vkd3d_version) { k.push("wine.vkd3d_version".into()); }
-    if d.wine.d3d_extras.is_some_and(|v| v != w.d3d_extras) { k.push("wine.d3d_extras".into()); }
-    if d.wine.d3d_extras_version.as_ref().is_some_and(|v| v != &w.d3d_extras_version) { k.push("wine.d3d_extras_version".into()); }
-    if d.wine.dxvk_nvapi.is_some_and(|v| v != w.dxvk_nvapi) { k.push("wine.dxvk_nvapi".into()); }
-    if d.wine.dxvk_nvapi_version.as_ref().is_some_and(|v| v != &w.dxvk_nvapi_version) { k.push("wine.dxvk_nvapi_version".into()); }
-    if d.wine.fsr.is_some_and(|v| v != w.fsr) { k.push("wine.fsr".into()); }
-    if d.wine.battleye.is_some_and(|v| v != w.battleye) { k.push("wine.battleye".into()); }
-    if d.wine.easyanticheat.is_some_and(|v| v != w.easyanticheat) { k.push("wine.easyanticheat".into()); }
-    if d.wine.dpi_scaling.is_some_and(|v| v != w.dpi_scaling) { k.push("wine.dpi_scaling".into()); }
-    if d.wine.dpi.is_some_and(|v| v != w.dpi) { k.push("wine.dpi".into()); }
-    if d.wine.audio_driver.as_ref().is_some_and(|v| v != &w.audio_driver) { k.push("wine.audio_driver".into()); }
-    if d.wine.graphics_driver.as_ref().is_some_and(|v| v != &w.graphics_driver) { k.push("wine.graphics_driver".into()); }
-    if !d.wine.dll_overrides.is_empty() { k.push("wine.dll_overrides".into()); }
+macro_rules! defaults_fields {
+    (bind: $d:ident $w:ident $g:ident $gs:ident $s:ident $l:ident,
+     $( $key:literal => $kind:ident, $($path:ident).+, $base:expr ),* $(,)?) => {
+        fn build_defaults_map($d: &Defaults) -> cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant> {
+            use cxx_qt_lib::{QMap, QMapPair_QString_QVariant, QString, QVariant};
 
-    if d.launch.command_prefix.as_ref().is_some_and(|v| v != &l.command_prefix) { k.push("launch.command_prefix".into()); }
-    if !d.launch.env.is_empty() { k.push("launch.env".into()); }
+            let mut m = QMap::<QMapPair_QString_QVariant>::default();
+            let $w = WineConfig::default();
+            let $g = GraphicsConfig::default();
+            let $gs = GamescopeConfig::default();
+            let $s = SystemConfig::default();
+            let $l = LaunchConfig::default();
 
-    if d.graphics.mangohud.is_some_and(|v| v != g.mangohud) { k.push("graphics.mangohud".into()); }
-    if d.graphics.gpu.as_ref().is_some_and(|v| v != &g.gpu) { k.push("graphics.gpu".into()); }
+            $( defaults_get!($kind, m, $key, $d.$($path).+, $base); )*
+            m
+        }
 
-    let dgs = &d.graphics.gamescope;
-    if dgs.enabled.is_some_and(|v| v != gs_def.enabled) { k.push("graphics.gamescope.enabled".into()); }
-    if dgs.width.is_some_and(|v| v != gs_def.width) { k.push("graphics.gamescope.width".into()); }
-    if dgs.height.is_some_and(|v| v != gs_def.height) { k.push("graphics.gamescope.height".into()); }
-    if dgs.game_width.is_some_and(|v| v != gs_def.game_width) { k.push("graphics.gamescope.game_width".into()); }
-    if dgs.game_height.is_some_and(|v| v != gs_def.game_height) { k.push("graphics.gamescope.game_height".into()); }
-    if dgs.fps.is_some_and(|v| v != gs_def.fps) { k.push("graphics.gamescope.fps".into()); }
-    if dgs.fullscreen.is_some_and(|v| v != gs_def.fullscreen) { k.push("graphics.gamescope.fullscreen".into()); }
-    if dgs.borderless.is_some_and(|v| v != gs_def.borderless) { k.push("graphics.gamescope.borderless".into()); }
-    if dgs.integer_scaling.is_some_and(|v| v != gs_def.integer_scaling) { k.push("graphics.gamescope.integer_scaling".into()); }
-    if dgs.hdr.is_some_and(|v| v != gs_def.hdr) { k.push("graphics.gamescope.hdr".into()); }
-    if dgs.filter.as_ref().is_some_and(|v| v != &gs_def.filter) { k.push("graphics.gamescope.filter".into()); }
-    if dgs.fsr_sharpness.is_some_and(|v| v != gs_def.fsr_sharpness) { k.push("graphics.gamescope.fsr_sharpness".into()); }
+        fn apply_to_defaults($d: &mut Defaults, key: &str, value: &str) -> bool {
+            $( defaults_set!($kind, $d, key, value, $key, $($path).+); )*
+            tracing::warn!("unknown key: {}", key);
+            false
+        }
 
-    if d.system.gamemode.is_some_and(|v| v != s.gamemode) { k.push("system.gamemode".into()); }
-    if d.system.prevent_sleep.is_some_and(|v| v != s.prevent_sleep) { k.push("system.prevent_sleep".into()); }
-    if d.system.pulse_latency.is_some_and(|v| v != s.pulse_latency) { k.push("system.pulse_latency".into()); }
-    if d.system.cpu_limit.is_some_and(|v| v != s.cpu_limit) { k.push("system.cpu_limit".into()); }
+        fn clear_in_defaults($d: &mut Defaults, key: &str) -> bool {
+            $( defaults_clear!($kind, $d, key, $key, $($path).+); )*
+            tracing::warn!("unknown key to reset: {}", key);
+            false
+        }
 
-    k
+        fn collect_set_keys($d: &Defaults) -> Vec<String> {
+            let mut k = Vec::new();
+            let $w = WineConfig::default();
+            let $g = GraphicsConfig::default();
+            let $gs = GamescopeConfig::default();
+            let $s = SystemConfig::default();
+            let $l = LaunchConfig::default();
+
+            $( defaults_diff!($kind, k, $d, $key, $base, $($path).+); )*
+            k
+        }
+    };
+}
+
+// equality with the baseline default = nothing to undo, no reset badge
+defaults_fields! {
+    bind: d w g gs s l,
+
+    "wine.version" => str, wine.version, w.version,
+    "wine.prefix" => str, wine.prefix, w.prefix,
+    "wine.prefix_arch" => str, wine.prefix_arch, w.prefix_arch,
+    "wine.esync" => bool, wine.esync, w.esync,
+    "wine.fsync" => bool, wine.fsync, w.fsync,
+    "wine.ntsync" => bool, wine.ntsync, w.ntsync,
+    "wine.dxvk" => bool, wine.dxvk, w.dxvk,
+    "wine.dxvk_version" => str, wine.dxvk_version, w.dxvk_version,
+    "wine.vkd3d" => bool, wine.vkd3d, w.vkd3d,
+    "wine.vkd3d_version" => str, wine.vkd3d_version, w.vkd3d_version,
+    "wine.d3d_extras" => bool, wine.d3d_extras, w.d3d_extras,
+    "wine.d3d_extras_version" => str, wine.d3d_extras_version, w.d3d_extras_version,
+    "wine.dxvk_nvapi" => bool, wine.dxvk_nvapi, w.dxvk_nvapi,
+    "wine.dxvk_nvapi_version" => str, wine.dxvk_nvapi_version, w.dxvk_nvapi_version,
+    "wine.fsr" => bool, wine.fsr, w.fsr,
+    "wine.battleye" => bool, wine.battleye, w.battleye,
+    "wine.easyanticheat" => bool, wine.easyanticheat, w.easyanticheat,
+    "wine.dpi_scaling" => bool, wine.dpi_scaling, w.dpi_scaling,
+    "wine.dpi" => int, wine.dpi, w.dpi,
+    "wine.audio_driver" => str, wine.audio_driver, w.audio_driver,
+    "wine.graphics_driver" => str, wine.graphics_driver, w.graphics_driver,
+    "wine.dll_overrides" => json, wine.dll_overrides, (),
+
+    "launch.command_prefix" => str, launch.command_prefix, l.command_prefix,
+    "launch.env" => json, launch.env, (),
+
+    "graphics.mangohud" => bool, graphics.mangohud, g.mangohud,
+    "graphics.gpu" => str, graphics.gpu, g.gpu,
+
+    "graphics.gamescope.enabled" => bool, graphics.gamescope.enabled, gs.enabled,
+    "graphics.gamescope.width" => int, graphics.gamescope.width, gs.width,
+    "graphics.gamescope.height" => int, graphics.gamescope.height, gs.height,
+    "graphics.gamescope.game_width" => int, graphics.gamescope.game_width, gs.game_width,
+    "graphics.gamescope.game_height" => int, graphics.gamescope.game_height, gs.game_height,
+    "graphics.gamescope.fps" => int, graphics.gamescope.fps, gs.fps,
+    "graphics.gamescope.refresh_rate" => int, graphics.gamescope.refresh_rate, gs.refresh_rate,
+    "graphics.gamescope.fullscreen" => bool, graphics.gamescope.fullscreen, gs.fullscreen,
+    "graphics.gamescope.borderless" => bool, graphics.gamescope.borderless, gs.borderless,
+    "graphics.gamescope.integer_scaling" => bool, graphics.gamescope.integer_scaling, gs.integer_scaling,
+    "graphics.gamescope.hdr" => bool, graphics.gamescope.hdr, gs.hdr,
+    "graphics.gamescope.filter" => str, graphics.gamescope.filter, gs.filter,
+    "graphics.gamescope.fsr_sharpness" => int, graphics.gamescope.fsr_sharpness, gs.fsr_sharpness,
+
+    "system.gamemode" => bool, system.gamemode, s.gamemode,
+    "system.prevent_sleep" => bool, system.prevent_sleep, s.prevent_sleep,
+    "system.pulse_latency" => bool, system.pulse_latency, s.pulse_latency,
+    "system.cpu_limit" => int, system.cpu_limit, s.cpu_limit,
 }

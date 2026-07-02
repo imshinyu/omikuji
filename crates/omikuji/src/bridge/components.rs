@@ -54,6 +54,10 @@ pub mod qobject {
         fn install_all(self: Pin<&mut ComponentsBridge>);
 
         #[qinvokable]
+        #[cxx_name = "installEager"]
+        fn install_eager(self: Pin<&mut ComponentsBridge>);
+
+        #[qinvokable]
         #[cxx_name = "reinstallComponent"]
         fn reinstall_component(self: Pin<&mut ComponentsBridge>, name: QString);
 
@@ -86,7 +90,7 @@ struct ComponentStatusEntry {
 impl Default for ComponentsRust {
     fn default() -> Self {
         let specs = core_components::specs::all();
-        let pending = core_components::check_all();
+        let pending = core_components::eager_pending();
 
         let mut statuses = HashMap::new();
         for spec in specs {
@@ -139,7 +143,7 @@ impl qobject::ComponentsBridge {
 
     fn refresh(mut self: Pin<&mut Self>) {
         let specs = core_components::specs::all();
-        let pending = core_components::check_all();
+        let pending = core_components::eager_pending();
 
         for spec in specs {
             let current = self.statuses.get(spec.name).cloned();
@@ -184,14 +188,14 @@ impl qobject::ComponentsBridge {
         self.as_mut().set_all_done(pc == 0);
     }
 
-    fn install_all(mut self: Pin<&mut Self>) {
-        if self.in_progress {
+    // spawn an OS thread then block_on; we're inside #[tokio::main], so building a runtime directly would panic.
+    fn spawn_install(mut self: Pin<&mut Self>, specs: Vec<&'static core_components::ComponentSpec>) {
+        if self.in_progress || specs.is_empty() {
             return;
         }
         self.as_mut().set_in_progress(true);
 
-        // spawn an OS thread then block_on; we're inside #[tokio::main], so building a runtime directly would panic.
-        thread::spawn(|| {
+        thread::spawn(move || {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build();
@@ -200,17 +204,22 @@ impl qobject::ComponentsBridge {
                 return;
             };
             rt.block_on(async {
-                for spec in core_components::check_all() {
+                for spec in specs {
                     let _ = core_components::install_one(spec).await;
                 }
             });
         });
     }
 
+    fn install_all(self: Pin<&mut Self>) {
+        self.spawn_install(core_components::check_all());
+    }
+
+    fn install_eager(self: Pin<&mut Self>) {
+        self.spawn_install(core_components::eager_pending());
+    }
+
     fn reinstall_component(mut self: Pin<&mut Self>, name: QString) {
-        if self.in_progress {
-            return;
-        }
         let target = name.to_string();
         let Some(spec) = core_components::specs::all().iter().find(|s| s.name == target) else {
             omikuji_core::components::push_fail_event(
@@ -219,24 +228,7 @@ impl qobject::ComponentsBridge {
             );
             return;
         };
-        let spec: &'static core_components::ComponentSpec = spec;
-        self.as_mut().set_in_progress(true);
-
-        thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build();
-            let Ok(rt) = rt else {
-                omikuji_core::components::push_fail_event(
-                    &target,
-                    "couldn't build tokio runtime",
-                );
-                return;
-            };
-            rt.block_on(async {
-                let _ = core_components::install_one(spec).await;
-            });
-        });
+        self.as_mut().spawn_install(vec![spec]);
     }
 
     fn drain_events(mut self: Pin<&mut Self>) {

@@ -1,7 +1,7 @@
 import QtQuick
 
 import "../widgets"
-import "../dialogs"
+import "../widgets/RunnerGrouping.js" as RG
 
 Item {
     id: root
@@ -19,12 +19,10 @@ Item {
 
     height: showAutoInject ? 100 : 56
 
-    Rectangle {
+    Squircle {
         anchors.fill: parent
-        color: theme.cardBg
-        radius: 10
-        border.width: 1
-        border.color: theme.surfaceBorder
+        radius: theme.radius.md
+        fillColor: theme.cardBg
     }
 
     Item {
@@ -58,8 +56,8 @@ Item {
                     Rectangle {
                         height: 16
                         width: kindLabel.width + 12
-                        radius: 8
-                        color: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.13)
+                        radius: theme.radius.sm
+                        color: theme.alpha(theme.accent, 0.13)
                         anchors.verticalCenter: parent.verticalCenter
                         Text {
                             id: kindLabel
@@ -76,48 +74,24 @@ Item {
 
                 Text {
                     text: root.installedCount === 0
-                        ? "No versions installed"
+                        ? qsTr("No versions installed")
                         : root.installedCount === 1
-                            ? "1 version installed"
-                            : root.installedCount + " versions installed"
+                            ? qsTr("1 version installed")
+                            : qsTr("%1 versions installed").arg(root.installedCount)
                     color: root.installedCount > 0 ? theme.success : theme.textSubtle
                     font.pixelSize: 12
                 }
             }
         }
 
-        Rectangle {
+        M3Button {
             id: manageBtn
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            width: manageLabel.implicitWidth + 28
-            height: 32
-            radius: 16
-            color: btnArea.containsMouse
-                ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
-                : "transparent"
-            border.width: 1
-            border.color: theme.surfaceBorder
-
-            Behavior on color { ColorAnimation { duration: 120 } }
-
-            Text {
-                id: manageLabel
-                anchors.centerIn: parent
-                text: "Manage"
-                color: theme.text
-                font.pixelSize: 13
-                font.weight: Font.Medium
-            }
-
-            MouseArea {
-                id: btnArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.manageClicked()
-            }
+            text: qsTr("Manage")
+            variant: "tonal"
+            onClicked: root.manageClicked()
         }
     }
 
@@ -145,84 +119,39 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter
-            text: "Auto install on prefix"
+            text: qsTr("Auto install on prefix")
             color: theme.text
             font.pixelSize: 13
         }
 
-        Rectangle {
-            id: picker
+        M3Dropdown {
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            // max 240 so long tags elide instead of pushing off-screen, no min so short values shrink naturally
-            width: Math.min(240, pickerRow.implicitWidth + 20)
-            height: 32
-            radius: 16
-            color: pickerArea.containsMouse
-                ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
-                : "transparent"
-            border.width: 1
-            border.color: theme.surfaceBorder
-
-            Behavior on color { ColorAnimation { duration: 120 } }
-
-            Row {
-                id: pickerRow
-                anchors.centerIn: parent
-                spacing: 8
-
-                Text {
-                    id: pickerLabel
-                    text: root.activeVersion === "" ? "Disabled" : root.activeVersion
-                    color: root.activeVersion === "" ? theme.textMuted : theme.text
-                    font.pixelSize: 13
-                    font.weight: Font.Medium
-                    elide: Text.ElideRight
-                    width: Math.min(implicitWidth, 200)
-                    anchors.verticalCenter: parent.verticalCenter
+            width: Math.min(240, labelMetrics.width + 56)
+            fieldHeight: 32
+            options: {
+                let opts = [{ label: qsTr("Disabled"), value: "" }]
+                for (let i = 0; i < root.installedVersions.length; i++) {
+                    let tag = root.installedVersions[i]
+                    opts.push({ label: tag, value: tag })
                 }
-
-                SvgIcon {
-                    id: chevron
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: "chevron_left"
-                    size: 14
-                    color: theme.textMuted
-                    rotation: menu.visible ? 90 : -90
-                    Behavior on rotation { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
-                }
+                return opts
+            }
+            currentIndex: {
+                let idx = RG.indexOfValue(options, root.activeVersion)
+                return idx >= 0 ? idx : 0
+            }
+            onSelected: (value) => {
+                if (value !== root.activeVersion) root.autoInjectChanged(value)
             }
 
-            MouseArea {
-                id: pickerArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    // debounce becuase CloseOnPressOutside eats the click before this fires and would instantly reopen
-                    if (Date.now() - menu.lastClosedAt < 150) return
-                    menu.items = root._buildMenuItems()
-                    menu.minWidth = picker.width - 16
-                    menu.openBelow(picker)
-                }
-            }
-        }
-
-        ContextMenu {
-            id: menu
-            onItemClicked: (action) => {
-                if (action !== root.activeVersion) root.autoInjectChanged(action)
+            TextMetrics {
+                id: labelMetrics
+                font.pixelSize: 14
+                text: root.activeVersion === "" ? qsTr("Disabled") : root.activeVersion
             }
         }
     }
 
-    function _buildMenuItems() {
-        let items = [{ text: "Disabled", action: "" }]
-        for (let i = 0; i < installedVersions.length; i++) {
-            let tag = installedVersions[i]
-            items.push({ text: tag, action: tag })
-        }
-        return items
-    }
 }

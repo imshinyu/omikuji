@@ -1,5 +1,4 @@
 #![allow(clippy::too_many_arguments)]
-// 3K LOC WHAT THEU FKC TODO: .... send help
 
 mod drains;
 mod shortcuts;
@@ -38,6 +37,7 @@ pub mod qobject {
         #[qml_element]
         #[base = QAbstractListModel]
         #[qproperty(i32, count)]
+        #[qproperty(bool, preparing)]
         type GameModel = super::GameModelRust;
     }
 
@@ -97,6 +97,14 @@ pub mod qobject {
         fn game_log_appended(self: Pin<&mut GameModel>, game_id: &QString);
 
         #[qsignal]
+        #[cxx_name = "prepareOutput"]
+        fn prepare_output(self: Pin<&mut GameModel>, line: &QString);
+
+        #[qsignal]
+        #[cxx_name = "prepareFinished"]
+        fn prepare_finished(self: Pin<&mut GameModel>, ok: bool, error: &QString);
+
+        #[qsignal]
         fn error_required(
             self: Pin<&mut GameModel>,
             game_id: &QString,
@@ -142,6 +150,12 @@ pub mod qobject {
         fn remove_game(self: Pin<&mut GameModel>, index: i32);
 
         #[qinvokable]
+        fn remove_game_with_prefix(self: Pin<&mut GameModel>, index: i32);
+
+        #[qinvokable]
+        fn game_prefix_info(self: &GameModel, index: i32) -> QString;
+
+        #[qinvokable]
         fn refresh(self: Pin<&mut GameModel>, selected_index: i32) -> QString;
 
         #[qinvokable]
@@ -158,6 +172,21 @@ pub mod qobject {
 
         #[qinvokable]
         fn launch_game_force(self: &GameModel, index: i32) -> bool;
+
+        #[qinvokable]
+        fn needs_prefix_prep(self: &GameModel, index: i32) -> bool;
+
+        #[qinvokable]
+        fn prepare_prefix(self: Pin<&mut GameModel>, index: i32);
+
+        #[qinvokable]
+        fn launch_exe(self: &GameModel, exe: &QString, runner: &QString, prefix: &QString) -> bool;
+
+        #[qinvokable]
+        fn run_exe_path(self: &GameModel) -> QString;
+
+        #[qinvokable]
+        fn quit_now(self: &GameModel);
 
         #[qinvokable]
         fn check_epic_update(self: &GameModel, game_id: &QString) -> bool;
@@ -200,6 +229,12 @@ pub mod qobject {
 
         #[qinvokable]
         fn list_gpus(self: &GameModel) -> QString;
+
+        #[qinvokable]
+        fn system_info(self: &GameModel) -> QString;
+
+        #[qinvokable]
+        fn app_version(self: &GameModel) -> QString;
 
         #[qinvokable]
         #[cxx_name = "cpuCoreCount"]
@@ -249,6 +284,12 @@ pub mod qobject {
         ) -> QString;
 
         #[qinvokable]
+        fn enqueue_game_repair(self: Pin<&mut GameModel>, game_id: &QString) -> QString;
+
+        #[qinvokable]
+        fn game_supports_repair(self: &GameModel, game_id: &QString) -> bool;
+
+        #[qinvokable]
         fn browse_files(self: &GameModel, index: i32) -> bool;
 
         #[qinvokable]
@@ -270,10 +311,19 @@ pub mod qobject {
         fn has_menu_shortcut(self: &GameModel, index: i32) -> bool;
 
         #[qinvokable]
-        fn duplicate_game(self: Pin<&mut GameModel>, index: i32) -> bool;
+        fn create_steam_shortcut(self: &GameModel, index: i32) -> bool;
 
         #[qinvokable]
-        fn steam_is_installed(self: &GameModel) -> bool;
+        fn remove_steam_shortcut(self: &GameModel, index: i32) -> bool;
+
+        #[qinvokable]
+        fn has_steam_shortcut(self: &GameModel, index: i32) -> bool;
+
+        #[qinvokable]
+        fn steam_shortcut_available(self: &GameModel, index: i32) -> bool;
+
+        #[qinvokable]
+        fn duplicate_game(self: Pin<&mut GameModel>, index: i32) -> bool;
 
         #[qinvokable]
         fn steam_get_installed_games(self: &GameModel) -> QString;
@@ -382,9 +432,6 @@ pub mod qobject {
 
         #[qinvokable]
         fn gacha_posters(self: &GameModel) -> QString;
-
-        #[qinvokable]
-        fn gacha_resolve_poster(self: &GameModel, manifest_id: &QString) -> QString;
 
         #[qinvokable]
         fn fetch_gacha_install_size(
@@ -521,13 +568,14 @@ pub struct GameModelRust {
     count: i32,
     // in-memory staging slot for the add-game page. cleared on commit/discard.
     draft: Option<Game>,
+    preparing: bool,
 }
 
 impl Default for GameModelRust {
     fn default() -> Self {
         let library = Library::load().unwrap_or_default();
         let count = library.game.len() as i32;
-        Self { library, count, draft: None }
+        Self { library, count, draft: None, preparing: false }
     }
 }
 
@@ -535,6 +583,7 @@ fn runner_display(game: &Game) -> String {
     match game.runner.runner_type.as_str() {
         "steam" if !game.source.app_id.is_empty() => format!("steam:{}", game.source.app_id),
         "flatpak" if !game.source.app_id.is_empty() => format!("flatpak:{}", game.source.app_id),
+        "native" => "Native".to_string(),
         _ => game.wine.version.clone(),
     }
 }
@@ -599,195 +648,190 @@ fn args_from_text(s: &str) -> Vec<String> {
     out
 }
 
-fn populate_config_map(game: &Game, m: &mut QMap<QMapPair_QString_QVariant>) {
-    macro_rules! put_str {
-        ($k:expr, $v:expr) => {
-            m.insert(QString::from($k), QVariant::from(&QString::from(&*$v)));
-        };
-    }
-    macro_rules! put_bool {
-        ($k:expr, $v:expr) => {
-            m.insert(QString::from($k), QVariant::from(&$v));
-        };
-    }
-    macro_rules! put_int {
-        ($k:expr, $v:expr) => {
-            m.insert(QString::from($k), QVariant::from(&($v as i32)));
-        };
-    }
-
-    put_str!("meta.id", game.metadata.id);
-    put_str!("meta.name", game.metadata.name);
-    put_str!("meta.sort_name", game.metadata.sort_name);
-    put_str!("meta.slug", game.metadata.slug);
-    put_str!("meta.exe", game.metadata.exe.to_string_lossy());
-    put_str!("meta.color", game.metadata.color);
-    put_str!("meta.banner", game.metadata.banner);
-    put_str!("meta.coverart", game.metadata.coverart);
-    put_str!("meta.icon", game.metadata.icon);
-    put_bool!("meta.favourite", game.metadata.favourite);
-    if let Ok(json) = serde_json::to_string(&game.metadata.categories) {
-        put_str!("meta.categories", json);
-    }
-
-    put_str!("source.kind", game.source.kind);
-    put_str!("source.app_id", game.source.app_id);
-    put_bool!("source.eos_overlay", game.source.eos_overlay);
-    put_bool!("source.cloud_saves", game.source.cloud_saves);
-    put_str!("source.save_path", game.source.save_path);
-    put_str!("source.patch", game.source.patch);
-
-    put_str!("runner.type", game.runner.runner_type);
-
-    put_str!("wine.version", game.wine.version);
-    put_str!("wine.prefix", game.wine.prefix);
-    put_str!("wine.prefix_arch", game.wine.prefix_arch);
-    put_bool!("wine.esync", game.wine.esync);
-    put_bool!("wine.fsync", game.wine.fsync);
-    put_bool!("wine.ntsync", game.wine.ntsync);
-    put_bool!("wine.dxvk", game.wine.dxvk);
-    put_str!("wine.dxvk_version", game.wine.dxvk_version);
-    put_bool!("wine.vkd3d", game.wine.vkd3d);
-    put_str!("wine.vkd3d_version", game.wine.vkd3d_version);
-    put_bool!("wine.d3d_extras", game.wine.d3d_extras);
-    put_str!("wine.d3d_extras_version", game.wine.d3d_extras_version);
-    put_bool!("wine.dxvk_nvapi", game.wine.dxvk_nvapi);
-    put_str!("wine.dxvk_nvapi_version", game.wine.dxvk_nvapi_version);
-    put_bool!("wine.fsr", game.wine.fsr);
-    put_bool!("wine.battleye", game.wine.battleye);
-    put_bool!("wine.easyanticheat", game.wine.easyanticheat);
-    put_bool!("wine.dpi_scaling", game.wine.dpi_scaling);
-    put_int!("wine.dpi", game.wine.dpi);
-    put_str!("wine.audio_driver", game.wine.audio_driver);
-    put_str!("wine.graphics_driver", game.wine.graphics_driver);
-
-    if let Ok(json) = serde_json::to_string(&game.wine.dll_overrides) {
-        put_str!("wine.dll_overrides", json);
-    }
-
-    let args_text = args_to_text(&game.launch.args);
-    put_str!("launch.args", args_text);
-    put_str!("launch.working_dir", game.launch.working_dir);
-    put_str!("launch.command_prefix", game.launch.command_prefix);
-    put_str!("launch.pre_launch_script", game.launch.pre_launch_script);
-    put_str!("launch.post_exit_script", game.launch.post_exit_script);
-    if let Ok(json) = serde_json::to_string(&game.launch.env) {
-        put_str!("launch.env", json);
-    }
-
-    put_bool!("graphics.mangohud", game.graphics.mangohud);
-    put_str!("graphics.gpu", game.graphics.gpu);
-
-    put_bool!("graphics.gamescope.enabled", game.graphics.gamescope.enabled);
-    put_int!("graphics.gamescope.width", game.graphics.gamescope.width);
-    put_int!("graphics.gamescope.height", game.graphics.gamescope.height);
-    put_int!("graphics.gamescope.game_width", game.graphics.gamescope.game_width);
-    put_int!("graphics.gamescope.game_height", game.graphics.gamescope.game_height);
-    put_int!("graphics.gamescope.fps", game.graphics.gamescope.fps);
-    put_bool!("graphics.gamescope.fullscreen", game.graphics.gamescope.fullscreen);
-    put_bool!("graphics.gamescope.borderless", game.graphics.gamescope.borderless);
-    put_bool!("graphics.gamescope.integer_scaling", game.graphics.gamescope.integer_scaling);
-    put_bool!("graphics.gamescope.hdr", game.graphics.gamescope.hdr);
-    put_str!("graphics.gamescope.filter", game.graphics.gamescope.filter);
-    put_int!("graphics.gamescope.fsr_sharpness", game.graphics.gamescope.fsr_sharpness);
-
-    put_bool!("system.gamemode", game.system.gamemode);
-    put_bool!("system.prevent_sleep", game.system.prevent_sleep);
-    put_bool!("system.pulse_latency", game.system.pulse_latency);
-    put_int!("system.cpu_limit", game.system.cpu_limit);
+macro_rules! field_get {
+    (str, $m:ident, $key:literal, $v:expr) => {
+        $m.insert(QString::from($key), QVariant::from(&QString::from(&*$v)));
+    };
+    (path, $m:ident, $key:literal, $v:expr) => {
+        $m.insert(QString::from($key), QVariant::from(&QString::from(&*$v.to_string_lossy())));
+    };
+    (bool, $m:ident, $key:literal, $v:expr) => {
+        $m.insert(QString::from($key), QVariant::from(&$v));
+    };
+    (int, $m:ident, $key:literal, $v:expr) => {
+        $m.insert(QString::from($key), QVariant::from(&($v as i32)));
+    };
+    (json, $m:ident, $key:literal, $v:expr) => {
+        if let Ok(json) = serde_json::to_string(&$v) {
+            $m.insert(QString::from($key), QVariant::from(&QString::from(&*json)));
+        }
+    };
+    (args, $m:ident, $key:literal, $v:expr) => {
+        $m.insert(QString::from($key), QVariant::from(&QString::from(&*args_to_text(&$v))));
+    };
 }
 
-fn apply_field_to_game(game: &mut Game, key: &str, value: &str) -> bool {
-    let parse_bool = |s: &str| -> bool { s == "true" };
-    let parse_u32 = |s: &str| -> u32 { s.parse().unwrap_or(0) };
-
-    match key {
-        "meta.name" => game.metadata.name = value.to_string(),
-        "meta.sort_name" => game.metadata.sort_name = value.to_string(),
-        "meta.slug" => game.metadata.slug = value.to_string(),
-        "meta.exe" => game.metadata.exe = PathBuf::from(value),
-        "meta.color" => game.metadata.color = value.to_string(),
-        "meta.banner" => game.metadata.banner = value.to_string(),
-        "meta.coverart" => game.metadata.coverart = value.to_string(),
-        "meta.icon" => game.metadata.icon = value.to_string(),
-        "meta.favourite" => game.metadata.favourite = parse_bool(value),
-        "meta.categories" => {
-            if let Ok(cats) = serde_json::from_str(value) {
-                game.metadata.categories = cats;
+macro_rules! field_set {
+    ($kind:ident readonly, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {};
+    (str, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $game.$($path).+ = $value.to_string();
+            return true;
+        }
+    };
+    (path, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $game.$($path).+ = PathBuf::from($value);
+            return true;
+        }
+    };
+    (bool, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $game.$($path).+ = $value == "true";
+            return true;
+        }
+    };
+    (int, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $game.$($path).+ = $value.parse().unwrap_or(0);
+            return true;
+        }
+    };
+    (json, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            if let Ok(parsed) = serde_json::from_str($value) {
+                $game.$($path).+ = parsed;
             }
+            return true;
+        }
+    };
+    (args, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $game.$($path).+ = args_from_text($value);
+            return true;
+        }
+    };
+}
+
+macro_rules! game_fields {
+    ($( $key:literal => $kind:ident $($flag:ident)?, $($path:ident).+ ),* $(,)?) => {
+        fn populate_config_map(game: &Game, m: &mut QMap<QMapPair_QString_QVariant>) {
+            $( field_get!($kind, m, $key, game.$($path).+); )*
         }
 
-        "source.save_path" => game.source.save_path = value.to_string(),
-        "source.app_id" => game.source.app_id = value.to_string(),
-
-        "runner.type" => game.runner.runner_type = value.to_string(),
-
-        "wine.version" => game.wine.version = value.to_string(),
-        "wine.prefix" => game.wine.prefix = value.to_string(),
-        "wine.prefix_arch" => game.wine.prefix_arch = value.to_string(),
-        "wine.esync" => game.wine.esync = parse_bool(value),
-        "wine.fsync" => game.wine.fsync = parse_bool(value),
-        "wine.ntsync" => game.wine.ntsync = parse_bool(value),
-        "wine.dxvk" => game.wine.dxvk = parse_bool(value),
-        "wine.dxvk_version" => game.wine.dxvk_version = value.to_string(),
-        "wine.vkd3d" => game.wine.vkd3d = parse_bool(value),
-        "wine.vkd3d_version" => game.wine.vkd3d_version = value.to_string(),
-        "wine.d3d_extras" => game.wine.d3d_extras = parse_bool(value),
-        "wine.d3d_extras_version" => game.wine.d3d_extras_version = value.to_string(),
-        "wine.dxvk_nvapi" => game.wine.dxvk_nvapi = parse_bool(value),
-        "wine.dxvk_nvapi_version" => game.wine.dxvk_nvapi_version = value.to_string(),
-        "wine.fsr" => game.wine.fsr = parse_bool(value),
-        "wine.battleye" => game.wine.battleye = parse_bool(value),
-        "wine.easyanticheat" => game.wine.easyanticheat = parse_bool(value),
-        "wine.dpi_scaling" => game.wine.dpi_scaling = parse_bool(value),
-        "wine.dpi" => game.wine.dpi = parse_u32(value),
-        "wine.audio_driver" => game.wine.audio_driver = value.to_string(),
-        "wine.graphics_driver" => game.wine.graphics_driver = value.to_string(),
-        "wine.dll_overrides" => {
-            if let Ok(map) = serde_json::from_str(value) {
-                game.wine.dll_overrides = map;
-            }
+        fn apply_field_to_game(game: &mut Game, key: &str, value: &str) -> bool {
+            $( field_set!($kind $($flag)?, game, key, value, $key, $($path).+); )*
+            tracing::warn!("unknown or read-only config key: {}", key);
+            false
         }
+    };
+}
 
-        "launch.args" => game.launch.args = args_from_text(value),
-        "launch.working_dir" => game.launch.working_dir = value.to_string(),
-        "launch.command_prefix" => game.launch.command_prefix = value.to_string(),
-        "launch.pre_launch_script" => game.launch.pre_launch_script = value.to_string(),
-        "launch.post_exit_script" => game.launch.post_exit_script = value.to_string(),
-        "launch.env" => {
-            if let Ok(env) = serde_json::from_str(value) {
-                game.launch.env = env;
-            }
-        }
+game_fields! {
+    "meta.id" => str readonly, metadata.id,
+    "meta.name" => str, metadata.name,
+    "meta.sort_name" => str, metadata.sort_name,
+    "meta.slug" => str, metadata.slug,
+    "meta.exe" => path, metadata.exe,
+    "meta.color" => str, metadata.color,
+    "meta.banner" => str, metadata.banner,
+    "meta.coverart" => str, metadata.coverart,
+    "meta.icon" => str, metadata.icon,
+    "meta.favourite" => bool, metadata.favourite,
+    "meta.categories" => json, metadata.categories,
 
-        "graphics.mangohud" => game.graphics.mangohud = parse_bool(value),
-        "graphics.gpu" => game.graphics.gpu = value.to_string(),
+    "source.kind" => str readonly, source.kind,
+    "source.app_id" => str, source.app_id,
+    "source.eos_overlay" => bool readonly, source.eos_overlay,
+    "source.cloud_saves" => bool readonly, source.cloud_saves,
+    "source.save_path" => str, source.save_path,
+    "source.patch" => str readonly, source.patch,
 
-        "graphics.gamescope.enabled" => game.graphics.gamescope.enabled = parse_bool(value),
-        "graphics.gamescope.width" => game.graphics.gamescope.width = parse_u32(value),
-        "graphics.gamescope.height" => game.graphics.gamescope.height = parse_u32(value),
-        "graphics.gamescope.game_width" => game.graphics.gamescope.game_width = parse_u32(value),
-        "graphics.gamescope.game_height" => game.graphics.gamescope.game_height = parse_u32(value),
-        "graphics.gamescope.fps" => game.graphics.gamescope.fps = parse_u32(value),
-        "graphics.gamescope.fullscreen" => game.graphics.gamescope.fullscreen = parse_bool(value),
-        "graphics.gamescope.borderless" => game.graphics.gamescope.borderless = parse_bool(value),
-        "graphics.gamescope.integer_scaling" => game.graphics.gamescope.integer_scaling = parse_bool(value),
-        "graphics.gamescope.hdr" => game.graphics.gamescope.hdr = parse_bool(value),
-        "graphics.gamescope.filter" => game.graphics.gamescope.filter = value.to_string(),
-        "graphics.gamescope.fsr_sharpness" => game.graphics.gamescope.fsr_sharpness = parse_u32(value),
+    "runner.type" => str, runner.runner_type,
 
-        "system.gamemode" => game.system.gamemode = parse_bool(value),
-        "system.prevent_sleep" => game.system.prevent_sleep = parse_bool(value),
-        "system.pulse_latency" => game.system.pulse_latency = parse_bool(value),
-        "system.cpu_limit" => game.system.cpu_limit = parse_u32(value),
+    "wine.version" => str, wine.version,
+    "wine.prefix" => str, wine.prefix,
+    "wine.prefix_arch" => str, wine.prefix_arch,
+    "wine.esync" => bool, wine.esync,
+    "wine.fsync" => bool, wine.fsync,
+    "wine.ntsync" => bool, wine.ntsync,
+    "wine.dxvk" => bool, wine.dxvk,
+    "wine.dxvk_version" => str, wine.dxvk_version,
+    "wine.vkd3d" => bool, wine.vkd3d,
+    "wine.vkd3d_version" => str, wine.vkd3d_version,
+    "wine.d3d_extras" => bool, wine.d3d_extras,
+    "wine.d3d_extras_version" => str, wine.d3d_extras_version,
+    "wine.dxvk_nvapi" => bool, wine.dxvk_nvapi,
+    "wine.dxvk_nvapi_version" => str, wine.dxvk_nvapi_version,
+    "wine.fsr" => bool, wine.fsr,
+    "wine.battleye" => bool, wine.battleye,
+    "wine.easyanticheat" => bool, wine.easyanticheat,
+    "wine.dpi_scaling" => bool, wine.dpi_scaling,
+    "wine.dpi" => int, wine.dpi,
+    "wine.audio_driver" => str, wine.audio_driver,
+    "wine.graphics_driver" => str, wine.graphics_driver,
+    "wine.dll_overrides" => json, wine.dll_overrides,
+    "wine.dll_override_sets" => json, wine.dll_override_sets,
 
-        _ => {
-            eprintln!("unknown config key: {}", key);
-            return false;
-        }
+    "launch.args" => args, launch.args,
+    "launch.working_dir" => str, launch.working_dir,
+    "launch.command_prefix" => str, launch.command_prefix,
+    "launch.pre_launch_script" => str, launch.pre_launch_script,
+    "launch.post_exit_script" => str, launch.post_exit_script,
+    "launch.env" => json, launch.env,
+    "launch.env_sets" => json, launch.env_sets,
+
+    "graphics.mangohud" => bool, graphics.mangohud,
+    "graphics.gpu" => str, graphics.gpu,
+
+    "graphics.gamescope.enabled" => bool, graphics.gamescope.enabled,
+    "graphics.gamescope.width" => int, graphics.gamescope.width,
+    "graphics.gamescope.height" => int, graphics.gamescope.height,
+    "graphics.gamescope.game_width" => int, graphics.gamescope.game_width,
+    "graphics.gamescope.game_height" => int, graphics.gamescope.game_height,
+    "graphics.gamescope.fps" => int, graphics.gamescope.fps,
+    "graphics.gamescope.refresh_rate" => int, graphics.gamescope.refresh_rate,
+    "graphics.gamescope.fullscreen" => bool, graphics.gamescope.fullscreen,
+    "graphics.gamescope.borderless" => bool, graphics.gamescope.borderless,
+    "graphics.gamescope.integer_scaling" => bool, graphics.gamescope.integer_scaling,
+    "graphics.gamescope.hdr" => bool, graphics.gamescope.hdr,
+    "graphics.gamescope.filter" => str, graphics.gamescope.filter,
+    "graphics.gamescope.fsr_sharpness" => int, graphics.gamescope.fsr_sharpness,
+
+    "system.gamemode" => bool, system.gamemode,
+    "system.prevent_sleep" => bool, system.prevent_sleep,
+    "system.pulse_latency" => bool, system.pulse_latency,
+    "system.cpu_limit" => int, system.cpu_limit,
+}
+
+fn config_map(game: &Game) -> QMap<QMapPair_QString_QVariant> {
+    let mut m = QMap::<QMapPair_QString_QVariant>::default();
+    populate_config_map(game, &mut m);
+    if !game.metadata.id.is_empty() {
+        let resolved = omikuji_core::launch::prefix_path_for(game);
+        m.insert(
+            QString::from("wine.prefix.resolved"),
+            QVariant::from(&QString::from(&*resolved.to_string_lossy())),
+        );
     }
+    m
+}
 
-    true
+fn media_changed_notifier(
+    qt_thread: cxx_qt::CxxQtThread<qobject::GameModel>,
+    game_id: String,
+) -> impl FnMut(&media::MediaType) {
+    move |_| {
+        let id_inner = game_id.clone();
+        let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::GameModel>| {
+            let Some(row) = obj.library.game.iter().position(|g| g.metadata.id == id_inner) else {
+                return;
+            };
+            let idx = obj.as_ref().model_index(row as i32, 0, &QModelIndex::default());
+            let roles = cxx_qt_lib::QList::<i32>::default();
+            obj.as_mut().data_changed(&idx, &idx, &roles);
+        });
+    }
 }
 
 impl qobject::GameModel {
@@ -803,7 +847,7 @@ impl qobject::GameModel {
 
         // debug: log first data() call per game
         if role == ROLE_NAME {
-            eprintln!("[data] row={} name='{}' coverart='{}'",
+            tracing::debug!("row={} name='{}' coverart='{}'",
                 row, game.metadata.name,
                 media::resolve_image(&game.metadata.id, &game.metadata.coverart, &MediaType::Coverart));
         }
@@ -863,18 +907,16 @@ impl qobject::GameModel {
     fn begin_new_game(mut self: Pin<&mut Self>) -> QMap<QMapPair_QString_QVariant> {
         let mut game = Game::new(String::new(), PathBuf::new());
         game.seed_from_defaults(&omikuji_core::defaults::Defaults::load());
-        let mut m = QMap::<QMapPair_QString_QVariant>::default();
-        populate_config_map(&game, &mut m);
+        let m = config_map(&game);
         self.as_mut().rust_mut().get_mut().draft = Some(game);
         m
     }
 
     fn get_draft_config(&self) -> QMap<QMapPair_QString_QVariant> {
-        let mut m = QMap::<QMapPair_QString_QVariant>::default();
-        if let Some(game) = &self.rust().draft {
-            populate_config_map(game, &mut m);
+        match &self.rust().draft {
+            Some(game) => config_map(game),
+            None => QMap::<QMapPair_QString_QVariant>::default(),
         }
-        m
     }
 
     fn update_draft_field(mut self: Pin<&mut Self>, key: &QString, value: &QString) -> bool {
@@ -889,13 +931,13 @@ impl qobject::GameModel {
     // on failure, draft is preserved so the user can fix fields and retry (a bit useless most of the times but may it be a connection error)
     fn commit_new_game(mut self: Pin<&mut Self>) -> QString {
         let Some(mut game) = self.as_mut().rust_mut().get_mut().draft.take() else {
-            eprintln!("commit_new_game: no draft");
+            tracing::warn!("commit_new_game: no draft");
             return QString::default();
         };
 
         // exe is allowed empty for non-wine runners (steam, flatpak, etc)
         if game.metadata.name.trim().is_empty() {
-            eprintln!("commit_new_game: name is required");
+            tracing::warn!("commit_new_game: name is required");
             self.as_mut().rust_mut().get_mut().draft = Some(game);
             return QString::default();
         }
@@ -907,7 +949,7 @@ impl qobject::GameModel {
         let row = self.library.game.len() as i32;
 
         if let Err(e) = Library::save_game_static(&game) {
-            eprintln!("commit_new_game: failed to save: {}", e);
+            tracing::error!("commit_new_game: failed to save: {}", e);
             self.as_mut().rust_mut().get_mut().draft = Some(game);
             return QString::default();
         }
@@ -919,19 +961,9 @@ impl qobject::GameModel {
         self.as_mut().end_insert_rows();
 
         let qt_thread = self.as_mut().qt_thread();
-        let id_for_refresh = game_id.clone();
+        let on_asset = media_changed_notifier(qt_thread, game_id.clone());
         std::thread::spawn(move || {
-            let result = media::fetch_media_blocking_with(&game_id, &game_name, |_| {
-                let id_inner = id_for_refresh.clone();
-                let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::GameModel>| {
-                    let Some(row) = obj.library.game.iter().position(|g| g.metadata.id == id_inner) else {
-                        return;
-                    };
-                    let idx = obj.as_ref().model_index(row as i32, 0, &QModelIndex::default());
-                    let roles = cxx_qt_lib::QList::<i32>::default();
-                    obj.as_mut().data_changed(&idx, &idx, &roles);
-                });
-            });
+            let result = media::fetch_media_blocking_with(&game_id, &game_name, on_asset);
             let fetched: Vec<&str> = [
                 result.banner.as_ref().map(|_| "banner"),
                 result.coverart.as_ref().map(|_| "coverart"),
@@ -941,9 +973,9 @@ impl qobject::GameModel {
             .flatten()
             .collect();
             if fetched.is_empty() {
-                eprintln!("no media found for '{}'", game_name);
+                tracing::warn!("no media found for '{}'", game_name);
             } else {
-                eprintln!("fetched {} for '{}'", fetched.join(", "), game_name);
+                tracing::info!("fetched {} for '{}'", fetched.join(", "), game_name);
             }
         });
 
@@ -956,11 +988,11 @@ impl qobject::GameModel {
 
     fn begin_edit_game(mut self: Pin<&mut Self>, index: i32) -> QMap<QMapPair_QString_QVariant> {
         let idx = index as usize;
-        let mut m = QMap::<QMapPair_QString_QVariant>::default();
         let cloned = self.library.game.get(idx).cloned();
-        if let Some(ref game) = cloned {
-            populate_config_map(game, &mut m);
-        }
+        let m = match &cloned {
+            Some(game) => config_map(game),
+            None => QMap::<QMapPair_QString_QVariant>::default(),
+        };
         self.as_mut().rust_mut().get_mut().draft = cloned;
         m
     }
@@ -968,16 +1000,16 @@ impl qobject::GameModel {
     fn commit_edit_game(mut self: Pin<&mut Self>, game_id: &QString) -> bool {
         let id = game_id.to_string();
         let Some(draft) = self.as_mut().rust_mut().get_mut().draft.take() else {
-            eprintln!("commit_edit_game: no draft");
+            tracing::warn!("commit_edit_game: no draft");
             return false;
         };
         let Some(idx) = self.library.game.iter().position(|g| g.metadata.id == id) else {
-            eprintln!("commit_edit_game: game id '{}' not found", id);
+            tracing::warn!("commit_edit_game: game id '{}' not found", id);
             self.as_mut().rust_mut().get_mut().draft = Some(draft);
             return false;
         };
         if let Err(e) = Library::save_game_static(&draft) {
-            eprintln!("commit_edit_game: failed to save: {}", e);
+            tracing::error!("commit_edit_game: failed to save: {}", e);
             self.as_mut().rust_mut().get_mut().draft = Some(draft);
             return false;
         }
@@ -1003,7 +1035,7 @@ impl qobject::GameModel {
 
         let lib = &mut self.as_mut().rust_mut().get_mut().library;
         if let Err(e) = lib.remove_game(&game_id) {
-            eprintln!("failed to remove game file: {}", e);
+            tracing::error!("failed to remove game file: {}", e);
         }
 
         media::remove_cached_media(&game_id);
@@ -1011,6 +1043,82 @@ impl qobject::GameModel {
         let count = self.library.game.len() as i32;
         self.as_mut().set_count(count);
         self.end_remove_rows();
+    }
+
+    fn remove_game_with_prefix(mut self: Pin<&mut Self>, index: i32) {
+        let idx = index as usize;
+        let prefix = match self.library.game.get(idx) {
+            Some(game) if game.uses_wine_prefix() => {
+                Some(omikuji_core::launch::prefix_path_for(game))
+            }
+            _ => None,
+        };
+        if let Some(p) = prefix {
+            omikuji_core::prefixes::delete_prefix(&p);
+        }
+        self.as_mut().remove_game(index);
+    }
+
+    fn game_prefix_info(&self, index: i32) -> QString {
+        let idx = index as usize;
+        let Some(game) = self.library.game.get(idx) else {
+            return QString::default();
+        };
+        let path = omikuji_core::launch::prefix_path_for(game);
+        let has_prefix = game.uses_wine_prefix() && path.is_dir();
+        let games: Vec<String> = if has_prefix {
+            self.library
+                .game
+                .iter()
+                .filter(|g| g.uses_wine_prefix() && omikuji_core::launch::prefix_path_for(g) == path)
+                .map(|g| g.metadata.name.clone())
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let v = serde_json::json!({
+            "hasPrefix": has_prefix,
+            "path": path.to_string_lossy(),
+            "gameCount": games.len(),
+            "games": games,
+        });
+        QString::from(&v.to_string())
+    }
+
+    fn needs_prefix_prep(&self, index: i32) -> bool {
+        self.library
+            .game
+            .get(index as usize)
+            .map(omikuji_core::prefixes::prefix_needs_bootstrap)
+            .unwrap_or(false)
+    }
+
+    fn prepare_prefix(mut self: Pin<&mut Self>, index: i32) {
+        if self.preparing {
+            return;
+        }
+        let Some(game) = self.library.game.get(index as usize).cloned() else {
+            return;
+        };
+        self.as_mut().set_preparing(true);
+        let qt = self.as_mut().qt_thread();
+        std::thread::spawn(move || {
+            let line_qt = qt.clone();
+            let res = omikuji_core::prefixes::bootstrap_prefix(&game, |line| {
+                let l = line.to_string();
+                let _ = line_qt.queue(move |mut obj: Pin<&mut qobject::GameModel>| {
+                    obj.as_mut().prepare_output(&QString::from(&l));
+                });
+            });
+            let (ok, err) = match res {
+                Ok(_) => (true, String::new()),
+                Err(e) => (false, e.to_string()),
+            };
+            let _ = qt.queue(move |mut obj: Pin<&mut qobject::GameModel>| {
+                obj.as_mut().set_preparing(false);
+                obj.as_mut().prepare_finished(ok, &QString::from(&err));
+            });
+        });
     }
 
     fn refresh(mut self: Pin<&mut Self>, selected_index: i32) -> QString {
@@ -1032,7 +1140,7 @@ impl qobject::GameModel {
                 QString::from(&*selected_id)
             }
             Err(e) => {
-                eprintln!("failed to reload library: {}", e);
+                tracing::error!("failed to reload library: {}", e);
                 QString::from(&*selected_id)
             }
         }
@@ -1147,9 +1255,7 @@ impl qobject::GameModel {
         let Some(game) = self.library.game.get(idx) else {
             return QMap::<QMapPair_QString_QVariant>::default();
         };
-        let mut m = QMap::<QMapPair_QString_QVariant>::default();
-        populate_config_map(game, &mut m);
-        m
+        config_map(game)
     }
 
     fn update_game_field(mut self: Pin<&mut Self>, index: i32, key: &QString, value: &QString) -> bool {
@@ -1168,15 +1274,15 @@ impl qobject::GameModel {
         let game = match self.library.game.iter().find(|g| g.metadata.id == id) {
             Some(g) => g.clone(),
             None => {
-                eprintln!("save_game: game with id '{}' not found", id);
+                tracing::warn!("save_game: game with id '{}' not found", id);
                 return false;
             }
         };
 
-        eprintln!("[save_game] saving game '{}' id '{}'", game.metadata.name, game.metadata.id);
+        tracing::debug!("saving game '{}' id '{}'", game.metadata.name, game.metadata.id);
 
         if let Err(e) = Library::save_game_static(&game) {
-            eprintln!("failed to save game config: {}", e);
+            tracing::error!("failed to save game config: {}", e);
             return false;
         }
         true
@@ -1185,7 +1291,7 @@ impl qobject::GameModel {
     fn refetch_media(mut self: Pin<&mut Self>, game_id: &QString) {
         let id = game_id.to_string();
         let Some(game) = self.library.game.iter().find(|g| g.metadata.id == id) else {
-            eprintln!("refetch_media: game id '{}' not found", id);
+            tracing::warn!("refetch_media: game id '{}' not found", id);
             return;
         };
         let name = game.metadata.name.clone();
@@ -1195,24 +1301,15 @@ impl qobject::GameModel {
         } else {
             None
         };
+        let steam_appid = (game.source.kind == "steam").then(|| game.source.app_id.clone());
 
         let qt_thread = self.as_mut().qt_thread();
+        let on_asset = media_changed_notifier(qt_thread, id.clone());
         std::thread::spawn(move || {
-            let id_for_refresh = id.clone();
-            let on_asset = move |_: &media::MediaType| {
-                let id_inner = id_for_refresh.clone();
-                let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::GameModel>| {
-                    let Some(row) = obj.library.game.iter().position(|g| g.metadata.id == id_inner) else {
-                        return;
-                    };
-                    let idx = obj.as_ref().model_index(row as i32, 0, &QModelIndex::default());
-                    let roles = cxx_qt_lib::QList::<i32>::default();
-                    obj.as_mut().data_changed(&idx, &idx, &roles);
-                });
-            };
-            match gacha_manifest {
-                Some(m) => omikuji_core::gachas::art::fetch_into_library_cache(&m, &id, on_asset),
-                None => { let _ = media::fetch_media_blocking_with(&id, &name, on_asset); }
+            match (gacha_manifest, steam_appid) {
+                (Some(m), _) => omikuji_core::gachas::art::fetch_into_library_cache(&m, &id, on_asset),
+                (_, Some(appid)) => { let _ = media::fetch_steam_media_blocking_with(&appid, on_asset); }
+                _ => { let _ = media::fetch_media_blocking_with(&id, &name, on_asset); }
             }
         });
     }
@@ -1241,8 +1338,8 @@ impl qobject::GameModel {
             defaults.apply_sections_to(game, &sections, replace_maps);
             match Library::save_game_static(game) {
                 Ok(_) => written += 1,
-                Err(e) => eprintln!(
-                    "[apply_defaults] save failed for {}: {}",
+                Err(e) => tracing::error!(
+                    "apply_defaults save failed for {}: {}",
                     game.metadata.id, e
                 ),
             }
@@ -1267,6 +1364,15 @@ impl qobject::GameModel {
         }
     }
 
+    fn system_info(&self) -> QString {
+        let qt = option_env!("OMIKUJI_QT_VERSION").unwrap_or("unknown");
+        QString::from(&omikuji_core::system_info::report(env!("CARGO_PKG_VERSION"), qt))
+    }
+
+    fn app_version(&self) -> QString {
+        QString::from(env!("CARGO_PKG_VERSION"))
+    }
+
     fn cpu_core_count(&self) -> i32 {
         std::thread::available_parallelism()
             .map(|n| n.get() as i32)
@@ -1286,7 +1392,7 @@ impl qobject::GameModel {
     fn duplicate_game(mut self: Pin<&mut Self>, index: i32) -> bool {
         let idx = index as usize;
         if idx >= self.library.game.len() {
-            eprintln!("duplicate_game: invalid index {}", index);
+            tracing::warn!("duplicate_game: invalid index {}", index);
             return false;
         }
 
@@ -1312,12 +1418,12 @@ impl qobject::GameModel {
                 self.as_mut().set_count(count);
                 self.as_mut().end_insert_rows();
 
-                eprintln!("duplicated game '{}' -> '{}' (id: {})",
+                tracing::info!("duplicated game '{}' -> '{}' (id: {})",
                     game.metadata.name, new_name, new_id);
                 true
             }
             Err(e) => {
-                eprintln!("duplicate_game failed: {}", e);
+                tracing::error!("duplicate_game failed: {}", e);
                 false
             }
         }

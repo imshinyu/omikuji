@@ -87,7 +87,7 @@ Item {
         color: Qt.darker(theme.surface, 1.45)
         radius: 14 * osk.uiScale
         border.width: 1
-        border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+        border.color: theme.alpha(theme.text, 0.08)
     }
 
     Column {
@@ -171,7 +171,7 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "Backspace"
+                    text: qsTr("Backspace")
                     color: bsBtn.isFocused ? theme.accentOn : theme.text
                     font.pixelSize: 14 * osk.uiScale
                     font.weight: Font.Medium
@@ -209,7 +209,7 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "Space"
+                    text: qsTr("Space")
                     color: spaceBtn.isFocused ? theme.accentOn : theme.text
                     font.pixelSize: 14 * osk.uiScale
                     font.weight: Font.Medium
@@ -247,7 +247,7 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "Enter"
+                    text: qsTr("Enter")
                     color: enterBtn.isFocused ? theme.accentOn : theme.text
                     font.pixelSize: 14 * osk.uiScale
                     font.weight: Font.Medium

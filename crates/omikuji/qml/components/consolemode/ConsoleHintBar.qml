@@ -18,10 +18,10 @@ Row {
     readonly property var _g: _glyphTables[controllerKind] || _glyphTables.xbox
 
     readonly property var hints: [
-        { glyph: _g.south, label: "Launch" },
-        { glyph: _g.east,  label: "Back" },
-        { glyph: _g.north, label: "Search" },
-        { glyph: "✥",      label: "Navigate" }
+        { glyph: _g.south, label: qsTr("Launch") },
+        { glyph: _g.east,  label: qsTr("Back") },
+        { glyph: _g.north, label: qsTr("Search") },
+        { glyph: "✥",      label: qsTr("Navigate") }
     ]
 
     spacing: 28 * _scale
@@ -47,7 +47,7 @@ Row {
                     radius: width / 2
                     color: theme.surface
                     border.width: 1
-                    border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.15)
+                    border.color: theme.alpha(theme.text, 0.15)
                     antialiasing: true
                 }
 

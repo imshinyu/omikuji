@@ -97,7 +97,7 @@ Item {
                 }
 
                 Text {
-                    text: "Gacha Games"
+                    text: qsTr("Gacha Games")
                     color: theme.textMuted
                     font.pixelSize: 13
                 }
@@ -152,7 +152,7 @@ Item {
                         anchors.margins: 4
                         height: 24
                         radius: 10
-                        color: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.9)
+                        color: theme.alpha(theme.accent, 0.9)
                         visible: gachaCard.isDownloading
 
                         Text {

@@ -1,4 +1,4 @@
-use super::spec::{ComponentSpec, ExtractStrategy, SettingsKey, Source};
+use super::spec::{ComponentSpec, ExtractStrategy, SettingsKey, Source, Trigger};
 
 pub fn all() -> &'static [ComponentSpec] {
     COMPONENTS
@@ -13,6 +13,7 @@ static COMPONENTS: &[ComponentSpec] = &[
         extract: ExtractStrategy::Tar { inner_path: "umu-run" },
         dest: "umu-run",
         settings_key: SettingsKey::UmuRun,
+        trigger: Trigger::Eager,
     },
     ComponentSpec {
         name: "hpatchz",
@@ -22,6 +23,7 @@ static COMPONENTS: &[ComponentSpec] = &[
         extract: ExtractStrategy::Zip { inner_path: "hpatchz" },
         dest: "hpatchz",
         settings_key: SettingsKey::Hpatchz,
+        trigger: Trigger::OnDemand,
     },
     ComponentSpec {
         name: "legendary",
@@ -31,6 +33,7 @@ static COMPONENTS: &[ComponentSpec] = &[
         extract: ExtractStrategy::Raw,
         dest: "legendary",
         settings_key: SettingsKey::Legendary,
+        trigger: Trigger::OnDemand,
     },
     ComponentSpec {
         name: "gogdl",
@@ -40,6 +43,7 @@ static COMPONENTS: &[ComponentSpec] = &[
         extract: ExtractStrategy::Raw,
         dest: "gogdl",
         settings_key: SettingsKey::Gogdl,
+        trigger: Trigger::OnDemand,
     },
     ComponentSpec {
         name: "jadeite",
@@ -49,6 +53,7 @@ static COMPONENTS: &[ComponentSpec] = &[
         extract: ExtractStrategy::ZipAll { dest_subdir: "jadeite" },
         dest: "jadeite/jadeite.exe",
         settings_key: SettingsKey::Jadeite,
+        trigger: Trigger::OnDemand,
     },
     ComponentSpec {
         name: "egl-dummy",
@@ -56,5 +61,6 @@ static COMPONENTS: &[ComponentSpec] = &[
         extract: ExtractStrategy::Raw,
         dest: "EpicGamesLauncher.exe",
         settings_key: SettingsKey::EglDummy,
+        trigger: Trigger::OnDemand,
     },
 ];

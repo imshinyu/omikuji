@@ -1,7 +1,7 @@
 pub mod spec;
 pub mod specs;
 
-pub use spec::{ComponentSpec, ComponentStatus, ExtractStrategy, SettingsKey, Source};
+pub use spec::{ComponentSpec, ComponentStatus, ExtractStrategy, SettingsKey, Source, Trigger};
 
 use anyhow::{anyhow, Result};
 use std::collections::VecDeque;
@@ -42,6 +42,55 @@ pub fn check_all() -> Vec<&'static ComponentSpec> {
         .iter()
         .filter(|s| matches!(status_for(s), ComponentStatus::Missing))
         .collect()
+}
+
+pub fn eager_pending() -> Vec<&'static ComponentSpec> {
+    check_all()
+        .into_iter()
+        .filter(|s| matches!(s.trigger, Trigger::Eager))
+        .collect()
+}
+
+pub fn epic_tools() -> Vec<&'static ComponentSpec> {
+    specs::all()
+        .iter()
+        .filter(|s| matches!(s.settings_key, SettingsKey::Legendary | SettingsKey::EglDummy))
+        .collect()
+}
+
+pub fn gog_tools() -> Vec<&'static ComponentSpec> {
+    specs::all()
+        .iter()
+        .filter(|s| matches!(s.settings_key, SettingsKey::Gogdl))
+        .collect()
+}
+
+pub fn gacha_tools(publisher_slug: &str, launch_patch: &str) -> Vec<&'static ComponentSpec> {
+    let needs_hpatchz = matches!(publisher_slug, "hoyoverse" | "hypergryph");
+    let needs_jadeite = launch_patch == "jadeite";
+    specs::all()
+        .iter()
+        .filter(|s| match s.settings_key {
+            SettingsKey::Hpatchz => needs_hpatchz,
+            SettingsKey::Jadeite => needs_jadeite,
+            _ => false,
+        })
+        .collect()
+}
+
+pub fn ready(specs: &[&'static ComponentSpec]) -> bool {
+    specs
+        .iter()
+        .all(|s| matches!(status_for(s), ComponentStatus::Installed { .. }))
+}
+
+pub async fn ensure(specs: &[&'static ComponentSpec]) -> Result<()> {
+    for &spec in specs {
+        if matches!(status_for(spec), ComponentStatus::Missing) {
+            install_one(spec).await?;
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone)]
@@ -153,8 +202,8 @@ async fn install_one_inner(spec: &ComponentSpec) -> Result<String> {
                 .await
                 .map_err(|e| anyhow!("release api ({}): {}", settings_url, e))?;
 
-            eprintln!(
-                "[components] {} latest release {} has assets:\n  - {}",
+            tracing::debug!(
+                "{} latest release {} has assets:\n  - {}",
                 spec.name,
                 release.tag_name,
                 release

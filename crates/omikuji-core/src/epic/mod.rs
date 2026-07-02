@@ -95,7 +95,7 @@ impl EpicStore {
     pub async fn list_games(&mut self) -> Result<Vec<EpicGame>> {
         migrate_image_cache_once();
         let bin = legendary_bin()?;
-        eprintln!("[Epic] Fetching library via legendary list --json ...");
+        tracing::info!("fetching library via legendary list --json ...");
         let output = AsyncCommand::new(&bin)
             .arg("list")
             .arg("--json")
@@ -186,14 +186,11 @@ impl EpicStore {
         }
 
         games.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
-        eprintln!("[Epic] Got {} games from legendary.", games.len());
+        tracing::info!("got {} games from legendary", games.len());
         save_cached_library(&games);
         Ok(games)
     }
 
-    pub fn get_legendary_path() -> Option<PathBuf> {
-        crate::downloads::legendary::find_legendary()
-    }
 }
 
 fn legendary_bin() -> Result<PathBuf> {
@@ -338,8 +335,15 @@ pub fn find_installed_info(app_name: &str) -> Option<InstalledInfo> {
     let v: serde_json::Value = serde_json::from_str(&content).ok()?;
     let entry = v.get(app_name)?;
     let install_path = PathBuf::from(entry.get("install_path")?.as_str()?);
-    let exe_rel = entry.get("executable")?.as_str()?;
-    let executable = install_path.join(exe_rel);
+    let exe_rel = entry
+        .get("executable")
+        .and_then(|e| e.as_str())
+        .unwrap_or("");
+    let executable = if exe_rel.is_empty() {
+        PathBuf::new()
+    } else {
+        install_path.join(exe_rel)
+    };
     let title = entry.get("title").and_then(|t| t.as_str()).map(String::from);
     Some(InstalledInfo {
         install_path,
@@ -370,7 +374,7 @@ pub fn discover_save_path(game: &crate::library::Game) -> Result<String> {
 
     let config = crate::launch::build_launch(game)?;
 
-    eprintln!("[epic/saves] discovering save path for '{}'", app_name);
+    tracing::info!("discovering save path for '{}'", app_name);
 
     let status = std::process::Command::new(&bin)
         .arg("sync-saves")
@@ -382,7 +386,7 @@ pub fn discover_save_path(game: &crate::library::Game) -> Result<String> {
         .status()?;
 
     if !status.success() {
-        eprintln!("[epic/saves] sync-saves path discovery exited with {}", status);
+        tracing::warn!("sync-saves path discovery exited with {}", status);
     }
 
     Ok(installed_save_path(app_name).unwrap_or_default())
@@ -393,7 +397,7 @@ pub fn sync_saves_download(app_name: &str, save_path: &str) -> Result<()> {
         return Ok(());
     }
     let bin = legendary_bin()?;
-    eprintln!("[epic/saves] downloading saves for '{}' to '{}'", app_name, save_path);
+    tracing::info!("downloading saves for '{}' to '{}'", app_name, save_path);
 
     let status = std::process::Command::new(&bin)
         .arg("sync-saves")
@@ -415,7 +419,7 @@ pub fn sync_saves_upload(app_name: &str, save_path: &str) -> Result<()> {
         return Ok(());
     }
     let bin = legendary_bin()?;
-    eprintln!("[epic/saves] uploading saves for '{}' from '{}'", app_name, save_path);
+    tracing::info!("uploading saves for '{}' from '{}'", app_name, save_path);
 
     let status = std::process::Command::new(&bin)
         .arg("sync-saves")
@@ -458,7 +462,7 @@ fn migrate_image_cache_once() {
         if marker.exists() {
             return;
         }
-        eprintln!("[epic] migrating image cache to thumbnailed version");
+        tracing::info!("migrating image cache to thumbnailed version");
         if let Ok(entries) = std::fs::read_dir(&dir) {
             for e in entries.flatten() {
                 let p = e.path();
@@ -482,7 +486,7 @@ pub fn load_cached_library() -> Vec<EpicGame> {
     match serde_json::from_str::<Vec<EpicGame>>(&data) {
         Ok(v) => v,
         Err(e) => {
-            eprintln!("[epic] library cache parse failed: {}", e);
+            tracing::warn!("library cache parse failed: {}", e);
             Vec::new()
         }
     }
@@ -492,23 +496,23 @@ pub fn save_cached_library(games: &[EpicGame]) {
     let path = cached_library_path();
     if let Some(parent) = path.parent()
         && let Err(e) = std::fs::create_dir_all(parent) {
-            eprintln!("[epic] library cache dir create failed: {}", e);
+            tracing::error!("library cache dir create failed: {}", e);
             return;
         }
     let body = match serde_json::to_string(games) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("[epic] library cache serialize failed: {}", e);
+            tracing::error!("library cache serialize failed: {}", e);
             return;
         }
     };
     let tmp = path.with_extension("json.tmp");
     if let Err(e) = std::fs::write(&tmp, body) {
-        eprintln!("[epic] library cache write failed: {}", e);
+        tracing::error!("library cache write failed: {}", e);
         return;
     }
     if let Err(e) = std::fs::rename(&tmp, &path) {
-        eprintln!("[epic] library cache rename failed: {}", e);
+        tracing::error!("library cache rename failed: {}", e);
     }
 }
 
@@ -533,11 +537,11 @@ fn resolve_epic_image(app_name: &str, kind: &str, cdn_url: Option<&str>) -> Opti
             Ok(resp) if resp.status().is_success() => {
                 if let Ok(bytes) = resp.bytes().await
                     && let Err(e) = std::fs::write(&path, &bytes) {
-                        eprintln!("[epic] image cache write failed {}: {}", path.display(), e);
+                        tracing::error!("image cache write failed {}: {}", path.display(), e);
                     }
             }
-            Ok(resp) => eprintln!("[epic] image fetch {} returned {}", fetch_url, resp.status()),
-            Err(e) => eprintln!("[epic] image fetch failed {}: {}", fetch_url, e),
+            Ok(resp) => tracing::warn!("image fetch {} returned {}", fetch_url, resp.status()),
+            Err(e) => tracing::error!("image fetch failed {}: {}", fetch_url, e),
         }
     });
 

@@ -22,7 +22,9 @@ Item {
     signal importRequested(int index)
 
     function _maybeRefresh() {
-        if (epicModel && epicModel.isLoggedIn) {
+        if (!epicModel) return
+        epicModel.refresh_tools()
+        if (epicModel.isLoggedIn) {
             epicModel.refresh()
         }
     }
@@ -49,7 +51,7 @@ Item {
                 spacing: 8
 
                 Text {
-                    text: "Logged in as: " + (epicModel ? epicModel.displayName : "")
+                    text: qsTr("Logged in as: %1").arg(epicModel ? epicModel.displayName : "")
                     color: theme.textMuted
                     font.pixelSize: 13
                 }
@@ -123,7 +125,7 @@ Item {
                         anchors.margins: 4
                         height: 24
                         radius: 10
-                        color: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.9)
+                        color: theme.alpha(theme.accent, 0.9)
                         visible: epicCard.isDownloading
 
                         Text {
@@ -152,7 +154,7 @@ Item {
 
         LoadingDots {
             anchors.centerIn: parent
-            text: "Loading library"
+            text: qsTr("Loading library")
             running: loadingOverlay.visible
         }
     }
@@ -176,7 +178,7 @@ Item {
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "No games in this store"
+                text: qsTr("No games in this store")
                 color: theme.textMuted
                 font.pixelSize: 16
                 font.weight: Font.Medium
@@ -184,102 +186,16 @@ Item {
         }
     }
 
-    Item {
-        id: loginOverlay
-        anchors.fill: parent
+    StoreLoginOverlay {
         visible: epicModel && !epicModel.isLoggedIn
-        z: 100
-
-        Column {
-            anchors.centerIn: parent
-            width: 400
-            spacing: 24
-
-            SvgIcon {
-                anchors.horizontalCenter: parent.horizontalCenter
-                name: "shield_moon"
-                size: 64
-                color: theme.text
-            }
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "Login to Epic Games"
-                color: theme.text
-                font.pixelSize: 20
-                font.weight: Font.Bold
-            }
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: parent.width
-                text: "To sync your Epic library, you need to provide an authorization code from Epic's website."
-                color: theme.textMuted
-                font.pixelSize: 14
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-            }
-
-            Text {
-                id: epicLoginLink
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "Open Login Page"
-                color: linkMouseArea.containsMouse ? Qt.lighter(theme.accent, 1.1) : theme.accent
-                font.pixelSize: 14
-                font.weight: Font.DemiBold
-                Behavior on color { ColorAnimation { duration: 100 } }
-
-                MouseArea {
-                    id: linkMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Qt.openUrlExternally("https://legendary.gl/epiclogin")
-                }
-            }
-
-            M3TextField {
-                id: loginCodeField
-                width: parent.width
-                placeholder: "Paste authorization code here..."
-            }
-
-            Item {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: 140
-                height: 42
-                enabled: loginCodeField.text.length > 0
-                opacity: enabled ? 1.0 : 0.5
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 21
-                    color: theme.accent
-                    opacity: loginMouseArea.containsPress ? 0.8 : (loginMouseArea.containsMouse ? 0.95 : 0.9)
-                    scale: loginMouseArea.containsPress ? 0.97 : 1.0
-                    Behavior on opacity { NumberAnimation { duration: 100 } }
-                    Behavior on scale { NumberAnimation { duration: 100 } }
-                }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "Login"
-                    color: theme.accentOn
-                    font.pixelSize: 14
-                    font.weight: Font.DemiBold
-                }
-
-                MouseArea {
-                    id: loginMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        epicModel.login(loginCodeField.text)
-                        loginCodeField.text = ""
-                    }
-                }
-            }
-        }
+        iconName: "shield_moon"
+        title: qsTr("Login to Epic Games")
+        description: qsTr("To sync your Epic library, you need to provide an authorization code from Epic's website.")
+        loginUrl: "https://legendary.gl/epiclogin"
+        toolName: "Legendary"
+        toolReady: epicModel && epicModel.toolReady
+        toolInstalling: epicModel && epicModel.toolInstalling
+        onLoginRequested: (code) => epicModel.login(code)
+        onInstallToolRequested: epicModel.install_tools()
     }
 }

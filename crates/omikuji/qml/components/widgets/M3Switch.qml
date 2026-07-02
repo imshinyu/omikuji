@@ -15,7 +15,7 @@ Item {
         radius: height / 2
         color: root.checked ? theme.accent : "transparent"
         border.width: 2
-        border.color: root.checked ? theme.accent : Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.25)
+        border.color: root.checked ? theme.accent : theme.alpha(theme.text, 0.25)
 
         Behavior on color {
             ColorAnimation { duration: 150 }
@@ -28,13 +28,20 @@ Item {
     Rectangle {
         id: thumb
         anchors.verticalCenter: parent.verticalCenter
-        x: root.checked ? parent.width - width - 3 : 3
-        width: mouseArea.pressed ? 22 : root.checked ? 20 : 14
+        anchors.horizontalCenter: parent.horizontalCenter
+
+        readonly property int pad: 3
+        readonly property int offSize: 14
+        readonly property int onSize: 20
+        readonly property real travel: (parent.width - onSize) / 2 - pad
+
+        anchors.horizontalCenterOffset: root.checked ? travel : -travel
+        width: mouseArea.pressed ? 22 : (root.checked ? onSize : offSize)
         height: width
         radius: width / 2
-        color: root.checked ? theme.accentText : Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.45)
+        color: root.checked ? theme.accentText : theme.alpha(theme.text, 0.45)
 
-        Behavior on x {
+        Behavior on anchors.horizontalCenterOffset {
             NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
         }
         Behavior on width {

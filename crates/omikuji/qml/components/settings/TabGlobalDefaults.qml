@@ -12,6 +12,7 @@ Item {
     property var gameModel: null
 
     signal applyToExistingRequested()
+    signal manageSetsRequested(string kind)
 
     property var cfg: ({})
     property var setKeys: []
@@ -65,7 +66,7 @@ Item {
             anchors.fill: parent
             radius: width / 2
             color: iconArea.containsMouse
-                ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.10)
+                ? theme.alpha(theme.text, 0.10)
                 : "transparent"
             Behavior on color { ColorAnimation { duration: 100 } }
         }
@@ -131,14 +132,14 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    radius: 8
+                    radius: theme.radius.sm
                     color: applyMouse.containsPress
-                        ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.14)
+                        ? theme.alpha(theme.text, 0.14)
                         : (applyMouse.containsMouse
-                            ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
+                            ? theme.alpha(theme.text, 0.08)
                             : "transparent")
                     border.width: 1
-                    border.color: Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.18)
+                    border.color: theme.alpha(theme.text, 0.18)
                     Behavior on color { ColorAnimation { duration: 100 } }
                 }
 
@@ -155,7 +156,7 @@ Item {
                     }
 
                     Text {
-                        text: "Apply to existing games"
+                        text: qsTr("Apply to existing games")
                         color: theme.text
                         font.pixelSize: 12
                         font.weight: Font.Medium
@@ -183,10 +184,10 @@ Item {
                 spacing: 8
                 M3Dropdown {
                     id: versionDd
-                    label: "Version"
+                    label: qsTr("Version")
                     width: parent.width - 32
                     options: {
-                        if (!root.gameModel) return [{ label: "System default", value: "" }]
+                        if (!root.gameModel) return [{ label: qsTr("System default"), value: "" }]
                         let runners = JSON.parse(root.gameModel.list_runners())
                         return RG.groupRunners(runners, { includeSystemDefault: true })
                     }
@@ -208,8 +209,8 @@ Item {
                 spacing: 8
                 M3FileField {
                     id: prefixField
-                    label: "Prefix"
-                    placeholder: "empty = auto-create per game"
+                    label: qsTr("Prefix")
+                    placeholder: qsTr("empty = auto-create per game")
                     text: root.cfg["wine.prefix"] || ""
                     selectFolder: true
                     width: parent.width - 32
@@ -228,11 +229,11 @@ Item {
                 spacing: 8
                 M3Dropdown {
                     id: archDd
-                    label: "Architecture"
+                    label: qsTr("Architecture")
                     width: parent.width - 32
                     options: [
-                        { label: "64-bit (win64)", value: "win64" },
-                        { label: "32-bit (win32)", value: "win32" }
+                        { label: qsTr("64-bit (win64)"), value: "win64" },
+                        { label: qsTr("32-bit (win32)"), value: "win32" }
                     ]
                     currentIndex: root.cfg["wine.prefix_arch"] === "win32" ? 1 : 0
                     onSelected: (val) => root.update("wine.prefix_arch", val)
@@ -245,35 +246,35 @@ Item {
         }
 
         SettingsSection {
-            label: "Sync"
+            label: qsTr("Sync")
             icon: "sync"
             width: parent.width
 
-            ToggleRow { fieldKey: "wine.esync"; toggleLabel: "Esync" }
-            ToggleRow { fieldKey: "wine.fsync"; toggleLabel: "Fsync" }
+            ToggleRow { fieldKey: "wine.esync"; toggleLabel: qsTr("Esync") }
+            ToggleRow { fieldKey: "wine.fsync"; toggleLabel: qsTr("Fsync") }
             ToggleRow {
                 fieldKey: "wine.ntsync"
-                toggleLabel: "NTSync"
+                toggleLabel: qsTr("NTSync")
                 toggleDescription: !root.isProtonWine
-                    ? "Only applied when the default Wine version is Proton"
+                    ? qsTr("Only applied when the default Wine version is Proton")
                     : ""
                 toggleEnabled: root.isProtonWine
             }
         }
 
         SettingsSection {
-            label: "Translation Layers"
+            label: qsTr("Translation Layers")
             icon: "layers"
             width: parent.width
 
             ToggleRow { fieldKey: "wine.dxvk"; toggleLabel: "DXVK" }
             ToggleRow { fieldKey: "wine.vkd3d"; toggleLabel: "VKD3D" }
-            ToggleRow { fieldKey: "wine.d3d_extras"; toggleLabel: "D3D Extras" }
-            ToggleRow { fieldKey: "wine.dxvk_nvapi"; toggleLabel: "DXVK-NVAPI"; toggleDescription: "Nvidia DLSS support" }
+            ToggleRow { fieldKey: "wine.d3d_extras"; toggleLabel: qsTr("D3D Extras") }
+            ToggleRow { fieldKey: "wine.dxvk_nvapi"; toggleLabel: "DXVK-NVAPI"; toggleDescription: qsTr("Nvidia DLSS support") }
         }
 
         SettingsSection {
-            label: "Compatibility"
+            label: qsTr("Compatibility")
             icon: "verified"
             width: parent.width
 
@@ -283,11 +284,11 @@ Item {
         }
 
         SettingsSection {
-            label: "Display"
+            label: qsTr("Display")
             icon: "desktop_windows"
             width: parent.width
 
-            ToggleRow { fieldKey: "wine.dpi_scaling"; toggleLabel: "DPI Scaling" }
+            ToggleRow { fieldKey: "wine.dpi_scaling"; toggleLabel: qsTr("DPI Scaling") }
 
             Row {
                 width: parent.width
@@ -295,7 +296,7 @@ Item {
                 visible: root.cfg["wine.dpi_scaling"] === true
                 M3Slider {
                     id: dpiSlider
-                    label: "DPI"
+                    label: qsTr("DPI")
                     from: 72
                     to: 288
                     stepSize: 12
@@ -311,7 +312,7 @@ Item {
         }
 
         SettingsSection {
-            label: "Drivers"
+            label: qsTr("Drivers")
             icon: "headphones"
             width: parent.width
 
@@ -320,10 +321,10 @@ Item {
                 spacing: 8
                 M3Dropdown {
                     id: audioDd
-                    label: "Audio Driver"
+                    label: qsTr("Audio Driver")
                     width: parent.width - 32
                     options: [
-                        { label: "Default", value: "" },
+                        { label: qsTr("Default"), value: "" },
                         { label: "PulseAudio", value: "pulse" },
                         { label: "ALSA", value: "alsa" }
                     ]
@@ -346,10 +347,10 @@ Item {
                 spacing: 8
                 M3Dropdown {
                     id: gfxDd
-                    label: "Graphics Driver"
+                    label: qsTr("Graphics Driver")
                     width: parent.width - 32
                     options: [
-                        { label: "Default", value: "" },
+                        { label: qsTr("Default"), value: "" },
                         { label: "X11", value: "x11" },
                         { label: "Wayland", value: "wayland" }
                     ]
@@ -369,7 +370,7 @@ Item {
         }
 
         SettingsSection {
-            label: "DLL Overrides"
+            label: qsTr("DLL Overrides")
             icon: "build"
             width: parent.width
 
@@ -382,7 +383,7 @@ Item {
                     json: root.cfg["wine.dll_overrides"] || "{}"
                     keyPlaceholder: "dll_name"
                     valuePlaceholder: "n,b"
-                    addLabel: "Add override"
+                    addLabel: qsTr("Add override")
                     onChanged: (j) => root.update("wine.dll_overrides", j)
                 }
                 ResetBadge {
@@ -394,7 +395,7 @@ Item {
         }
 
         SettingsSection {
-            label: "Launch"
+            label: qsTr("Launch")
             icon: "terminal"
             width: parent.width
 
@@ -403,11 +404,11 @@ Item {
                 spacing: 8
                 M3TextField {
                     id: cmdPrefixTf
-                    label: "Command Prefix"
-                    placeholder: "prepended to every game's command"
+                    label: qsTr("Command Prefix")
+                    placeholder: qsTr("prepended to every game's command")
                     text: root.cfg["launch.command_prefix"] || ""
                     width: parent.width - 32
-                    onTextEdited: root.update("launch.command_prefix", text)
+                    onTextEdited: (t) => root.update("launch.command_prefix", t)
                 }
                 ResetBadge {
                     anchors.verticalCenter: cmdPrefixTf.verticalCenter
@@ -417,7 +418,7 @@ Item {
         }
 
         SettingsSection {
-            label: "Environment"
+            label: qsTr("Environment")
             icon: "tune"
             width: parent.width
 
@@ -430,7 +431,7 @@ Item {
                     json: root.cfg["launch.env"] || "{}"
                     keyPlaceholder: "VAR_NAME"
                     valuePlaceholder: "value"
-                    addLabel: "Add variable"
+                    addLabel: qsTr("Add variable")
                     onChanged: (j) => root.update("launch.env", j)
                 }
                 ResetBadge {
@@ -442,20 +443,68 @@ Item {
         }
 
         SettingsSection {
-            label: "Graphics"
+            label: qsTr("Environment Sets")
+            icon: "view_list"
+            width: parent.width
+
+            RowLayout {
+                width: parent.width
+
+                Text {
+                    Layout.fillWidth: true
+                    text: qsTr("Create and edit reusable env sets, applied or copied per-game.")
+                    color: theme.textSubtle
+                    font.pixelSize: 13
+                    wrapMode: Text.WordWrap
+                }
+
+                M3Button {
+                    text: qsTr("Manage")
+                    variant: "tonal"
+                    onClicked: root.manageSetsRequested("env")
+                }
+            }
+        }
+
+        SettingsSection {
+            label: qsTr("DLL Override Sets")
+            icon: "view_list"
+            width: parent.width
+
+            RowLayout {
+                width: parent.width
+
+                Text {
+                    Layout.fillWidth: true
+                    text: qsTr("Create and edit reusable DLL override sets, applied or copied per-game.")
+                    color: theme.textSubtle
+                    font.pixelSize: 13
+                    wrapMode: Text.WordWrap
+                }
+
+                M3Button {
+                    text: qsTr("Manage")
+                    variant: "tonal"
+                    onClicked: root.manageSetsRequested("dll")
+                }
+            }
+        }
+
+        SettingsSection {
+            label: qsTr("Graphics")
             icon: "fullscreen"
             width: parent.width
 
-            ToggleRow { fieldKey: "graphics.mangohud"; toggleLabel: "MangoHUD"; toggleDescription: "FPS overlay" }
+            ToggleRow { fieldKey: "graphics.mangohud"; toggleLabel: "MangoHUD"; toggleDescription: qsTr("FPS overlay") }
 
             Row {
                 width: parent.width
                 spacing: 8
                 M3Dropdown {
                     id: gpuDd
-                    label: "GPU"
+                    label: qsTr("GPU")
                     width: parent.width - 32
-                    options: root.gameModel ? JSON.parse(root.gameModel.list_gpus()).map(g => ({ label: g[0], value: g[1] })) : [{ label: "Default", value: "" }]
+                    options: root.gameModel ? JSON.parse(root.gameModel.list_gpus()).map(g => ({ label: g[0], value: g[1] })) : [{ label: qsTr("Default"), value: "" }]
                     currentIndex: {
                         let v = root.cfg["graphics.gpu"] || ""
                         let gpus = root.gameModel ? JSON.parse(root.gameModel.list_gpus()) : []
@@ -476,23 +525,23 @@ Item {
             icon: "monitor"
             width: parent.width
 
-            ToggleRow { fieldKey: "graphics.gamescope.enabled"; toggleLabel: "Enable"; toggleDescription: "run every game inside gamescope" }
+            ToggleRow { fieldKey: "graphics.gamescope.enabled"; toggleLabel: qsTr("Enable"); toggleDescription: qsTr("run every game inside gamescope") }
 
             Column {
                 width: parent.width
                 spacing: 12
                 visible: root.cfg["graphics.gamescope.enabled"] === true
 
-                ToggleRow { fieldKey: "graphics.gamescope.fullscreen"; toggleLabel: "Fullscreen" }
-                ToggleRow { fieldKey: "graphics.gamescope.borderless"; toggleLabel: "Borderless" }
-                ToggleRow { fieldKey: "graphics.gamescope.integer_scaling"; toggleLabel: "Integer Scaling" }
-                ToggleRow { fieldKey: "graphics.gamescope.hdr"; toggleLabel: "HDR" }
+                ToggleRow { fieldKey: "graphics.gamescope.fullscreen"; toggleLabel: qsTr("Fullscreen") }
+                ToggleRow { fieldKey: "graphics.gamescope.borderless"; toggleLabel: qsTr("Borderless") }
+                ToggleRow { fieldKey: "graphics.gamescope.integer_scaling"; toggleLabel: qsTr("Integer Scaling") }
+                ToggleRow { fieldKey: "graphics.gamescope.hdr"; toggleLabel: qsTr("HDR") }
 
                 Row {
                     width: parent.width
                     spacing: 8
                     SettingsRow {
-                        label: "FPS Limit"
+                        label: qsTr("FPS Limit")
                         width: parent.width - 32
                         M3SpinBox {
                             id: fpsSpinBox
@@ -500,6 +549,7 @@ Item {
                             to: 999
                             stepSize: 1
                             value: root.cfg["graphics.gamescope.fps"] || 0
+                            zeroPlaceholder: "—"
                             onValueChanged: root.update("graphics.gamescope.fps", value)
                         }
                     }
@@ -512,17 +562,39 @@ Item {
                 Row {
                     width: parent.width
                     spacing: 8
+                    SettingsRow {
+                        label: qsTr("Refresh Rate")
+                        width: parent.width - 32
+                        M3SpinBox {
+                            id: refreshRateSpinBox
+                            from: 0
+                            to: 999
+                            stepSize: 1
+                            value: root.cfg["graphics.gamescope.refresh_rate"] || 0
+                            zeroPlaceholder: "—"
+                            onValueChanged: root.update("graphics.gamescope.refresh_rate", value)
+                        }
+                    }
+                    ResetBadge {
+                        anchors.verticalCenter: parent.verticalCenter
+                        fieldKey: "graphics.gamescope.refresh_rate"
+                    }
+                }
+
+                Row {
+                    width: parent.width
+                    spacing: 8
                     M3Dropdown {
                         id: filterDd
-                        label: "Filter"
+                        label: qsTr("Filter")
                         width: parent.width - 32
                         options: [
-                            { label: "None", value: "" },
-                            { label: "Nearest", value: "nearest" },
-                            { label: "Linear", value: "linear" },
+                            { label: qsTr("None"), value: "" },
+                            { label: qsTr("Nearest"), value: "nearest" },
+                            { label: qsTr("Linear"), value: "linear" },
                             { label: "FSR", value: "fsr" },
                             { label: "NIS", value: "nis" },
-                            { label: "Pixel", value: "pixel" }
+                            { label: qsTr("Pixel"), value: "pixel" }
                         ]
                         currentIndex: {
                             let f = root.cfg["graphics.gamescope.filter"] || ""
@@ -543,7 +615,7 @@ Item {
                     visible: (root.cfg["graphics.gamescope.filter"] || "") === "fsr"
                     M3Slider {
                         id: sharpSlider
-                        label: "FSR Sharpness"
+                        label: qsTr("FSR Sharpness")
                         from: 0
                         to: 20
                         stepSize: 1
@@ -560,15 +632,15 @@ Item {
         }
 
         SettingsSection {
-            label: "Performance"
+            label: qsTr("Performance")
             icon: "speed"
             width: parent.width
 
-            ToggleRow { fieldKey: "system.gamemode"; toggleLabel: "GameMode"; toggleDescription: "Feral GameMode (gamemoderun)" }
+            ToggleRow { fieldKey: "system.gamemode"; toggleLabel: "GameMode"; toggleDescription: qsTr("Feral GameMode (gamemoderun)") }
 
             SettingsRow {
-                label: "CPU Cores"
-                description: "0 = no limit"
+                label: qsTr("CPU Cores")
+                description: qsTr("0 = no limit")
                 width: parent.width
                 contentRightMargin: 52
                 Row {
@@ -591,19 +663,19 @@ Item {
         }
 
         SettingsSection {
-            label: "Audio"
+            label: qsTr("Audio")
             icon: "volume_up"
             width: parent.width
 
-            ToggleRow { fieldKey: "system.pulse_latency"; toggleLabel: "Reduce Pulse Latency" }
+            ToggleRow { fieldKey: "system.pulse_latency"; toggleLabel: qsTr("Reduce Pulse Latency") }
         }
 
         SettingsSection {
-            label: "Power"
+            label: qsTr("Power")
             icon: "power_settings_new"
             width: parent.width
 
-            ToggleRow { fieldKey: "system.prevent_sleep"; toggleLabel: "Prevent Sleep"; toggleDescription: "inhibit screensaver and sleep" }
+            ToggleRow { fieldKey: "system.prevent_sleep"; toggleLabel: qsTr("Prevent Sleep"); toggleDescription: qsTr("inhibit screensaver and sleep") }
         }
     }
 }

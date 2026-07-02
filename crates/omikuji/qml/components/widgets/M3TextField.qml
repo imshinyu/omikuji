@@ -3,24 +3,17 @@ import QtQuick
 Item {
     id: root
 
-    property alias text: input.text
+    property string text: ""
     property string placeholder: ""
     property string label: ""
     property bool readOnly: false
 
-    signal textEdited()
+    signal textEdited(string text)
 
     implicitWidth: 200
     implicitHeight: label ? labelText.height + 4 + field.height : field.height
 
-    // guard against emitting textEdited on programmatic text changes
-    property bool _settingText: false
-
-    onTextChanged: {
-        if (!_settingText && input.activeFocus) {
-            textEdited()
-        }
-    }
+    onTextChanged: if (input.text !== text) input.text = text
 
     Text {
         id: labelText
@@ -35,24 +28,13 @@ Item {
         }
     }
 
-    Rectangle {
+    FieldSurface {
         id: field
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: 44
-        radius: 8
-        color: "transparent"
-        border.width: input.activeFocus ? 2 : 1
-        border.color: input.activeFocus ? theme.accent
-                     : Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.15)
-
-        Behavior on border.width {
-            NumberAnimation { duration: 100 }
-        }
-        Behavior on border.color {
-            ColorAnimation { duration: 100 }
-        }
+        focused: input.activeFocus
 
         TextInput {
             id: input
@@ -67,6 +49,8 @@ Item {
             selectionColor: theme.accent
             selectedTextColor: theme.accentText
             selectByMouse: true
+
+            onTextEdited: root.textEdited(input.text)
 
             Text {
                 anchors.fill: parent

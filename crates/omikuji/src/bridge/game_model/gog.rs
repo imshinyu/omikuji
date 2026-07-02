@@ -33,42 +33,11 @@ impl super::qobject::GameModel {
         let rid = request_id.to_string();
         let app_name_str = app_name.to_string();
 
-        std::thread::spawn(move || {
-            let rt = match tokio::runtime::Runtime::new() {
-                Ok(r) => r,
-                Err(e) => {
-                    eprintln!("[gog_size] failed to create tokio runtime: {}", e);
-                    omikuji_core::install_sizes::push(omikuji_core::install_sizes::InstallSizeResult {
-                        request_id: rid,
-                        download_bytes: 0,
-                        install_bytes: 0,
-                        error: format!("tokio runtime: {}", e),
-                    });
-                    return;
-                }
-            };
-            let result = rt.block_on(async {
-                omikuji_core::gog::fetch_install_size(&app_name_str).await
-            });
-
-            let pushed = match result {
-                Ok(size) => omikuji_core::install_sizes::InstallSizeResult {
-                    request_id: rid,
-                    download_bytes: size.download_bytes,
-                    install_bytes: size.install_bytes,
-                    error: String::new(),
-                },
-                Err(e) => {
-                    eprintln!("[gog_size] error: {}", e);
-                    omikuji_core::install_sizes::InstallSizeResult {
-                        request_id: rid,
-                        download_bytes: 0,
-                        install_bytes: 0,
-                        error: format!("{}", e),
-                    }
-                }
-            };
-            omikuji_core::install_sizes::push(pushed);
+        omikuji_core::install_sizes::spawn_fetch(rid, move || async move {
+            omikuji_core::gog::fetch_install_size(&app_name_str)
+                .await
+                .map(|s| (s.download_bytes, s.install_bytes))
+                .map_err(|e| e.to_string())
         });
     }
 
@@ -86,12 +55,12 @@ impl super::qobject::GameModel {
         let app_name_s = app_name.to_string();
 
         if self.library.game.iter().any(|g| g.metadata.id == app_name_s) {
-            eprintln!("[gog_import] already in library: {}", app_name_s);
+            tracing::info!("already in library: {}", app_name_s);
             return QString::from(&app_name_s);
         }
 
         let Some(info) = omikuji_core::gog::find_installed_info(&app_name_s) else {
-            eprintln!("[gog_import] no install info for {} — leaving library alone", app_name_s);
+            tracing::warn!("no install info for {} - leaving library alone", app_name_s);
             return QString::default();
         };
 
@@ -141,26 +110,16 @@ impl super::qobject::GameModel {
         let row = self.library.game.len() as i32;
 
         if let Err(e) = Library::save_game_static(&game) {
-            eprintln!("[gog_import] failed to save: {}", e);
+            tracing::error!("failed to save: {}", e);
             return QString::default();
         }
 
         let id_for_media = game.metadata.id.clone();
         let name_for_media = game.metadata.name.clone();
         let qt_thread = self.as_mut().qt_thread();
+        let on_asset = super::media_changed_notifier(qt_thread, id_for_media.clone());
         std::thread::spawn(move || {
-            let id_for_refresh = id_for_media.clone();
-            media::fetch_media_blocking_with(&id_for_media, &name_for_media, |_| {
-                let id_inner = id_for_refresh.clone();
-                let _ = qt_thread.queue(move |mut obj: Pin<&mut super::qobject::GameModel>| {
-                    let Some(row) = obj.library.game.iter().position(|g| g.metadata.id == id_inner) else {
-                        return;
-                    };
-                    let idx = obj.as_ref().model_index(row as i32, 0, &QModelIndex::default());
-                    let roles = cxx_qt_lib::QList::<i32>::default();
-                    obj.as_mut().data_changed(&idx, &idx, &roles);
-                });
-            });
+            media::fetch_media_blocking_with(&id_for_media, &name_for_media, on_asset);
         });
 
         self.as_mut().begin_insert_rows(&QModelIndex::default(), row, row);
@@ -169,7 +128,7 @@ impl super::qobject::GameModel {
         self.as_mut().set_count(count);
         self.as_mut().end_insert_rows();
 
-        eprintln!("[gog_import] imported '{}' as id '{}'", title, app_name_s);
+        tracing::info!("imported '{}' as id '{}'", title, app_name_s);
         QString::from(&app_name_s)
     }
 
@@ -182,19 +141,25 @@ impl super::qobject::GameModel {
             .find(|g| g.metadata.id == id)
             .cloned()
         else {
-            eprintln!("[gog_uninstall] game '{}' not found", id);
+            tracing::error!("game '{}' not found", id);
             return false;
         };
         if game.source.kind != "gog" || game.source.app_id.is_empty() {
-            eprintln!("[gog_uninstall] game '{}' is not a gog entry", id);
+            tracing::error!("game '{}' is not a gog entry", id);
             return false;
         }
 
         let app_id = game.source.app_id.clone();
         let name = game.metadata.name.clone();
         let game_id_owned = game.metadata.id.clone();
-        let install_path = omikuji_core::gog::find_installed_info(&app_id)
-            .map(|i| i.install_path.clone());
+        let installed = omikuji_core::gog::find_installed_info(&app_id);
+        let wrapper_name = omikuji_core::gog::install_wrapper_dir_name(
+            installed
+                .as_ref()
+                .and_then(|i| i.title.as_deref())
+                .unwrap_or(&name),
+        );
+        let install_path = installed.map(|i| i.install_path);
 
         std::thread::spawn(move || {
             let entries_to_cancel: Vec<String> = omikuji_core::downloads::manager()
@@ -209,8 +174,8 @@ impl super::qobject::GameModel {
 
             omikuji_core::notifications::info(&name, "Removing GOG game...");
             if let Some(path) = install_path
-                && path.exists()
-                    && let Err(e) = std::fs::remove_dir_all(&path) {
+                && path.exists() {
+                    if let Err(e) = std::fs::remove_dir_all(&path) {
                         omikuji_core::process::notify_error(
                             omikuji_core::process::ErrorNotification {
                                 game_id: game_id_owned.clone(),
@@ -221,8 +186,14 @@ impl super::qobject::GameModel {
                         );
                         return;
                     }
+                    if !wrapper_name.is_empty()
+                        && let Some(parent) = path.parent()
+                            && parent.file_name().is_some_and(|n| n.to_string_lossy() == wrapper_name) {
+                                let _ = std::fs::remove_dir(parent);
+                            }
+                }
             if let Err(e) = omikuji_core::gog::remove_install(&app_id) {
-                eprintln!("[gog_uninstall] registry remove failed: {}", e);
+                tracing::error!("registry remove failed: {}", e);
             }
             if let Ok(mut lib) = omikuji_core::library::Library::load() {
                 let _ = lib.remove_game(&game_id_owned);

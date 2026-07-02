@@ -28,7 +28,7 @@ Item {
     // z:10 so it sits above the CardGrid's empty Flow during load
     Text {
         anchors.centerIn: parent
-        text: loading ? "Loading Steam games..." : "No Steam games found"
+        text: loading ? qsTr("Loading Steam games...") : qsTr("No Steam games found")
         color: theme.textFaint
         font.pixelSize: 13
         visible: loading || steamGames.length === 0
@@ -64,7 +64,7 @@ Item {
             leftIconName: "steam"
             leftIconSize: 20
             selected: modelData.imported
-            selectedBgTint: Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.05)
+            selectedBgTint: theme.alpha(theme.accent, 0.05)
             clickable: false
             cardVisible: root.searchText === ""
                 || (modelData.name || "").toLowerCase().includes(root.searchText.toLowerCase())

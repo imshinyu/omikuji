@@ -73,7 +73,7 @@ impl GogStore {
         }
 
         if let Err(e) = self.refresh_user_data().await {
-            eprintln!("[GOG] refresh_user_data after login failed: {}", e);
+            tracing::error!("refresh_user_data after login failed: {}", e);
         }
         if self.display_name.is_empty() {
             self.display_name = "GOG User".to_string();
@@ -86,7 +86,7 @@ impl GogStore {
     // account id, which can differ from the galaxy id the token binds to. (ahhaahahah?!!??!!?)
     pub async fn refresh_user_data(&mut self) -> Result<()> {
         if !self.is_logged_in() {
-            eprintln!("[GOG] refresh_user_data: not logged in (no auth file)");
+            tracing::warn!("refresh_user_data: not logged in (no auth file)");
             return Ok(());
         }
         let creds = read_credentials().await?;
@@ -112,8 +112,8 @@ impl GogStore {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
-            eprintln!(
-                "[GOG] userData.json returned {} — body (first 300 chars): {}",
+            tracing::error!(
+                "userData.json returned {} - body (first 300 chars): {}",
                 status,
                 body.chars().take(300).collect::<String>()
             );
@@ -136,13 +136,13 @@ impl GogStore {
         }
         // deliberately do NOT overwrite self.user_id with userdata_id
         if !userdata_id.is_empty() && userdata_id != self.user_id {
-            eprintln!(
-                "[GOG] userData.json userId={} differs from token user_id={} — using token id for galaxy-library",
+            tracing::warn!(
+                "userData.json userId={} differs from token user_id={} - using token id for galaxy-library",
                 userdata_id, self.user_id
             );
         }
-        eprintln!(
-            "[GOG] refresh_user_data ok — username='{}' token_user_id='{}'",
+        tracing::info!(
+            "refresh_user_data ok - username='{}' token_user_id='{}'",
             self.display_name, self.user_id
         );
         save_user_data(&self.display_name, &self.user_id);
@@ -155,15 +155,15 @@ impl GogStore {
             return Ok(Vec::new());
         }
         if let Err(e) = self.refresh_user_data().await {
-            eprintln!("[GOG] list_games: refresh_user_data failed: {}", e);
+            tracing::error!("list_games: refresh_user_data failed: {}", e);
         }
         if self.user_id.is_empty() {
             anyhow::bail!("user id unresolved — try logging in again (userData.json call failed)");
         }
 
         let creds = read_credentials().await?;
-        eprintln!(
-            "[GOG] hitting galaxy-library for user_id={} (token len {})",
+        tracing::debug!(
+            "hitting galaxy-library for user_id={} (token len {})",
             self.user_id,
             creds.access_token.len()
         );
@@ -191,8 +191,8 @@ impl GogStore {
             let status = resp.status();
             if !status.is_success() {
                 let body = resp.text().await.unwrap_or_default();
-                eprintln!(
-                    "[GOG] galaxy-library returned {} — body (first 300): {}",
+                tracing::error!(
+                    "galaxy-library returned {} - body (first 300): {}",
                     status,
                     body.chars().take(300).collect::<String>()
                 );
@@ -234,7 +234,7 @@ impl GogStore {
                             });
                         }
                         Err(e) => {
-                            eprintln!("[gog] skipping {}: {}", external_id, e);
+                            tracing::warn!("skipping {}: {}", external_id, e);
                         }
                     }
                 }
@@ -261,13 +261,9 @@ impl GogStore {
         }
 
         games.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
-        eprintln!("[GOG] Got {} games from library.", games.len());
+        tracing::info!("got {} games from library", games.len());
         save_cached_library(&games);
         Ok(games)
-    }
-
-    pub fn get_gogdl_path() -> Option<PathBuf> {
-        find_gogdl()
     }
 
     pub fn logout(&mut self) {
@@ -415,6 +411,16 @@ pub fn remove_install(app_name: &str) -> Result<()> {
     Ok(())
 }
 
+// must stay in sync with the folder-name sanitize in GogInstallDialog.qml
+pub fn install_wrapper_dir_name(title: &str) -> String {
+    title
+        .chars()
+        .filter(|c| !"\\/:*?\"<>|".contains(*c))
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct InstallSize {
     pub download_bytes: u64,
@@ -453,21 +459,18 @@ pub async fn fetch_install_size(app_name: &str) -> Result<InstallSize> {
             .and_then(|x| x.as_str())
             .map(|s| s.to_string());
         if let Some(build_id) = latest_build {
-            eprintln!(
-                "[gog_size] no manifest in default response — retrying with --build {}",
-                build_id
-            );
+            tracing::debug!("no manifest in default response - retrying with --build {}", build_id);
             match fetch_install_size_pinned(app_name, &build_id).await {
                 Ok(s) => return Ok(s),
                 Err(e) => {
-                    eprintln!("[gog_size] --build retry also failed: {}", e);
+                    tracing::error!("--build retry also failed: {}", e);
                 }
             }
         }
 
         let dump = serde_json::to_string_pretty(&v).unwrap_or_default();
-        eprintln!(
-            "[gog_size] no manifest sizes for {} — full gogdl info response:\n{}",
+        tracing::warn!(
+            "no manifest sizes for {} - full gogdl info response:\n{}",
             app_name, dump
         );
     }
@@ -683,7 +686,7 @@ pub async fn read_credentials() -> Result<GogCredentials> {
         .await?;
     if !output.status.success() {
         let err = String::from_utf8_lossy(&output.stderr);
-        eprintln!("[GOG] gogdl auth stderr: {}", err.trim());
+        tracing::warn!("gogdl auth stderr: {}", err.trim());
     }
     let raw = String::from_utf8_lossy(&output.stdout);
     let trimmed = raw.trim();
@@ -714,15 +717,15 @@ pub async fn read_credentials() -> Result<GogCredentials> {
                 return Ok(creds);
             }
         }
-        eprintln!(
-            "[GOG] couldn't parse auth file at {} (first 200 chars): {}",
+        tracing::error!(
+            "couldn't parse auth file at {} (first 200 chars): {}",
             auth.display(),
             body.chars().take(200).collect::<String>()
         );
     }
 
-    eprintln!(
-        "[GOG] gogdl auth stdout (first 500 chars): {}",
+    tracing::error!(
+        "gogdl auth stdout (first 500 chars): {}",
         trimmed.chars().take(500).collect::<String>()
     );
     anyhow::bail!("couldn't read gogdl credentials from stdout or {}", auth.display())
@@ -818,7 +821,7 @@ pub fn wipe_gogdl_manifest_for(app_id: &str) {
                 } else {
                     let _ = std::fs::remove_file(&p);
                 }
-                eprintln!("[gog] cleared stale gogdl state: {}", p.display());
+                tracing::debug!("cleared stale gogdl state: {}", p.display());
                 continue;
             }
             if md.is_dir() {
@@ -957,7 +960,7 @@ pub fn load_cached_library() -> Vec<GogGame> {
     match serde_json::from_str::<Vec<GogGame>>(&data) {
         Ok(v) => v,
         Err(e) => {
-            eprintln!("[gog] library cache parse failed: {}", e);
+            tracing::error!("library cache parse failed: {}", e);
             Vec::new()
         }
     }
@@ -967,23 +970,23 @@ pub fn save_cached_library(games: &[GogGame]) {
     let path = cached_library_path();
     if let Some(parent) = path.parent()
         && let Err(e) = std::fs::create_dir_all(parent) {
-            eprintln!("[gog] library cache dir create failed: {}", e);
+            tracing::error!("library cache dir create failed: {}", e);
             return;
         }
     let body = match serde_json::to_string(games) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("[gog] library cache serialize failed: {}", e);
+            tracing::error!("library cache serialize failed: {}", e);
             return;
         }
     };
     let tmp = path.with_extension("json.tmp");
     if let Err(e) = std::fs::write(&tmp, body) {
-        eprintln!("[gog] library cache write failed: {}", e);
+        tracing::error!("library cache write failed: {}", e);
         return;
     }
     if let Err(e) = std::fs::rename(&tmp, &path) {
-        eprintln!("[gog] library cache rename failed: {}", e);
+        tracing::error!("library cache rename failed: {}", e);
     }
 }
 
@@ -1017,11 +1020,11 @@ fn resolve_gog_image(app_name: &str, kind: &str, cdn_url: Option<&str>) -> Optio
             Ok(resp) if resp.status().is_success() => {
                 if let Ok(bytes) = resp.bytes().await
                     && let Err(e) = std::fs::write(&path, &bytes) {
-                        eprintln!("[gog] image cache write failed {}: {}", path.display(), e);
+                        tracing::error!("image cache write failed {}: {}", path.display(), e);
                     }
             }
-            Ok(resp) => eprintln!("[gog] image fetch {} returned {}", fetch_url, resp.status()),
-            Err(e) => eprintln!("[gog] image fetch failed {}: {}", fetch_url, e),
+            Ok(resp) => tracing::warn!("image fetch {} returned {}", fetch_url, resp.status()),
+            Err(e) => tracing::error!("image fetch failed {}: {}", fetch_url, e),
         }
         let mut guard = INFLIGHT.lock().unwrap();
         guard.retain(|k| k != &key);

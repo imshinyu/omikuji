@@ -15,11 +15,11 @@ Item {
     signal manageRequested(string category, string source, string kind)
 
     readonly property var runtimeMeta: ({
-        "umu-run":   { label: "umu-run",    desc: "Launcher wrapper needed for Proton." },
-        "hpatchz":   { label: "HPatchZ",    desc: "Binary patch tool. Required for gacha diff updates." },
-        "legendary": { label: "Legendary",  desc: "Epic Games CLI binary." },
-        "jadeite":   { label: "Jadeite",    desc: "Compatibility shim for Honkai: Star Rail." },
-        "egl-dummy": { label: "EGL dummy",  desc: "Dummy EpicGamesLauncher.exe needed for Epic Games imports." }
+        "umu-run":   { label: "umu-run",    desc: qsTr("Launcher wrapper needed for Proton.") },
+        "hpatchz":   { label: "HPatchZ",    desc: qsTr("Binary patch tool. Required for gacha diff updates.") },
+        "legendary": { label: "Legendary",  desc: qsTr("Epic Games CLI binary.") },
+        "jadeite":   { label: "Jadeite",    desc: qsTr("Compatibility shim for Honkai: Star Rail.") },
+        "egl-dummy": { label: "EGL dummy",  desc: qsTr("Dummy EpicGamesLauncher.exe needed for Epic Games imports.") }
     })
 
     property var runtimeStatuses: ({})
@@ -128,7 +128,7 @@ Item {
         spacing: 20
 
         SettingsSection {
-            label: "Translation Layers"
+            label: qsTr("Translation Layers")
             width: parent.width
 
             Column {
@@ -158,7 +158,7 @@ Item {
 
                 Text {
                     visible: root.dllPacks.length === 0
-                    text: "No DLL packs configured. Add [[dll_packs]] entries to settings.toml."
+                    text: qsTr("No DLL packs configured. Add [[dll_packs]] entries to settings.toml.")
                     color: theme.textSubtle
                     font.pixelSize: 12
                     width: parent.width
@@ -168,7 +168,7 @@ Item {
         }
 
         SettingsSection {
-            label: "Runners"
+            label: qsTr("Runners")
             width: parent.width
 
             Column {
@@ -191,7 +191,7 @@ Item {
 
                 Text {
                     visible: root.runners.length === 0
-                    text: "No runners configured. Add [[runners]] entries to settings.toml."
+                    text: qsTr("No runners configured. Add [[runners]] entries to settings.toml.")
                     color: theme.textSubtle
                     font.pixelSize: 12
                     width: parent.width
@@ -201,11 +201,11 @@ Item {
         }
 
         SettingsSection {
-            label: "Runtime"
+            label: qsTr("Runtime")
             width: parent.width
 
             Text {
-                text: "External tools omikuji downloads on first run. Reinstall if a version is stale or corrupted."
+                text: qsTr("External tools omikuji downloads on first run. Reinstall if a version is stale or corrupted.")
                 color: theme.textSubtle
                 font.pixelSize: 12
                 width: parent.width
@@ -232,12 +232,10 @@ Item {
                         width: parent.width
                         height: 56
 
-                        Rectangle {
+                        Squircle {
                             anchors.fill: parent
-                            color: theme.cardBg
-                            radius: 10
-                            border.width: 1
-                            border.color: theme.surfaceBorder
+                            radius: theme.radius.md
+                            fillColor: theme.cardBg
                         }
 
                         Row {
@@ -284,7 +282,7 @@ Item {
                                     Text {
                                         visible: busy
                                         text: status.status === "downloading"
-                                            ? "downloading " + Math.round(status.percent) + "%"
+                                            ? qsTr("downloading %1%").arg(Math.round(status.percent))
                                             : status.status
                                         color: theme.accent
                                         font.pixelSize: 12
@@ -302,68 +300,22 @@ Item {
                             }
                         }
 
-                        Rectangle {
+                        M3Button {
                             id: actionBtn
                             anchors.right: parent.right
                             anchors.rightMargin: 12
                             anchors.verticalCenter: parent.verticalCenter
-                            // hug the label and animate width so Install to Working to Reinstall reads as intentional
-                            width: btnLabel.implicitWidth + 28
-                            height: 32
-                            radius: 16
-                            Behavior on width {
-                                NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-                            }
 
-                            readonly property string kind: busy ? "muted"
-                                : (componentsBridge && componentsBridge.inProgress) ? "muted"
-                                : status.status === "completed" ? "ghost"
-                                : status.status === "failed" ? "danger"
-                                : "primary"
+                            readonly property bool busyState: busy || (componentsBridge && componentsBridge.inProgress)
 
-                            color: {
-                                if (kind === "muted") return "transparent"
-                                if (kind === "ghost") return btnArea.containsMouse
-                                    ? Qt.rgba(theme.text.r, theme.text.g, theme.text.b, 0.08)
-                                    : "transparent"
-                                if (kind === "primary") return btnArea.containsMouse
-                                    ? Qt.darker(theme.accent, 1.1)
-                                    : theme.accent
-                                if (kind === "danger") return btnArea.containsMouse
-                                    ? Qt.darker(theme.error, 1.1)
-                                    : theme.error
-                                return "transparent"
-                            }
-                            border.width: kind === "ghost" || kind === "muted" ? 1 : 0
-                            border.color: kind === "muted" ? theme.textFaint : theme.surfaceBorder
-
-                            Behavior on color { ColorAnimation { duration: 120 } }
-
-                            Text {
-                                id: btnLabel
-                                anchors.centerIn: parent
-                                text: actionBtn.kind === "ghost" ? "Reinstall"
-                                    : actionBtn.kind === "danger" ? "Retry"
-                                    : actionBtn.kind === "muted" ? "Working…"
-                                    : "Install"
-                                color: actionBtn.kind === "primary" ? theme.accentOn
-                                    : actionBtn.kind === "danger" ? "white"
-                                    : actionBtn.kind === "muted" ? theme.textFaint
-                                    : theme.text
-                                font.pixelSize: 13
-                                font.weight: Font.Medium
-                            }
-
-                            MouseArea {
-                                id: btnArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: actionBtn.kind === "muted" ? Qt.ArrowCursor : Qt.PointingHandCursor
-                                onClicked: {
-                                    if (actionBtn.kind === "muted") return
-                                    componentsBridge.reinstallComponent(modelData)
-                                }
-                            }
+                            text: busyState ? qsTr("Working…")
+                                : status.status === "completed" ? qsTr("Reinstall")
+                                : status.status === "failed" ? qsTr("Retry")
+                                : qsTr("Install")
+                            variant: (busyState || status.status === "completed") ? "tonal" : "filled"
+                            danger: status.status === "failed" && !busyState
+                            enabled: !busyState
+                            onClicked: componentsBridge.reinstallComponent(modelData)
                         }
                     }
                 }

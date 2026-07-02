@@ -39,10 +39,7 @@ pub async fn ensure_all_fetched() -> Result<u32> {
     for entry in &index.gachas {
         match fetch_one(&client, &base, &entry.publisher, &entry.game).await {
             Ok(()) => written += 1,
-            Err(e) => eprintln!(
-                "[gachas/remote] {}/{}: {}",
-                entry.publisher, entry.game, e
-            ),
+            Err(e) => tracing::error!("{}/{}: {}", entry.publisher, entry.game, e),
         }
     }
     Ok(written)

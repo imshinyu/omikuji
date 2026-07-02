@@ -1,0 +1,17 @@
+[book]
+title = "Omikuji"
+description = "A universal, native game launcher for Linux."
+authors = ["reakjra"]
+language = "en"
+src = "src"
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+additional-css = ["custom.css"]
+git-repository-url = "https://github.com/reakjra/omikuji"
+edit-url-template = "https://github.com/reakjra/omikuji/edit/master/docs/site/src/{path}"
+
+[output.html.fold]
+enable = true
+level = 1

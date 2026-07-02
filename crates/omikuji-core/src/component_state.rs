@@ -35,19 +35,11 @@ fn load_from_disk() -> ComponentState {
     }
     match std::fs::read_to_string(&path) {
         Ok(body) => toml::from_str::<ComponentState>(&body).unwrap_or_else(|e| {
-            eprintln!(
-                "[component_state] couldn't parse {}: {} — using defaults",
-                path.display(),
-                e
-            );
+            tracing::warn!("couldn't parse {}: {} - using defaults", path.display(), e);
             ComponentState::default()
         }),
         Err(e) => {
-            eprintln!(
-                "[component_state] couldn't read {}: {} — using defaults",
-                path.display(),
-                e
-            );
+            tracing::warn!("couldn't read {}: {} - using defaults", path.display(), e);
             ComponentState::default()
         }
     }

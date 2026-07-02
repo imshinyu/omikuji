@@ -3,7 +3,14 @@
 A Qt/QML based games/apps launcher for Linux. Built 'cause I couldn't bear having 3 different launchers for just games.
 
 Manages wine/proton runners, wineprefixes, DXVK/VKD3D, and game launching. Imports from Steam, installs Epic, GOG and Waifu machine slots games directly. 
-Backend is Rust, frontend is Qt/QML via [cxx-qt](https://github.com/KDAB/cxx-qt).
+
+## Read the docs! 
+
+> [!IMPORTANT]
+> You feel lost, want more infos or just waste time? Read the [Docs](https://reakjra.github.io/omikuji).
+
+- [Configuration](https://reakjra.github.io/omikuji/user/configuration.html): `settings.toml`, custom runners, DLL packs
+- [Nix Home Manager options](docs/hm-module.md): Every options available in the Home Manager module
 
 ## Screenshots
 
@@ -15,41 +22,45 @@ Backend is Rust, frontend is Qt/QML via [cxx-qt](https://github.com/KDAB/cxx-qt)
 | Gacha Store                                      | Gacha Install Dialog                                      |
 | <img src="docs/screenshots/gacha_store.png"/>    | <img src="docs/screenshots/gacha_store_download.png"/>    |
 | Interface Settings                               | Components Settings                                       |
-| <img src="docs/screenshots/settings_page_interface.png"/> | <img src="docs/screenshots/settings_page_componenets.png"/> |
+| <img src="docs/screenshots/settings_page_interface.png"/> | <img src="docs/screenshots/settings_page_components.png"/> |
 | Console Mode (Aurora background)                 | Console Mode (Sakura background)   
 | <img src="docs/screenshots/console_mode_1.png"/> | <img src="docs/screenshots/console_mode_2.png"/> |
 
 
 
-## What it does
+## Installation / Building
 
-- **Game library** one TOML per game, shareable, git-friendly.
-- **Wine / Proton**: auto-detects Steam-installed Proton, has its own fetcher in the settings.
-- **Translation layers**: DXVK, VKD3D, DXVK-NVAPI. Auto-fetched from upstream releases.
-- **Stores**: import from Steam (locally), install Epic games (via legendary), GOG (via gogdl), HoYoverse / Kuro / Gryphline gachas (direct CDN + delta patch handlers).
-- **Wrapping chain**: gamescope, mangohud, gamemode, taskset, custom prefixes.
-- **Wine tools**: winecfg, winetricks, regedit, cmd, winefile, run-exe, kill-wineserver.
-- **Art fetch**: SteamGridDB for banners, covers, icons.
-- **Playtime**: tracked per-game, persisted on exit. Steam playtime via your own Web API key.
-- **CLI**: `omikuji run <slug_or_id>` launches games headlessly. Used for `.desktop` shortcuts.
+#### Arch (malware repository aka AUR)
 
-## Status
+```sh
+yay -S omikuji-git
+# or 
+yay -S omikuji-bin
+```
 
-Usable. Daily-driven by me. Still needs some UI polish and decisions that i'm too saturated to take yet.
+#### Fedora COPR (43 - 44)
 
-QML side held up with tape and prays🙏
+```sh
+sudo dnf copr enable reakjra/omikuji
+sudo dnf install omikuji
+```
+> or manually install with the `.rpm` in the [releases page](https://github.com/reakjra/omikuji/releases).
 
-Not implemented/WIP/Planning to add: 
-- i18n/qsTr (ehahahshhaha)
-- Amazon Games
-- make gacha stuff optional (not automatically fetched on startup)
-- more CLI commands which i cant be bothered with yet
-- Genuinely fix some UI stuff (e.g, settings page edit/add games tabs. I dont like them there ngl)
-- Components tab in the settings page is a bit ass and im not sure i like the green texts/balls
+#### Flatpak 
 
-## Building
+Until I bother with reading the flathub documentation to submit, you can manually install it yourself:
 
-Requires Rust (2024 edition), Qt 6.7+, plus `pkgconf` and `cmake`. Or skip all this and grab the AUR build below.
+Grab the `.flatpak` file in the [releases page](https://github.com/reakjra/omikuji/releases)
+
+Install the application by running: 
+
+```sh
+flatpak install omikuji.flatpak
+```
+
+#### Manual building
+
+Requires Rust (2024 edition), Qt 6.7+, plus `pkgconf` and `cmake`.
 
 ```sh
 git clone https://github.com/reakjra/omikuji.git
@@ -63,19 +74,14 @@ Run it straight from the build dir:
 ./target/release/omikuji
 ```
 
-Or go with the AUR:
 
-```sh
-yay -S omikuji-git
-```
-
-
-You can also install/build it with Nix:
+#### Nix:
 
 <details>
 <summary><b>Click to expand Nix related stuff</b></summary>
 
 > For any issues related to the flake, mention @claymorwan in your issue.
+</br>
 
 If you're on NixOS and using flakes, add the flake to your inputs:
 ```nix
@@ -159,29 +165,55 @@ nix develop
 
 </details>
 
-Runtime tools (umu-run, hpatchz, legendary, gogdl, jadeite, EGL dummy) are auto-fetched on first run.
+## What does it do?!
+
+- **Game library** one TOML per game, shareable, git-friendly.
+- **Wine / Proton**: auto-detects Steam-installed Proton, has its own fetcher in the settings.
+- **Translation layers**: DXVK, VKD3D, DXVK-NVAPI. Auto-fetched from upstream releases.
+- **Stores**: import from Steam (locally), install Epic games (via legendary), GOG (via gogdl), HoYoverse / Kuro / Gryphline gachas (direct downloads and updates).
+- **Wine tools**: winecfg, winetricks, regedit, cmd, winefile, run-exe, kill-wineserver.
+- **Art fetch**: SteamGridDB for banners, covers, icons.
+
+#### CLI commands
+
+| Command   | args |  Description       										   					 |
+| ------ | ---------- | ---------- 												   	 				 |
+| `omikuji`         |   `path/to/.exe`     |  Opens a modal for ephemeral runs.			         	 |
+| `omikuji run`     |     `slug_or_id`     |  runs a game from the library headless.			     | 
+| `omikuji console` |     `None`  	       |  runs Omikuji in console mode.			     			 | 
+
+
+## Status/Infos
+
+Runtime tools are lazy fetched dont really worry about it. If it's something particular is missing check `settings > components` page at the bottom.
 
 Data lives in `~/.local/share/omikuji/`.
 
-If someone willingly wants to take charge for `.deb` / `.rpm` / etc. packaging im fine with it
+Usable. Daily-driven by me. Its pretty pls tell me its pretty
 
-## Documentation
-- [Configuration](docs/configuration.md): `settings.toml`, custom runners, DLL packs
-- [Nix Home Manager options](docs/hm-module.md): Every options available in the Home Manager module
+
+QML side held up with tape and prays🙏 
+
+
+Not implemented/WIP/Planning to add: 
+- Amazon Games (Nile)
+
 
 ## Contributing
 
 Bug reports (especially these), requests and PRs welcome. A few notes:
 
+- For translations contributions, check the [translation guide](https://reakjra.github.io/omikuji/dev/translations.html)
+- To get debug logs, in your terminal: RUST_LOG=debug omikuji 
 - Open an issue before a big change so we can talk about it first.
 - Match the existing code style. (literally just make it better than mine)
 - Keep PRs focused. One thing at a time.
-- This is a solo project, so no back-compat shims for old behavior. If something needs to change, it changes (praying it doesn't break anything).
 - Be thorough in explaining a issue/request/PR, im dummy
 - Whatever other 20 reasons people usually list in their contributing section
-- Might still have no proper app-wise stacktraces when releasing it (just a note if for x reasons the app crashes)
 
 - assets repo: [omikuji-assets](https://github.com/reakjra/omikuji-assets)
+
+> See also: [Dev Infos](https://reakjra.github.io/omikuji/dev/overview.html)
 
 ## License
 
@@ -191,9 +223,9 @@ GPL-3.0-or-later. See [LICENSE](LICENSE).
 
 Heavy debt to the prior art:
 
+- [cxx-qt](https://github.com/KDAB/cxx-qt): lovely super-glue.
 - [Lutris](https://github.com/lutris/lutris): the wrapping chain, env setup, runner detection logic, and a lot of wine know-how is ported from here.
 - [Heroic Games Launcher](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher): Epic and GOG integration patterns. Also the source of the bundled `gogdl` binary.
 - [AAG](https://github.com/an-anime-team/): gacha launcher reference. HoYo Sophon, CDN methods all from them <3. 
 
 Bundled icon set: [Material Symbols](https://github.com/google/material-design-icons) (Apache-2.0).
-

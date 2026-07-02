@@ -178,16 +178,7 @@ impl Default for DownloadModelRust {
         let count = entries.len() as i32;
         let active_count = entries
             .iter()
-            .filter(|e| {
-                matches!(
-                    e.status,
-                    DownloadStatus::Queued
-                        | DownloadStatus::Starting
-                        | DownloadStatus::Downloading
-                        | DownloadStatus::Extracting
-                        | DownloadStatus::Paused
-                )
-            })
+            .filter(|e| e.status.is_active())
             .count() as i32;
         let completed_count = entries
             .iter()
@@ -217,15 +208,7 @@ fn error_text(s: &DownloadStatus) -> String {
 fn recompute_active(entries: &[DownloadEntry]) -> i32 {
     entries
         .iter()
-        .filter(|e| {
-            matches!(
-                e.status,
-                DownloadStatus::Queued
-                    | DownloadStatus::Starting
-                    | DownloadStatus::Downloading
-                    | DownloadStatus::Paused
-            )
-        })
+        .filter(|e| e.status.is_active())
         .count() as i32
 }
 
@@ -321,7 +304,7 @@ impl qobject::DownloadModel {
 
         let mid = manifest_id.to_string();
         let Some(manifest) = gm::find(&mid) else {
-            eprintln!("[enqueue_gacha] manifest '{}' not found", mid);
+            tracing::error!("manifest '{}' not found", mid);
             return QString::default();
         };
         let eid = edition_id.to_string();
@@ -346,7 +329,7 @@ impl qobject::DownloadModel {
         ) {
             Ok(r) => r,
             Err(e) => {
-                eprintln!("[enqueue_gacha] build request failed: {}", e);
+                tracing::error!("build request failed: {}", e);
                 return QString::default();
             }
         };
@@ -495,13 +478,7 @@ impl qobject::DownloadModel {
     fn source_state_json(&self, source: &str) -> QString {
         let mut map = serde_json::Map::new();
         for e in self.entries.iter().filter(|e| e.source == source) {
-            if matches!(
-                e.status,
-                DownloadStatus::Queued
-                    | DownloadStatus::Starting
-                    | DownloadStatus::Downloading
-                    | DownloadStatus::Paused
-            ) {
+            if e.status.is_active() {
                 map.insert(
                     e.app_id.clone(),
                     serde_json::json!({
@@ -522,15 +499,7 @@ impl qobject::DownloadModel {
         let prefix = format!("{}:", needle);
 
         let hit = self.entries.iter().find(|e| {
-            let active = matches!(
-                e.status,
-                omikuji_core::downloads::DownloadStatus::Queued
-                    | omikuji_core::downloads::DownloadStatus::Starting
-                    | omikuji_core::downloads::DownloadStatus::Downloading
-                    | omikuji_core::downloads::DownloadStatus::Extracting
-                    | omikuji_core::downloads::DownloadStatus::Patching
-                    | omikuji_core::downloads::DownloadStatus::Paused
-            );
+            let active = e.status.is_active();
             if !active {
                 return false;
             }
@@ -544,6 +513,7 @@ impl qobject::DownloadModel {
         let kind = match &e.kind {
             omikuji_core::downloads::DownloadKind::Install => "install",
             omikuji_core::downloads::DownloadKind::Update { .. } => "update",
+            omikuji_core::downloads::DownloadKind::Repair => "repair",
         };
 
         let payload = serde_json::json!({

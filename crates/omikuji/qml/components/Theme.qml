@@ -7,27 +7,28 @@ QtObject {
     property SystemPalette inactive: SystemPalette { colorGroup: SystemPalette.Inactive }
 
     property bool followSystemColors: true
+    readonly property bool systemColorsAvailable: Application.styleHints.colorScheme !== Qt.ColorScheme.Unknown
     property bool followSystemFont: true
     property string fontFamily: ""
     property var overrides: ({})
 
-    function _resolve(token, fallback) {
-        if (followSystemColors) return fallback
+    function _resolve(token, system, fallback) {
+        if (followSystemColors) return systemColorsAvailable ? system : fallback
         var v = overrides[token]
         return v ? v : fallback
     }
 
-    property color accent: _resolve("accent", active.highlight)
-    property color accentText: _resolve("accentText", active.highlightedText)
+    property color accent: _resolve("accent", active.highlight, "#bdc2ff")
+    property color accentText: _resolve("accentText", active.highlightedText, "#1d2678")
     property color accentOn: accent.hslLightness > 0.5 ? "#000000" : "#ffffff"
 
-    property color bg: _resolve("bg", active.window)
+    property color bg: _resolve("bg", active.base, "#111111")
     property color bgAlt: Qt.darker(bg, 1.1)
-    property color surface: _resolve("surface", active.base)
+    property color surface: _resolve("surface", active.base, "#111111")
     property color surfaceHover: Qt.lighter(surface, 1.1)
     property color surfaceBorder: Qt.rgba(text.r, text.g, text.b, 0.08)
 
-    property color text: _resolve("text", active.windowText)
+    property color text: _resolve("text", active.windowText, "#c5c6c6")
     property color textMuted: Qt.rgba(text.r, text.g, text.b, 0.55)
     property color textSubtle: Qt.rgba(text.r, text.g, text.b, 0.35)
     property color textFaint: Qt.rgba(text.r, text.g, text.b, 0.2)
@@ -54,7 +55,66 @@ QtObject {
     property color tooltipBg: text
     property color tooltipText: bg
 
-    property color error: _resolve("error", bg.hslLightness > 0.5 ? "#d32f2f" : "#ef5350")
-    property color success: _resolve("success", bg.hslLightness > 0.5 ? "#388e3c" : "#66bb6a")
-    property color warning: _resolve("warning", bg.hslLightness > 0.5 ? "#f57c00" : "#ffa726")
+    property color error: _resolve("error", bg.hslLightness > 0.5 ? "#d32f2f" : "#ef5350", "#ef5350")
+    property color success: _resolve("success", bg.hslLightness > 0.5 ? "#388e3c" : "#66bb6a", "#66bb6a")
+    property color warning: _resolve("warning", bg.hslLightness > 0.5 ? "#f57c00" : "#ffa726", "#ffa726")
+
+    function alpha(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
+    function mix(a, b, t) {
+        return Qt.rgba(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t)
+    }
+
+    property color outline: alpha(text, 0.12)
+    property color outlineStrong: alpha(text, 0.24)
+    property color stateHover: alpha(text, 0.06)
+    property color statePressed: alpha(text, 0.11)
+
+    property color fieldBg: alpha(text, 0.06)
+    property color fieldBgFocus: alpha(text, 0.09)
+
+    property bool fillFields: true
+
+    property real radiusScale: 1.0
+
+    readonly property QtObject radius: QtObject {
+        readonly property int xs: Math.round(6 * theme.radiusScale)
+        readonly property int sm: Math.round(8 * theme.radiusScale)
+        readonly property int md: Math.round(12 * theme.radiusScale)
+        readonly property int lg: Math.round(16 * theme.radiusScale)
+        readonly property int xl: Math.round(22 * theme.radiusScale)
+        readonly property int xxl: Math.round(28 * theme.radiusScale)
+        readonly property int pill: 999
+    }
+
+    readonly property QtObject space: QtObject {
+        readonly property int xs: 4
+        readonly property int sm: 8
+        readonly property int md: 12
+        readonly property int lg: 16
+        readonly property int xl: 24
+        readonly property int xxl: 32
+    }
+
+    readonly property QtObject dur: QtObject {
+        readonly property int xfast: 90
+        readonly property int fast: 140
+        readonly property int med: 220
+        readonly property int slow: 340
+    }
+
+    readonly property QtObject ease: QtObject {
+        readonly property int standard: Easing.OutCubic
+        readonly property int emphasized: Easing.OutBack
+        readonly property real overshoot: 1.15
+    }
+
+    readonly property QtObject type: QtObject {
+        readonly property var display: ({ size: 22, weight: Font.DemiBold })
+        readonly property var title: ({ size: 16, weight: Font.DemiBold })
+        readonly property var subtitle: ({ size: 14, weight: Font.Medium })
+        readonly property var body: ({ size: 14, weight: Font.Normal })
+        readonly property var label: ({ size: 13, weight: Font.Medium })
+        readonly property var caption: ({ size: 12, weight: Font.Normal })
+        readonly property var micro: ({ size: 11, weight: Font.Medium })
+    }
 }

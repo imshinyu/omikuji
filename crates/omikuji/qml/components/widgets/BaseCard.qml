@@ -72,7 +72,7 @@ Item {
     Rectangle {
         id: frame
         anchors.fill: parent
-        radius: 16
+        radius: theme.radius.lg
         color: root.selected && root.selectedBgTint.a > 0
             ? root.selectedBgTint
             : theme.cardBg
@@ -97,7 +97,7 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 color: root.placeholderTint
-                radius: 12
+                radius: theme.radius.md
             }
 
             Image {
@@ -134,7 +134,7 @@ Item {
                 maskSource: Rectangle {
                     width: bannerClip.width
                     height: bannerClip.height
-                    radius: 12
+                    radius: theme.radius.md
                 }
             }
         }
@@ -200,7 +200,7 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            radius: 16
+            radius: theme.radius.lg
             color: "transparent"
             border.width: 1
             border.color: cardHover.containsMouse ? theme.cardBorderHover : theme.cardBorder

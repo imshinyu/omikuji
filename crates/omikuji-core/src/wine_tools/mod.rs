@@ -2,12 +2,13 @@ use crate::launch::{build_env, resolve_wine_exe, WineVariant};
 use crate::library::Game;
 use anyhow::{anyhow, Result};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 
 #[derive(Debug, Clone)]
 pub enum WineTool {
     Winecfg,
     Winetricks,
+    WinetricksVerbs(Vec<String>),
     Regedit,
     Cmd,
     Explorer,
@@ -17,7 +18,31 @@ pub enum WineTool {
 }
 
 pub fn run(game: &Game, tool: WineTool) -> Result<Child> {
-    // steam-imported games need the prefix rewritten to compatdata/{app_id}/pfx; 
+    let mut cmd = build_wine_command(game, &tool)?;
+    cmd.spawn().map_err(|e| anyhow!("failed to spawn wine tool: {}", e))
+}
+
+pub fn run_streamed<F: FnMut(&str)>(game: &Game, tool: WineTool, mut on_line: F) -> Result<()> {
+    let mut cmd = build_wine_command(game, &tool)?;
+    cmd.stdin(Stdio::null());
+    cmd.stdout(Stdio::null());
+    cmd.stderr(Stdio::piped());
+    let mut child = cmd.spawn().map_err(|e| anyhow!("failed to spawn wine tool: {}", e))?;
+    if let Some(stderr) = child.stderr.take() {
+        use std::io::BufRead;
+        for line in std::io::BufReader::new(stderr).lines().map_while(Result::ok) {
+            on_line(&line);
+        }
+    }
+    let status = child.wait()?;
+    if !status.success() {
+        anyhow::bail!("{:?} exited with {}", tool, status);
+    }
+    Ok(())
+}
+
+fn build_wine_command(game: &Game, tool: &WineTool) -> Result<Command> {
+    // steam-imported games need the prefix rewritten to compatdata/{app_id}/pfx;
     // we must not create our own omikuji prefix dir becuase steam owns the lifetime of that one.
     // also rewrite wine.version from "steam:{app_id}" to "steam:{proton_dir_name}" using the version stamp in compatdata/version so PROTONPATH resolves correctly.
     let mut effective: Game;
@@ -50,9 +75,18 @@ pub fn run(game: &Game, tool: WineTool) -> Result<Child> {
 
     let variant = WineVariant::from_version(&g.wine.version);
     let wine_exe = resolve_wine_exe(variant, &g.wine.version)?;
-    let env = build_env(g, variant, &wine_exe);
+    let mut env = build_env(g, variant, &wine_exe);
 
-    let (program, args) = build_command(&tool, variant, &wine_exe)?;
+    // fuck this shit lmao
+    if matches!(tool, WineTool::Winetricks | WineTool::WinetricksVerbs(_))
+        && let Some(bundle) = staged_ca_bundle()
+    {
+        let b = bundle.to_string_lossy().into_owned();
+        env.insert("CURL_CA_BUNDLE".to_string(), b.clone());
+        env.insert("SSL_CERT_FILE".to_string(), b);
+    }
+
+    let (program, args) = build_command(tool, variant, &wine_exe)?;
 
     let mut cmd = Command::new(&program);
     cmd.args(&args);
@@ -65,13 +99,13 @@ pub fn run(game: &Game, tool: WineTool) -> Result<Child> {
         cmd.env("PROTON_VERB", "waitforexitandrun");
     }
 
-    eprintln!(
-        "[wine_tools] {:?} :: {} {}",
+    tracing::debug!(
+        "{:?} :: {} {}",
         tool,
         program.display(),
         args.join(" ")
     );
-    cmd.spawn().map_err(|e| anyhow!("failed to spawn wine tool: {}", e))
+    Ok(cmd)
 }
 
 fn build_command(
@@ -100,6 +134,17 @@ fn build_command(
                 Ok((wt, vec!["--gui".into()]))
             }
         }
+        WineTool::WinetricksVerbs(verbs) => {
+            let mut args = vec!["-q".to_string()];
+            args.extend(verbs.iter().cloned());
+            if variant == WineVariant::Proton {
+                let mut a = vec!["winetricks".to_string()];
+                a.extend(args);
+                Ok((wine_exe.to_path_buf(), a))
+            } else {
+                Ok((find_winetricks()?, args))
+            }
+        }
         WineTool::KillWineserver => {
             if variant == WineVariant::Proton {
                 // wineboot -k tears down the session cleanly; invoking wineserver directly races with umu's lifecycle
@@ -114,6 +159,37 @@ fn build_command(
                 Ok((bin, vec!["-k".into()]))
             }
         }
+    }
+}
+
+fn ca_bundle() -> Option<PathBuf> {
+    for candidate in [
+        "/etc/ssl/certs/ca-certificates.crt",
+        "/etc/pki/tls/certs/ca-bundle.crt",
+        "/etc/ssl/cert.pem",
+        "/etc/ssl/ca-bundle.pem",
+    ] {
+        let path = Path::new(candidate);
+        if path.exists() {
+            return Some(std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf()));
+        }
+    }
+    None
+}
+
+fn staged_ca_bundle() -> Option<PathBuf> {
+    let src = ca_bundle()?;
+    let cache = std::env::var_os("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".cache"));
+    let dir = cache.join("omikuji");
+    if std::fs::create_dir_all(&dir).is_err() {
+        return Some(src);
+    }
+    let dst = dir.join("ca-bundle.crt");
+    match std::fs::copy(&src, &dst) {
+        Ok(_) => Some(dst),
+        Err(_) => Some(src),
     }
 }
 

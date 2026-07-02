@@ -81,11 +81,6 @@ impl VoiceLocale {
     }
 }
 
-pub const JADEITE_METADATA_URL: &str =
-    "https://codeberg.org/mkrsym1/jadeite/raw/branch/master/metadata.json";
-pub const JADEITE_API_URL: &str =
-    "https://codeberg.org/api/v1/repos/mkrsym1/jadeite/releases/latest";
-
 pub fn parse_voice_csv(csv: &str) -> Vec<VoiceLocale> {
     csv.split(',')
         .map(|s| s.trim())

@@ -25,7 +25,7 @@ Window {
     height: 520
     minimumWidth: 420
     minimumHeight: 280
-    title: "omikuji · " + (gameName || gameId) + " logs"
+    title: qsTr("omikuji · %1 logs").arg(gameName || gameId)
     color: theme ? theme.bg : "#0a0a0a"
 
     function refresh() {
@@ -108,7 +108,7 @@ Window {
 
         Rectangle {
             anchors.fill: parent
-            radius: 6
+            radius: theme.radius.xs
             color: btnArea.containsMouse ? btn.hoverColor : "transparent"
             border.width: 1
             border.color: btn.borderColor
@@ -162,7 +162,7 @@ Window {
 
                     Rectangle {
                         anchors.fill: parent
-                        radius: 6
+                        radius: theme.radius.xs
                         color: followArea.containsMouse
                             ? Qt.rgba(logWindow.theme.text.r, logWindow.theme.text.g, logWindow.theme.text.b, 0.08)
                             : "transparent"
@@ -183,7 +183,7 @@ Window {
 
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Follow"
+                            text: qsTr("Follow")
                             color: logWindow.theme.text
                             font.pixelSize: 12
                         }
@@ -201,7 +201,7 @@ Window {
                 HeaderButton {
                     Layout.preferredWidth: implicitWidth
                     Layout.preferredHeight: implicitHeight
-                    label: "Clear"
+                    label: qsTr("Clear")
                     onClicked: {
                         if (gameModel) {
                             gameModel.clear_game_log(logWindow.gameId)
@@ -213,7 +213,7 @@ Window {
                 HeaderButton {
                     Layout.preferredWidth: implicitWidth
                     Layout.preferredHeight: implicitHeight
-                    label: "Copy all"
+                    label: qsTr("Copy all")
                     onClicked: {
                         textArea.selectAll()
                         textArea.copy()
@@ -224,7 +224,7 @@ Window {
                 HeaderButton {
                     Layout.preferredWidth: implicitWidth
                     Layout.preferredHeight: implicitHeight
-                    label: logWindow.justSaved ? "Saved ✓" : "Save"
+                    label: logWindow.justSaved ? qsTr("Saved ✓") : qsTr("Save")
                     labelColor: logWindow.justSaved ? logWindow.theme.success : logWindow.theme.text
                     borderColor: logWindow.justSaved
                         ? Qt.rgba(logWindow.theme.success.r, logWindow.theme.success.g, logWindow.theme.success.b, 0.5)
@@ -389,7 +389,7 @@ Window {
                 Text {
                     anchors.fill: parent
                     verticalAlignment: Text.AlignVCenter
-                    text: "Search..."
+                    text: qsTr("Search...")
                     color: logWindow.theme.textSubtle
                     font.pixelSize: 14
                     visible: !searchInput.text && !searchInput.activeFocus

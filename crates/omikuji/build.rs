@@ -26,6 +26,23 @@ fn collect_icons() -> (Vec<String>, Vec<String>) {
     (paths, names)
 }
 
+fn collect_translations() -> Vec<String> {
+    let dir = Path::new("i18n");
+    let Ok(entries) = fs::read_dir(dir) else {
+        return vec![];
+    };
+    let mut paths: Vec<String> = vec![];
+    for entry in entries.flatten() {
+        let p = entry.path();
+        if p.extension().and_then(|s| s.to_str()) == Some("qm") {
+            let filename = p.file_name().unwrap().to_string_lossy().into_owned();
+            paths.push(format!("i18n/{filename}"));
+        }
+    }
+    paths.sort();
+    paths
+}
+
 fn find_qsb() -> PathBuf {
     if let Ok(out) = Command::new("which").arg("qsb").output()
         && out.status.success()
@@ -37,6 +54,7 @@ fn find_qsb() -> PathBuf {
     }
     for candidate in [
         "/usr/lib/qt6/bin/qsb",
+        "/usr/lib64/qt6/bin/qsb",
         "/usr/lib/x86_64-linux-gnu/qt6/bin/qsb",
         "/usr/libexec/qt6/qsb",
     ] {
@@ -108,16 +126,36 @@ fn write_icon_names(names: &[String]) {
     fs::write(&out_path, content).expect("write icon_names.rs");
 }
 
+fn qt_version() -> String {
+    for tool in ["qmake6", "qmake"] {
+        if let Ok(out) = Command::new(tool).arg("-query").arg("QT_VERSION").output()
+            && out.status.success()
+        {
+            let v = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if !v.is_empty() {
+                return v;
+            }
+        }
+    }
+    "unknown".to_string()
+}
+
 fn main() {
     let (icon_paths, icon_names) = collect_icons();
     write_icon_names(&icon_names);
     println!("cargo:rerun-if-changed=qml/icons");
 
+    println!("cargo:rustc-env=OMIKUJI_QT_VERSION={}", qt_version());
+
     let shader_paths = compile_shaders();
     println!("cargo:rerun-if-changed=qml/components/consolemode/shaders");
 
+    let translation_paths = collect_translations();
+    println!("cargo:rerun-if-changed=i18n");
+
     let mut qrc_paths = icon_paths;
     qrc_paths.extend(shader_paths);
+    qrc_paths.extend(translation_paths);
     qrc_paths.push("qml/components/widgets/RunnerGrouping.js".to_string());
 
     let builder = CxxQtBuilder::new_qml_module(
@@ -125,6 +163,7 @@ fn main() {
             .qml_files([
                 "qml/Main.qml",
                 "qml/ConsoleMode.qml",
+                "qml/RunExe.qml",
                 // root
                 "qml/components/Theme.qml",
 
@@ -142,13 +181,18 @@ fn main() {
                 "qml/components/dialogs/CategoryEditDialog.qml",
                 "qml/components/dialogs/ConfirmDialog.qml",
                 "qml/components/dialogs/ContextMenu.qml",
+                "qml/components/dialogs/DialogCard.qml",
                 "qml/components/dialogs/DefaultsApplyDialog.qml",
                 "qml/components/dialogs/EpicInstallDialog.qml",
                 "qml/components/dialogs/GachaInstallDialog.qml",
                 "qml/components/dialogs/GameCategoriesDialog.qml",
                 "qml/components/dialogs/GogInstallDialog.qml",
                 "qml/components/dialogs/ErrorDialog.qml",
+                "qml/components/dialogs/PrefixCreateDialog.qml",
+                "qml/components/dialogs/PrefixDetailDialog.qml",
+                "qml/components/dialogs/PrefixPrepDialog.qml",
                 "qml/components/dialogs/GameLogsWindow.qml",
+                "qml/components/dialogs/SetsDialog.qml",
                 "qml/components/dialogs/UpdateAvailableDialog.qml",
                 // downloads
                 "qml/components/downloads/ComponentRow.qml",
@@ -163,15 +207,16 @@ fn main() {
                 // navigation
                 "qml/components/navigation/NavTabs.qml",
                 "qml/components/navigation/Sidebar.qml",
+                "qml/components/navigation/SubNavRail.qml",
                 "qml/components/navigation/TopBar.qml",
                 "qml/components/navigation/WindowControls.qml",
                 // pages
                 "qml/components/pages/AddGamePage.qml",
                 "qml/components/pages/GameSettingsPage.qml",
                 "qml/components/pages/GlobalSettingsPage.qml",
+                "qml/components/pages/SettingsModal.qml",
                 // settings
                 "qml/components/settings/ArchiveSourceRow.qml",
-                "qml/components/settings/SettingsActionBar.qml",
                 "qml/components/settings/SettingsRow.qml",
                 "qml/components/settings/SettingsSection.qml",
                 "qml/components/settings/TabEpic.qml",
@@ -179,6 +224,7 @@ fn main() {
                 "qml/components/settings/TabGlobalAbout.qml",
                 "qml/components/settings/TabGlobalComponents.qml",
                 "qml/components/settings/TabGlobalDefaults.qml",
+                "qml/components/settings/TabGlobalOfuda.qml",
                 "qml/components/settings/TabGlobalTheme.qml",
                 "qml/components/settings/TabGlobalUi.qml",
                 "qml/components/settings/TabRunnerOptions.qml",
@@ -192,14 +238,18 @@ fn main() {
                 "qml/components/store/GogController.qml",
                 "qml/components/store/StorePanel.qml",
                 "qml/components/store/SteamLibrary.qml",
+                "qml/components/store/StoreLoginOverlay.qml",
                 // widgets
                 "qml/components/widgets/BaseCard.qml",
                 "qml/components/widgets/CardGrid.qml",
                 "qml/components/widgets/DisplayOptionsPopup.qml",
+                "qml/components/widgets/FieldSurface.qml",
                 "qml/components/widgets/IconButton.qml",
                 "qml/components/widgets/IconPickerPopup.qml",
                 "qml/components/widgets/KeyValueTable.qml",
+                "qml/components/widgets/LabeledSwitch.qml",
                 "qml/components/widgets/LoadingDots.qml",
+                "qml/components/widgets/M3Button.qml",
                 "qml/components/widgets/M3Dropdown.qml",
                 "qml/components/widgets/M3FileField.qml",
                 "qml/components/widgets/M3Slider.qml",
@@ -209,8 +259,9 @@ fn main() {
                 "qml/components/widgets/PlayButton.qml",
                 "qml/components/widgets/StatusBadge.qml",
                 "qml/components/widgets/StoreCardAction.qml",
+                "qml/components/widgets/Squircle.qml",
                 "qml/components/widgets/SvgIcon.qml",
-                "qml/components/widgets/TabPill.qml",
+                "qml/components/widgets/ThinScrollBar.qml",
                 "qml/components/widgets/ToastManager.qml",
                 "qml/components/widgets/Tooltip.qml",
                 "qml/components/widgets/WavyProgressBar.qml",
@@ -225,6 +276,7 @@ fn main() {
         "src/bridge/download_model.rs",
         "src/bridge/ui_settings.rs",
         "src/bridge/components.rs",
+        "src/bridge/ofuda.rs",
         "src/bridge/archive_manager.rs",
         "src/bridge/defaults.rs",
         "src/bridge/gamepad.rs",
@@ -242,22 +294,19 @@ fn main() {
     let builder = builder.qt_module("Widgets");
     println!("cargo:rustc-link-lib=Qt6Widgets");
 
-    // one-off C++ shim: calls QGuiApplication::setWindowIcon. QML's
-    // Window / ApplicationWindow don't expose `icon` as an assignable
-    // property in our Qt version, so we set it from Rust via a tiny
-    // extern "C" function defined in src/app_icon.cpp. cc_builder is
-    // marked unsafe by cxx-qt-build because the closure has full
-    // access to the internal cc::Build; adding one file is harmless.
     let builder = unsafe {
         builder.cc_builder(|cc| {
+            cc.flag_if_supported("-Wno-sfinae-incomplete");
             cc.file("src/app_icon.cpp");
             cc.file("src/app_font.cpp");
             cc.file("src/tray_native.cpp");
+            cc.file("src/i18n.cpp");
         })
     };
     println!("cargo:rerun-if-changed=src/app_icon.cpp");
     println!("cargo:rerun-if-changed=src/app_font.cpp");
     println!("cargo:rerun-if-changed=src/tray_native.cpp");
+    println!("cargo:rerun-if-changed=src/i18n.cpp");
 
     builder.build();
 }

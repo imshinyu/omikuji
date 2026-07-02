@@ -41,6 +41,8 @@ pub mod qobject {
         #[qproperty(bool, is_logged_in, cxx_name = "isLoggedIn")]
         #[qproperty(bool, is_refreshing, cxx_name = "isRefreshing")]
         #[qproperty(QString, display_name, cxx_name = "displayName")]
+        #[qproperty(bool, tool_ready, cxx_name = "toolReady")]
+        #[qproperty(bool, tool_installing, cxx_name = "toolInstalling")]
         type EpicModel = super::EpicModelRust;
     }
 
@@ -82,7 +84,10 @@ pub mod qobject {
         fn get_game_at(self: &EpicModel, index: i32) -> QMap_QString_QVariant;
 
         #[qinvokable]
-        fn is_logged_in_sync(self: &EpicModel) -> bool;
+        fn install_tools(self: Pin<&mut EpicModel>);
+
+        #[qinvokable]
+        fn refresh_tools(self: Pin<&mut EpicModel>);
     }
 
     unsafe extern "RustQt" {
@@ -105,6 +110,8 @@ pub struct EpicModelRust {
     pub is_logged_in: bool,
     pub is_refreshing: bool,
     pub display_name: QString,
+    pub tool_ready: bool,
+    pub tool_installing: bool,
 }
 
 impl Default for EpicModelRust {
@@ -121,6 +128,8 @@ impl Default for EpicModelRust {
             is_logged_in,
             is_refreshing: false,
             display_name,
+            tool_ready: omikuji_core::components::ready(&omikuji_core::components::epic_tools()),
+            tool_installing: false,
         }
     }
 }
@@ -188,8 +197,27 @@ impl qobject::EpicModel {
         QString::from(&EpicStore::get_login_url())
     }
 
-    pub fn is_logged_in_sync(&self) -> bool {
-        EPIC_STORE.blocking_lock().is_logged_in()
+    pub fn install_tools(mut self: Pin<&mut Self>) {
+        if self.rust().tool_installing {
+            return;
+        }
+        self.as_mut().set_tool_installing(true);
+        let qt_thread = self.as_mut().qt_thread();
+        tokio::spawn(async move {
+            let ok = omikuji_core::components::ensure(&omikuji_core::components::epic_tools())
+                .await
+                .map_err(|e| tracing::error!("epic tools install failed: {}", e))
+                .is_ok();
+            let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::EpicModel>| {
+                obj.as_mut().set_tool_installing(false);
+                obj.as_mut().set_tool_ready(ok);
+            });
+        });
+    }
+
+    pub fn refresh_tools(mut self: Pin<&mut Self>) {
+        let ready = omikuji_core::components::ready(&omikuji_core::components::epic_tools());
+        self.as_mut().set_tool_ready(ready);
     }
 
     pub fn login(mut self: Pin<&mut Self>, code: &QString) {
@@ -212,7 +240,7 @@ impl qobject::EpicModel {
                     });
                 }
                 Err(e) => {
-                    eprintln!("[Epic] Login failed: {}", e);
+                    tracing::error!("login failed: {}", e);
                 }
             }
         });
@@ -224,7 +252,7 @@ impl qobject::EpicModel {
             {
                 let mut store = EPIC_STORE.lock().await;
                 if let Err(e) = store.logout().await {
-                    eprintln!("[Epic] logout failed: {}", e);
+                    tracing::error!("logout failed: {}", e);
                 }
             }
             let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::EpicModel>| {
@@ -301,7 +329,7 @@ impl qobject::EpicModel {
                     });
                 }
                 Err(e) => {
-                    eprintln!("[Epic] Refresh failed: {}", e);
+                    tracing::error!("refresh failed: {}", e);
                     let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::EpicModel>| {
                         obj.as_mut().set_is_refreshing(false);
                     });
@@ -320,7 +348,7 @@ impl qobject::EpicModel {
     ) -> QString {
         let i = index as usize;
         let Some(game) = self.rust().games.get(i).cloned() else {
-            eprintln!("[epic] enqueue_install: bad index {}", index);
+            tracing::error!("enqueue_install: bad index {}", index);
             return QString::default();
         };
 

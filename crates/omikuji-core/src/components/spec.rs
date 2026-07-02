@@ -5,6 +5,13 @@ pub struct ComponentSpec {
     pub extract: ExtractStrategy,
     pub dest: &'static str,
     pub settings_key: SettingsKey,
+    pub trigger: Trigger,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Trigger {
+    Eager,
+    OnDemand,
 }
 
 #[derive(Debug, Clone, Copy)]
